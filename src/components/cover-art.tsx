@@ -1,10 +1,15 @@
+"use client";
 import Image from "next/image";
+import { useState } from "react";
 import type { Product } from "@/lib/products";
 
 /**
- * Renders a comic cover plate in pure CSS/SVG. Placeholder art stands in for the
- * real scan — swap the inner block for <Image src={product.image} …> once a CMS
- * or DAM is wired up. Kept deterministic so pages remain fully static.
+ * Comic cover plate.
+ * - Shows the real scan when `product.image` is set and loads successfully.
+ * - Falls back to the deterministic CSS gradient palette when no image is
+ *   provided or when the remote fetch fails.
+ * `unoptimized` lets the browser fetch Wikimedia URLs directly, bypassing the
+ * Next.js image-optimizer proxy (which Wikimedia's CDN rate-limits/rejects).
  */
 export function CoverArt({
   product,
@@ -15,6 +20,7 @@ export function CoverArt({
   className?: string;
   priority?: boolean;
 }) {
+  const [imgFailed, setImgFailed] = useState(false);
   const [from, to] = product.palette;
   const slabbed = product.grader !== "Raw";
 
@@ -25,8 +31,8 @@ export function CoverArt({
       role="img"
       aria-label={`${product.title} ${product.issue} — ${product.publisher}, ${product.year}, ${product.grader} ${product.grade}`}
     >
-      {/* real cover scan — fills container, CSS gradient is the fallback */}
-      {product.image && (
+      {/* real cover scan — fills container; gradient above is the fallback */}
+      {product.image && !imgFailed && (
         <Image
           src={product.image}
           alt={`${product.title} ${product.issue} cover`}
@@ -34,6 +40,8 @@ export function CoverArt({
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
           className="object-cover"
           priority={priority}
+          unoptimized
+          onError={() => setImgFailed(true)}
         />
       )}
 
@@ -93,8 +101,6 @@ export function CoverArt({
           {product.grade.replace(/[^\d.]/g, "") || product.grade}
         </span>
       </div>
-
-      {priority ? null : null}
     </div>
   );
 }
