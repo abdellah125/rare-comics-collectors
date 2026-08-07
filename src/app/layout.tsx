@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Inter, Fraunces, Orbitron } from "next/font/google";
 import "./globals.css";
 
 import { CartProvider } from "@/components/cart-provider";
@@ -21,6 +21,13 @@ const display = Fraunces({
   subsets: ["latin"],
   display: "swap",
   weight: ["600", "700"],
+});
+
+const orbitron = Orbitron({
+  variable: "--font-orbitron",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["700", "900"],
 });
 
 export const metadata: Metadata = {
@@ -86,7 +93,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${display.variable} ${orbitron.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-white">
         <JsonLd id="org-schema" data={organizationJsonLd()} />
         <a

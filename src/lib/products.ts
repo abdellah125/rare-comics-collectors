@@ -27,6 +27,7 @@ export type Product = {
   bestseller?: boolean;
   rating: number;
   reviewCount: number;
+  image?: string;
 };
 
 export const products: Product[] = [
@@ -63,6 +64,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 3,
+    image: "https://upload.wikimedia.org/wikipedia/en/5/5a/Action_Comics_1.jpg",
   },
   {
     slug: "detective-comics-27-cgc-2-0",
@@ -97,6 +99,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 2,
+    image: "https://upload.wikimedia.org/wikipedia/en/0/04/DetectiveComics27.jpg",
   },
   {
     slug: "marvel-comics-1-cgc-4-0",
@@ -130,6 +133,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 2,
+    image: "https://upload.wikimedia.org/wikipedia/commons/4/4a/Marvel_Comics_1.jpg",
   },
   {
     slug: "superman-1-cgc-3-5",
@@ -163,6 +167,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 4,
+    image: "https://upload.wikimedia.org/wikipedia/en/5/53/Superman1.jpg",
   },
   {
     slug: "batman-1-cgc-4-5",
@@ -196,6 +201,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 3,
+    image: "https://upload.wikimedia.org/wikipedia/en/1/10/Batman1.jpg",
   },
   {
     slug: "captain-america-comics-1-cgc-6-0",
@@ -230,6 +236,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 5,
+    image: "https://upload.wikimedia.org/wikipedia/en/4/47/Captain_America_Comics_1.jpg",
   },
   {
     slug: "all-star-comics-8-cgc-5-0",
@@ -263,6 +270,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 4,
+    image: "https://upload.wikimedia.org/wikipedia/en/5/5a/All-Star_Comics_8.jpg",
   },
   {
     slug: "flash-comics-1-cgc-7-0",
@@ -296,6 +304,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 3,
+    image: "https://upload.wikimedia.org/wikipedia/en/f/f5/Flash_Comics_1.jpg",
   },
   {
     slug: "whiz-comics-2-cgc-3-0",
@@ -328,6 +337,7 @@ export const products: Product[] = [
     palette: ["#dc2626", "#facc15"],
     rating: 5,
     reviewCount: 2,
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/WhizComicsNo02.jpg/960px-WhizComicsNo02.jpg",
   },
   {
     slug: "green-lantern-1-cgc-4-5",
@@ -360,6 +370,7 @@ export const products: Product[] = [
     palette: ["#065f46", "#a3e635"],
     rating: 4,
     reviewCount: 2,
+    image: "https://upload.wikimedia.org/wikipedia/en/3/33/Gl1.jpg",
   },
   {
     slug: "showcase-4-cgc-5-0",
@@ -394,6 +405,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 4,
+    image: "https://upload.wikimedia.org/wikipedia/en/2/22/Showcase_4.jpg",
   },
   {
     slug: "fantastic-four-1-cgc-7-0",
@@ -428,6 +440,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 6,
+    image: "https://upload.wikimedia.org/wikipedia/en/6/6e/Fantasticfour1.jpg",
   },
   {
     slug: "amazing-fantasy-15-cgc-6-5",
@@ -462,6 +475,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 8,
+    image: "https://upload.wikimedia.org/wikipedia/en/3/35/Amazing_Fantasy_15.jpg",
   },
   {
     slug: "incredible-hulk-1-cgc-6-0",
@@ -495,6 +509,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 5,
+    image: "https://upload.wikimedia.org/wikipedia/en/1/12/Hulk_Comic_1.jpg",
   },
   {
     slug: "x-men-1-cgc-9-0",
@@ -529,6 +544,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 7,
+    image: "https://upload.wikimedia.org/wikipedia/en/3/31/XMen1.jpg",
   },
   {
     slug: "avengers-1-cgc-8-5",
@@ -563,6 +579,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 9,
+    image: "https://upload.wikimedia.org/wikipedia/en/e/e8/Avengers_vol_1_1.jpg",
   },
   {
     slug: "tales-of-suspense-39-cgc-8-0",
@@ -596,6 +613,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 6,
+    image: "https://upload.wikimedia.org/wikipedia/en/f/ff/Tales_of_suspense_39.jpg",
   },
 ];
 
