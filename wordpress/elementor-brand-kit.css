@@ -1,0 +1,96 @@
+/**
+ * Rare Comics Collectors — Elementor Brand Kit
+ *
+ * Paste this in: Elementor → Site Settings → Custom CSS
+ * OR enqueue via your child theme's functions.php
+ */
+
+/* ── Design tokens ────────────────────────────────────────────────── */
+:root {
+  --rcc-red:        #e11d48;   /* primary brand red   */
+  --rcc-red-deep:   #9f1239;   /* deep red / hover    */
+  --rcc-red-light:  #fff1f2;   /* tinted background   */
+  --rcc-red-muted:  #fecdd3;   /* soft accent         */
+  --rcc-ink-900:    #0f172a;   /* headlines           */
+  --rcc-ink-600:    #475569;   /* body text           */
+  --rcc-ink-400:    #94a3b8;   /* muted / captions    */
+  --rcc-surface:    #ffffff;
+  --rcc-surface-alt:#f8fafc;
+  --rcc-border:     #e2e8f0;
+  --rcc-radius-card:12px;
+  --rcc-radius-btn: 8px;
+  --rcc-font-display:"Playfair Display", Georgia, serif;
+  --rcc-font-body:  "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* ── Typography ────────────────────────────────────────────────────── */
+body { font-family: var(--rcc-font-body); color: var(--rcc-ink-600); }
+h1,h2,h3,h4 { font-family: var(--rcc-font-display); color: var(--rcc-ink-900); }
+.elementor-widget-heading .elementor-heading-title { font-family: var(--rcc-font-display); }
+
+/* ── Buttons ─────────────────────────────────────────────────────────*/
+.elementor-button,
+.woocommerce a.button,
+.woocommerce button.button,
+.woocommerce #respond input#submit,
+.woocommerce input.button {
+  background: var(--rcc-red) !important;
+  border-color: var(--rcc-red) !important;
+  border-radius: var(--rcc-radius-btn) !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  transition: background .18s ease, transform .12s ease;
+}
+.elementor-button:hover,
+.woocommerce a.button:hover,
+.woocommerce button.button:hover,
+.woocommerce input.button:hover {
+  background: var(--rcc-red-deep) !important;
+  border-color: var(--rcc-red-deep) !important;
+  transform: translateY(-1px);
+}
+
+/* ── WooCommerce prices ───────────────────────────────────────────── */
+.woocommerce .price,
+.woocommerce .amount,
+.woocommerce span.amount { color: var(--rcc-red) !important; font-weight: 700; }
+
+/* ── Product grid cards ──────────────────────────────────────────── */
+.woocommerce ul.products li.product {
+  border: 1px solid var(--rcc-border);
+  border-radius: var(--rcc-radius-card);
+  transition: box-shadow .2s ease, transform .2s ease;
+  overflow: hidden;
+}
+.woocommerce ul.products li.product:hover {
+  box-shadow: 0 8px 32px rgba(225, 29, 72, .12);
+  transform: translateY(-2px);
+}
+
+/* ── Links ───────────────────────────────────────────────────────── */
+a { color: var(--rcc-red); }
+a:hover { color: var(--rcc-red-deep); }
+
+/* ── Header / nav ────────────────────────────────────────────────── */
+.site-header,
+.elementor-section.elementor-section-full_width:first-child {
+  border-bottom: 2px solid var(--rcc-red);
+}
+
+/* ── Section alternating backgrounds ────────────────────────────── */
+.rcc-section-alt { background: var(--rcc-surface-alt); }
+.rcc-section-red  { background: var(--rcc-red-light); }
+
+/* ── RCC grade badges (injected by plugin) ───────────────────────── */
+.rcc-badge-row { margin: 10px 0 14px; }
+.rcc-key-issue {
+  background: var(--rcc-red-light);
+  border-left: 3px solid var(--rcc-red);
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+}
+
+/* ── Cart icon colour ────────────────────────────────────────────── */
+.elementor-menu-cart__toggle_button { color: var(--rcc-red) !important; }
+
