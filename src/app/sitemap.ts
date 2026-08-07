@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { products } from "@/lib/products";
+import { catalog } from "@/lib/catalog";
 import { services } from "@/lib/services";
 import { policyPages } from "@/lib/nav";
 import { site } from "@/lib/site";
@@ -41,7 +42,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.3,
   }));
 
-  return [...core, ...productUrls, ...serviceUrls, ...policyUrls].map((entry) => ({
+  const catalogUrls: MetadataRoute.Sitemap = catalog.map((p) => ({
+    url: url(`/store/${p.slug}`),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  const accountUrls: MetadataRoute.Sitemap = [
+    { url: url("/account/login"),    changeFrequency: "yearly", priority: 0.3 },
+    { url: url("/account/register"), changeFrequency: "yearly", priority: 0.3 },
+  ];
+
+  return [...core, ...productUrls, ...catalogUrls, ...serviceUrls, ...policyUrls, ...accountUrls].map((entry) => ({
     ...entry,
     lastModified: LAST_MODIFIED,
   }));

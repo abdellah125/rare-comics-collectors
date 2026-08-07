@@ -99,7 +99,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 2,
-    image: "https://upload.wikimedia.org/wikipedia/en/0/04/DetectiveComics27.jpg",
+    // no confirmed public-domain image for this title — gradient fallback renders instead
   },
   {
     slug: "marvel-comics-1-cgc-4-0",
@@ -133,7 +133,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 2,
-    image: "https://upload.wikimedia.org/wikipedia/commons/4/4a/Marvel_Comics_1.jpg",
+    image: "https://upload.wikimedia.org/wikipedia/commons/9/9f/MarvelComics1.jpg",
   },
   {
     slug: "superman-1-cgc-3-5",
@@ -201,7 +201,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 3,
-    image: "https://upload.wikimedia.org/wikipedia/en/1/10/Batman1.jpg",
+    image: "https://upload.wikimedia.org/wikipedia/en/a/a0/Batman_Vol_1_1.jpg",
   },
   {
     slug: "captain-america-comics-1-cgc-6-0",
@@ -236,7 +236,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 5,
-    image: "https://upload.wikimedia.org/wikipedia/en/4/47/Captain_America_Comics_1.jpg",
+    image: "https://upload.wikimedia.org/wikipedia/en/0/08/Captain_America_Comics_1_cover.jpg",
   },
   {
     slug: "all-star-comics-8-cgc-5-0",
@@ -509,7 +509,7 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 5,
-    image: "https://upload.wikimedia.org/wikipedia/en/1/12/Hulk_Comic_1.jpg",
+    image: "https://upload.wikimedia.org/wikipedia/en/4/40/Incredible_Hulk_1.jpg",
   },
   {
     slug: "x-men-1-cgc-9-0",

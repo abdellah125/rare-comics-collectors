@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { TextField } from "@/components/form-fields";
 import { CheckIcon, ShieldIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
@@ -60,12 +62,25 @@ function AuthShell({
 /* --------------------------------------------------------------- sign in */
 
 export function LoginForm() {
-  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const auth = useAuth();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setState("sending");
-    window.setTimeout(() => setState("sent"), 700);
+    const fd = new FormData(e.currentTarget);
+    const email = String(fd.get("email") ?? "");
+    const password = String(fd.get("password") ?? "");
+    setLoading(true);
+    setError("");
+    const user = auth.login(email, password);
+    if (user) {
+      router.push("/dashboard");
+    } else {
+      setError("Email or password didn't match. Try goldenageguru@demo.com / demo123.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -82,48 +97,28 @@ export function LoginForm() {
         </>
       }
     >
-      {state === "sent" ? (
-        <div className="text-center" role="status">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-600 text-white">
-            <CheckIcon className="h-6 w-6" />
-          </span>
-          <h2 className="mt-5 font-display text-xl font-semibold text-ink-950">Check your inbox</h2>
-          <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-ink-600">
-            If that email matches an account, a secure sign-in link is on its way. It expires in fifteen minutes.
-          </p>
-          <button type="button" onClick={() => setState("idle")} className={`${buttonStyles.outline} ${buttonSizes.md} mt-6`}>
-            Use a different email
-          </button>
+      <form onSubmit={onSubmit} className="grid gap-5">
+        <TextField label="Email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" />
+        <TextField label="Password" name="password" type="password" required autoComplete="current-password" />
+
+        {error && (
+          <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2.5 text-sm text-ink-700">
+            <input type="checkbox" name="remember" className="h-4 w-4 rounded border-ink-300 accent-brand-600" />
+            Keep me signed in
+          </label>
+          <Link href="/account/reset" className="text-sm font-medium text-brand-700 underline-offset-2 hover:underline">
+            Forgot password?
+          </Link>
         </div>
-      ) : (
-        <form onSubmit={onSubmit} className="grid gap-5">
-          <TextField label="Email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" />
-          <TextField label="Password" name="password" type="password" required autoComplete="current-password" />
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="flex items-center gap-2.5 text-sm text-ink-700">
-              <input type="checkbox" name="remember" className="h-4 w-4 rounded border-ink-300 accent-brand-600" />
-              Keep me signed in
-            </label>
-            <Link href="/account/reset" className="text-sm font-medium text-brand-700 underline-offset-2 hover:underline">
-              Forgot password?
-            </Link>
-          </div>
-
-          <button type="submit" disabled={state === "sending"} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
-            {state === "sending" ? "Signing in…" : "Sign in"}
-          </button>
-
-          <div className="relative py-1 text-center">
-            <span aria-hidden className="absolute inset-x-0 top-1/2 h-px bg-ink-200" />
-            <span className="relative bg-white px-3 text-xs uppercase tracking-wide text-ink-400">or</span>
-          </div>
-
-          <button type="button" onClick={onSubmit as never} className={`${buttonStyles.outline} ${buttonSizes.md} w-full`}>
-            Email me a sign-in link instead
-          </button>
-        </form>
-      )}
+        <button type="submit" disabled={loading} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
+          {loading ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
     </AuthShell>
   );
 }
@@ -131,12 +126,27 @@ export function LoginForm() {
 /* --------------------------------------------------------------- sign up */
 
 export function RegisterForm() {
-  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const auth = useAuth();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setState("sending");
-    window.setTimeout(() => setState("sent"), 700);
+    const fd = new FormData(e.currentTarget);
+    const first = String(fd.get("firstName") ?? "").trim();
+    const last = String(fd.get("lastName") ?? "").trim();
+    const email = String(fd.get("email") ?? "");
+    const password = String(fd.get("password") ?? "");
+    setLoading(true);
+    setError("");
+    const user = auth.register(`${first} ${last}`.trim(), email, password);
+    if (user) {
+      router.push("/dashboard");
+    } else {
+      setError("That email is already registered. Try signing in instead.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -153,63 +163,40 @@ export function RegisterForm() {
         </>
       }
     >
-      {state === "sent" ? (
-        <div className="text-center" role="status">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-600 text-white">
-            <CheckIcon className="h-6 w-6" />
-          </span>
-          <h2 className="mt-5 font-display text-xl font-semibold text-ink-950">Verify your email</h2>
-          <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-ink-600">
-            We&apos;ve sent a confirmation link. Click it and your account is live — then you can start a submission or
-            check out faster.
-          </p>
-          <Link href="/store" className={`${buttonStyles.primary} ${buttonSizes.md} mt-6`}>
-            Browse the store
-          </Link>
+      <form onSubmit={onSubmit} className="grid gap-5">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <TextField label="First name" name="firstName" required autoComplete="given-name" />
+          <TextField label="Last name" name="lastName" required autoComplete="family-name" />
         </div>
-      ) : (
-        <form onSubmit={onSubmit} className="grid gap-5">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <TextField label="First name" name="firstName" required autoComplete="given-name" />
-            <TextField label="Last name" name="lastName" required autoComplete="family-name" />
-          </div>
-          <TextField label="Email" name="email" type="email" required autoComplete="email" />
-          <TextField
-            label="Password"
-            name="password"
-            type="password"
-            required
-            autoComplete="new-password"
-            minLength={10}
-            hint="At least 10 characters. A passphrase beats a complicated short password."
-          />
-          <TextField label="Phone (optional)" name="phone" type="tel" autoComplete="tel" hint="Only used for order and submission updates." />
+        <TextField label="Email" name="email" type="email" required autoComplete="email" />
+        <TextField
+          label="Password"
+          name="password"
+          type="password"
+          required
+          autoComplete="new-password"
+          minLength={8}
+          hint="At least 8 characters."
+        />
 
-          <label className="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink-600">
-            <input type="checkbox" name="terms" required className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
-            <span>
-              I agree to the{" "}
-              <Link href="/policies/terms-of-service" className="underline underline-offset-2">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="/policies/privacy" className="underline underline-offset-2">
-                Privacy Policy
-              </Link>
-              .
-            </span>
-          </label>
+        {error && (
+          <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+        )}
 
-          <label className="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink-600">
-            <input type="checkbox" name="marketing" className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
-            <span>Email me new arrivals matching my want list. No more than one email a week.</span>
-          </label>
+        <label className="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink-600">
+          <input type="checkbox" name="terms" required className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
+          <span>
+            I agree to the{" "}
+            <Link href="/policies/terms-of-service" className="underline underline-offset-2">Terms of Service</Link>{" "}
+            and{" "}
+            <Link href="/policies/privacy" className="underline underline-offset-2">Privacy Policy</Link>.
+          </span>
+        </label>
 
-          <button type="submit" disabled={state === "sending"} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
-            {state === "sending" ? "Creating account…" : "Create account"}
-          </button>
-        </form>
-      )}
+        <button type="submit" disabled={loading} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
+          {loading ? "Creating account…" : "Create account"}
+        </button>
+      </form>
     </AuthShell>
   );
 }

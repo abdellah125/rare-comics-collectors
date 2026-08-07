@@ -4,6 +4,7 @@ import { StoreBrowser } from "@/components/store-browser";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
 import { eras, graders, products, publishers } from "@/lib/products";
+import { catalog } from "@/lib/catalog";
 import { schemaPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
@@ -29,7 +30,8 @@ const crumbs: Crumb[] = [
 ];
 
 export default function StorePage() {
-  const prices = products.map((p) => p.price);
+  const allProducts = [...products, ...catalog];
+  const prices = allProducts.map((p) => p.price);
 
   const collectionJsonLd = {
     "@context": "https://schema.org",
@@ -42,7 +44,7 @@ export default function StorePage() {
     mainEntity: {
       "@type": "OfferCatalog",
       name: "VaultCollect comic inventory",
-      numberOfItems: products.length,
+      numberOfItems: allProducts.length,
       itemListElement: products.map((p, i) => ({
         "@type": "ListItem",
         position: i + 1,
@@ -74,7 +76,7 @@ export default function StorePage() {
           <Breadcrumbs items={crumbs} />
           <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
             <SectionHeading
-              eyebrow={`${products.length} listings in the vault`}
+              eyebrow={`${allProducts.length} listings in the vault`}
               title="Graded comics for sale"
               lead="Every slab is cert-verified against the grader's census before listing, and every raw book is graded in-house with its defects photographed and disclosed. Buy now to check out immediately, or add to cart and keep browsing."
             />
@@ -99,7 +101,7 @@ export default function StorePage() {
       </section>
 
       <Container className="py-10 lg:py-14">
-        <StoreBrowser products={products} eras={[...eras]} publishers={publishers} graders={[...graders]} />
+        <StoreBrowser products={allProducts} eras={[...eras]} publishers={publishers} graders={[...graders]} />
       </Container>
 
       {/* SEO copy — real, useful context for the category page */}

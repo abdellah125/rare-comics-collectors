@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { useCart } from "@/components/cart-provider";
+import { useAuth } from "@/components/auth-provider";
 import { CartIcon, CloseIcon, MenuIcon, PhoneIcon, PinIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 import { primaryNav } from "@/lib/nav";
@@ -13,8 +14,10 @@ import { mapLink, site, fullAddress } from "@/lib/site";
 export function Header() {
   const pathname = usePathname();
   const { count, openCart, hydrated } = useCart();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => setMenuOpen(false), [pathname]);
 
@@ -83,6 +86,34 @@ export function Header() {
               Free appraisal
             </Link>
 
+            {user ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen((o) => !o)}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white hover:bg-brand-700"
+                  aria-label="User menu"
+                  aria-expanded={dropdownOpen}
+                >
+                  {user.name.slice(0, 2).toUpperCase()}
+                </button>
+                {dropdownOpen && (
+                  <div className="absolute right-0 top-11 z-50 w-48 rounded-xl border border-ink-200 bg-white py-1 shadow-lg">
+                    <p className="truncate px-4 py-2 text-xs font-medium text-ink-500">{user.name}</p>
+                    <hr className="my-1 border-ink-100" />
+                    <Link href="/dashboard" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">Dashboard</Link>
+                    <Link href="/dashboard/listings/new" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">+ New listing</Link>
+                    <hr className="my-1 border-ink-100" />
+                    <button type="button" onClick={() => { logout(); setDropdownOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">Sign out</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link href="/account/login" className="hidden text-sm font-medium text-ink-700 hover:text-ink-950 sm:block">
+                Sign in
+              </Link>
+            )}
+
             <button
               type="button"
               onClick={openCart}
@@ -142,6 +173,26 @@ export function Header() {
               >
                 <PinIcon className="h-4 w-4 text-brand-600" /> {fullAddress}
               </a>
+              <div className="border-t border-ink-200 pt-2">
+                {user ? (
+                  <>
+                    <Link href="/dashboard" className="flex items-center gap-2 rounded-lg px-3 py-2 font-medium text-ink-800 hover:bg-ink-100">
+                      Dashboard
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={logout}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 font-medium text-red-600 hover:bg-red-50"
+                    >
+                      Sign out
+                    </button>
+                  </>
+                ) : (
+                  <Link href="/account/login" className="flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-brand-700">
+                    Sign in
+                  </Link>
+                )}
+              </div>
             </div>
           </nav>
         </div>
