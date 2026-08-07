@@ -9,17 +9,18 @@ import { Badge, Breadcrumbs, Container, Stars, ButtonLink, type Crumb } from "@/
 import { CheckIcon, ShieldIcon, TruckIcon, SearchIcon } from "@/components/icons";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
 import { getProduct, products, relatedProducts } from "@/lib/products";
+import { catalog, getCatalogProduct } from "@/lib/catalog";
 import { formatPrice, formatPriceExact, schemaPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 
 export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
+  return [...products, ...catalog].map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = getProduct(slug) ?? getCatalogProduct(slug);
   if (!product) return pageMetadata({ title: "Comic not found", description: "This listing is no longer available.", path: `/store/${slug}`, noIndex: true });
 
   const gradeLabel = product.grader === "Raw" ? `Raw ${product.grade}` : `${product.grader} ${product.grade}`;
@@ -56,10 +57,12 @@ const assurances = [
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = getProduct(slug) ?? getCatalogProduct(slug);
   if (!product) notFound();
 
-  const related = relatedProducts(product);
+  const related = [...products, ...catalog]
+    .filter((p) => p.slug !== slug && p.era === product.era)
+    .slice(0, 4);
   const onSale = product.compareAt !== undefined && product.compareAt > product.price;
   const gradeLabel = product.grader === "Raw" ? `Raw · ${product.grade}` : `${product.grader} ${product.grade}`;
 
