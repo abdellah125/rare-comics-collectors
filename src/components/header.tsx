@@ -19,7 +19,11 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  useEffect(() => setMenuOpen(false), [pathname]);
+  // Close the mobile menu whenever the route changes.
+  useEffect(() => {
+    const t = setTimeout(() => setMenuOpen(false), 0);
+    return () => clearTimeout(t);
+  }, [pathname]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);

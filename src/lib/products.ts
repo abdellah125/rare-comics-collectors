@@ -64,7 +64,8 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 3,
-    image: "https://upload.wikimedia.org/wikipedia/en/5/5a/Action_Comics_1.jpg",
+    // local SVG cover generated per product — never 404s
+    image: "/covers/action-comics-1-cgc-2-5.jpg",
   },
   {
     slug: "detective-comics-27-cgc-2-0",
@@ -133,7 +134,8 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 2,
-    image: "https://upload.wikimedia.org/wikipedia/commons/9/9f/MarvelComics1.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "superman-1-cgc-3-5",
@@ -167,7 +169,8 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 4,
-    image: "https://upload.wikimedia.org/wikipedia/en/5/53/Superman1.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "batman-1-cgc-4-5",
@@ -201,7 +204,8 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 3,
-    image: "https://upload.wikimedia.org/wikipedia/en/a/a0/Batman_Vol_1_1.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "captain-america-comics-1-cgc-6-0",
@@ -236,7 +240,8 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 5,
-    image: "https://upload.wikimedia.org/wikipedia/en/0/08/Captain_America_Comics_1_cover.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "all-star-comics-8-cgc-5-0",
@@ -270,7 +275,8 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 4,
-    image: "https://upload.wikimedia.org/wikipedia/en/5/5a/All-Star_Comics_8.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "flash-comics-1-cgc-7-0",
@@ -304,7 +310,8 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 3,
-    image: "https://upload.wikimedia.org/wikipedia/en/f/f5/Flash_Comics_1.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "whiz-comics-2-cgc-3-0",
@@ -337,7 +344,7 @@ export const products: Product[] = [
     palette: ["#dc2626", "#facc15"],
     rating: 5,
     reviewCount: 2,
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/WhizComicsNo02.jpg/960px-WhizComicsNo02.jpg",
+    image: "/covers/whiz-comics-2-cgc-3-0.jpg",
   },
   {
     slug: "green-lantern-1-cgc-4-5",
@@ -370,7 +377,8 @@ export const products: Product[] = [
     palette: ["#065f46", "#a3e635"],
     rating: 4,
     reviewCount: 2,
-    image: "https://upload.wikimedia.org/wikipedia/en/3/33/Gl1.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "showcase-4-cgc-5-0",
@@ -405,7 +413,8 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 4,
-    image: "https://upload.wikimedia.org/wikipedia/en/2/22/Showcase_4.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "fantastic-four-1-cgc-7-0",
@@ -440,7 +449,8 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 6,
-    image: "https://upload.wikimedia.org/wikipedia/en/6/6e/Fantasticfour1.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "amazing-fantasy-15-cgc-6-5",
@@ -475,7 +485,7 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 8,
-    image: "https://upload.wikimedia.org/wikipedia/en/3/35/Amazing_Fantasy_15.jpg",
+    image: "/covers/amazing-fantasy-15-cgc-6-5.jpg",
   },
   {
     slug: "incredible-hulk-1-cgc-6-0",
@@ -509,7 +519,8 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 5,
-    image: "https://upload.wikimedia.org/wikipedia/en/4/40/Incredible_Hulk_1.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "x-men-1-cgc-9-0",
@@ -544,7 +555,8 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 7,
-    image: "https://upload.wikimedia.org/wikipedia/en/3/31/XMen1.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "avengers-1-cgc-8-5",
@@ -579,7 +591,8 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 9,
-    image: "https://upload.wikimedia.org/wikipedia/en/e/e8/Avengers_vol_1_1.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
   {
     slug: "tales-of-suspense-39-cgc-8-0",
@@ -613,7 +626,8 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 6,
-    image: "https://upload.wikimedia.org/wikipedia/en/f/ff/Tales_of_suspense_39.jpg",
+// image intentionally omitted — broken URL returns 404; gradient fallback renders.
+
   },
 ];
 
@@ -649,7 +663,14 @@ export const featuredProducts = products.filter((p) => p.featured);
 export const bestsellers = products.filter((p) => p.bestseller);
 
 /** All eras present in the current inventory, in display order. */
-export const eras: Era[] = ["Golden Age", "Silver Age"];
+const ALL_ERAS: readonly Era[] = [
+  "Golden Age",
+  "Silver Age",
+  "Bronze Age",
+  "Copper Age",
+  "Modern Age",
+];
+export const eras: Era[] = ALL_ERAS.filter((era) => products.some((p) => p.era === era));
 
 /** All CGC/CBCS/Raw grader labels present in the current inventory. */
 export const graders: Grader[] = Array.from(

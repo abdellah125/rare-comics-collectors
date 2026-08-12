@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
 
 import { StoreBrowser } from "@/components/store-browser";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
@@ -101,7 +103,9 @@ export default function StorePage() {
       </section>
 
       <Container className="py-10 lg:py-14">
-        <StoreBrowser products={allProducts} eras={[...eras]} publishers={publishers} graders={[...graders]} />
+        <Suspense>
+          <StoreBrowser products={allProducts} eras={[...eras]} publishers={publishers} graders={[...graders]} />
+        </Suspense>
       </Container>
 
       {/* SEO copy — real, useful context for the category page */}
@@ -153,7 +157,7 @@ export default function StorePage() {
               Orders ship double-boxed, signature-required and insured to full value, free within the US above $250.
               You have fourteen days from delivery to inspect any book and return it in its original holder for a full
               refund. Undisclosed restoration is refundable in full with no time limit under our{" "}
-              <a href="/policies/authenticity-guarantee">authenticity guarantee</a>.
+              <Link href="/policies/authenticity-guarantee">authenticity guarantee</Link>.
             </p>
           </div>
         </Container>

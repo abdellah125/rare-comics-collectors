@@ -6,7 +6,6 @@ import { useCart, type CartLine } from "@/components/cart-provider";
 import { CartIcon, CheckIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 import type { Product } from "@/lib/products";
-import type { Service } from "@/lib/services";
 // Import for internal use, re-export so callers can import from here as before
 import { productToLine, serviceToLine } from "@/lib/cart-lines";
 export { productToLine, serviceToLine };

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
+<defs>
+  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#1d4ed8"/><stop offset="1" stop-color="#dc2626"/>
+  </linearGradient>
+  <linearGradient id="hl" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="white" stop-opacity=".3"/><stop offset="0.45" stop-color="white" stop-opacity="0"/>
+    <stop offset="1" stop-color="black" stop-opacity=".5"/>
+  </linearGradient>
+  <pattern id="dots" width="9" height="9" patternUnits="userSpaceOnUse">
+    <circle cx="1.5" cy="1.5" r="1.2" fill="white" opacity=".7"/>
+  </pattern>
+</defs>
+<rect width="400" height="600" fill="url(#g)"/>
+<rect width="400" height="600" fill="url(#dots)" opacity=".22"/>
+<rect width="400" height="600" fill="url(#hl)"/>
+<circle cx="320" cy="110" r="150" fill="#9a1b1b" opacity=".5"/>
+<circle cx="60" cy="510" r="190" fill="#143797" opacity=".55"/>
+<rect x="24" y="24" width="352" height="552" rx="6" fill="none" stroke="white" stroke-opacity=".45" stroke-width="4"/>
+<text x="30" y="46" font-family="Arial Black, Arial" font-size="13" font-weight="900" letter-spacing="3" fill="white" opacity=".95">Marvel</text>
+<text x="30" y="62" font-family="Arial" font-size="9" letter-spacing="2" fill="white" opacity=".75">COMICS - GRADED - COLLECTORS</text>
+<text x="200" y="230" text-anchor="middle" font-family="Arial Black, Arial" font-size="42" font-weight="900" fill="white" stroke="#143797" stroke-width="1.5"><tspan x="200" dy="0">CIVIL</tspan><tspan x="200" dy="46">WAR</tspan></text>
+<text x="200" y="500" text-anchor="middle" font-family="Arial Black, Arial" font-size="72" font-weight="900" fill="white" stroke="#143797" stroke-width="2">10</text>
+<rect x="20" y="550" width="360" height="28" fill="#143797" rx="3"/>
+<text x="200" y="569" text-anchor="middle" font-family="Arial" font-size="13" font-weight="700" letter-spacing="4" fill="white">CIVIL WAR #10</text>
+</svg>

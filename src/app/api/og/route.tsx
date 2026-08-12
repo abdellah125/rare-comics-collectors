@@ -12,7 +12,7 @@ export function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const title = (searchParams.get("title") ?? site.name).slice(0, 110);
   const subtitle = (searchParams.get("subtitle") ?? site.tagline).slice(0, 140);
-  const badge = (searchParams.get("badge") ?? "VaultCollect").slice(0, 40);
+  const badge = (searchParams.get("badge") ?? site.name).slice(0, 40);
 
   return new ImageResponse(
     (
@@ -46,7 +46,7 @@ export function GET(request: NextRequest) {
             V
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 27, fontWeight: 700, letterSpacing: -0.5 }}>VaultCollect</span>
+            <span style={{ fontSize: 27, fontWeight: 700, letterSpacing: -0.5 }}>{site.name}</span>
             <span style={{ fontSize: 14, letterSpacing: 3, color: "#8491a8", textTransform: "uppercase" }}>
               Comics · Grading · Services
             </span>
@@ -87,7 +87,7 @@ export function GET(request: NextRequest) {
             color: "#8491a8",
           }}
         >
-          <span>vaultcollect.com</span>
+          <span>{site.url.replace(/^https?:\/\//, "")}</span>
           <span>
             {site.address.city}, {site.address.region} · {site.phoneDisplay}
           </span>

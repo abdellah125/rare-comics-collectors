@@ -72,6 +72,15 @@ export interface UserListing {
   id: string; sellerId: string; title: string; issue: string;
   publisher: string; year: number; grade: string; grader: string;
   price: number; description: string; createdAt: string;
+  /** data-URL of the user-uplo­aded cover photo (stored inline, not on disk). */
+  coverImage?: string;
+  /** Optional collector details */
+  keyIssue?: string;
+  writer?: string;
+  artist?: string;
+  certNumber?: string;
+  label?: string;
+  notes?: string;
 }
 
 const LISTINGS_KEY = "rcc_listings";

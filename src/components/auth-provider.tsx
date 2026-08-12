@@ -27,8 +27,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUser(getSession());
-    setLoading(false);
+    // Hydrate session from localStorage after mount (client-only storage).
+    const t = setTimeout(() => {
+      setUser(getSession());
+      setLoading(false);
+    }, 0);
+    return () => clearTimeout(t);
   }, []);
 
   const login = (email: string, password: string) => {

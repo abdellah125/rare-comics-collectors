@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // WordPress PHP plugins and their CommonJS Node tooling are not Next.js code.
+    "wordpress/**",
   ]),
 ]);
 

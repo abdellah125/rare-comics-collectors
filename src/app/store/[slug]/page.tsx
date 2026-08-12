@@ -8,7 +8,7 @@ import { ProductCard } from "@/components/product-card";
 import { Badge, Breadcrumbs, Container, Stars, ButtonLink, type Crumb } from "@/components/ui";
 import { CheckIcon, ShieldIcon, TruckIcon, SearchIcon } from "@/components/icons";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
-import { getProduct, products, relatedProducts } from "@/lib/products";
+import { getProduct, products } from "@/lib/products";
 import { catalog, getCatalogProduct } from "@/lib/catalog";
 import { formatPrice, formatPriceExact, schemaPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";

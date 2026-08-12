@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { SearchIcon, CloseIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
@@ -40,8 +41,16 @@ export function StoreBrowser({
   publishers: string[];
   graders: Grader[];
 }) {
-  const [query, setQuery] = useState("");
-  const [era, setEra] = useState<Era | "all">("all");
+  // Honour deep links like /store?q=… or /store?era=Golden+Age (used by the
+  // footer and advertised in the SearchAction structured data).
+  const searchParams = useSearchParams();
+  const paramQuery = searchParams.get("q") ?? "";
+  const paramEra = searchParams.get("era");
+  const initialEra: Era | "all" =
+    paramEra !== null && eras.includes(paramEra as Era) ? (paramEra as Era) : "all";
+
+  const [query, setQuery] = useState(paramQuery);
+  const [era, setEra] = useState<Era | "all">(initialEra);
   const [publisher, setPublisher] = useState<string | "all">("all");
   const [grader, setGrader] = useState<Grader | "all">("all");
   const [band, setBand] = useState<number | null>(null);

@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { Product } from "@/lib/products";
-
+import coverMap from "@/lib/gocovers-map.json";
 /**
  * Comic cover plate.
  * - Shows the real scan when `product.image` is set and loads successfully.
@@ -23,6 +23,11 @@ export function CoverArt({
   const [imgFailed, setImgFailed] = useState(false);
   const [from, to] = product.palette;
   const slabbed = product.grader !== "Raw";
+  // Prefer the best local raster cover if we have one (JPEG > WebP > SVG),
+  // otherwise the product's explicit image, otherwise the generated SVG.
+  const localBest = (coverMap as Record<string, string>)[product.slug] ?? null;
+  const fallbackSvg = `/covers/${product.slug}.svg`;
+  const src = imgFailed ? fallbackSvg : (localBest ?? product.image ?? fallbackSvg);
 
   return (
     <div
@@ -31,17 +36,17 @@ export function CoverArt({
       role="img"
       aria-label={`${product.title} ${product.issue} — ${product.publisher}, ${product.year}, ${product.grader} ${product.grade}`}
     >
-      {/* real cover scan — fills container; gradient above is the fallback */}
-      {product.image && !imgFailed && (
+      {/* cover art — remote scan if set and loads, otherwise the generated local SVG */}
+      {src && (
         <Image
-          src={product.image}
+          src={src}
           alt={`${product.title} ${product.issue} cover`}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
           className="object-cover"
           priority={priority}
           unoptimized
-          onError={() => setImgFailed(true)}
+          onError={() => { if (!imgFailed) setImgFailed(true); }}
         />
       )}
 
