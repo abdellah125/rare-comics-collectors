@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { CartView } from "@/components/cart-view";
 import { Breadcrumbs, Container, type Crumb } from "@/components/ui";
 import { pageMetadata } from "@/lib/seo";
+import { site } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
   title: "Your Cart",
-  description: "Review the graded comics and services in your VaultCollect cart before checkout.",
+  description: `Review the graded comics and services in your ${site.name} cart before checkout.`,
   path: "/cart",
   noIndex: true,
 });
@@ -21,7 +22,7 @@ export default function CartPage() {
       <Breadcrumbs items={crumbs} />
       <h1 className="mt-6 font-display text-3xl font-semibold text-ink-950 sm:text-4xl">Your cart</h1>
       <p className="mt-2 text-[15px] text-ink-600">
-        Items are held for 30 minutes. Single-copy books are first-come, first-served until checkout completes.
+        Adding a book to your cart doesn&apos;t reserve it — single-copy books go to whoever completes checkout first.
       </p>
       <div className="mt-10">
         <CartView />

@@ -26,6 +26,13 @@ function sh(s: string): string {
   return (h >>> 0).toString(36);
 }
 
+/** Strip the password hash before a record leaves this module. */
+function publicUser(u: AuthUser & { _pw: string }): AuthUser {
+  const { _pw, ...safe } = u;
+  void _pw;
+  return safe;
+}
+
 function stored(): (AuthUser & { _pw: string })[] {
   if (typeof window === "undefined") return [];
   try { return JSON.parse(localStorage.getItem(USERS_KEY) ?? "[]"); } catch { return []; }
@@ -42,7 +49,7 @@ export function register(name: string, email: string, password: string): AuthUse
   };
   localStorage.setItem(USERS_KEY, JSON.stringify([...stored(), u]));
   localStorage.setItem(SESSION_KEY, u.id);
-  const { _pw: _, ...safe } = u; return safe;
+  return publicUser(u);
 }
 
 export function login(email: string, password: string): AuthUser | null {
@@ -50,7 +57,7 @@ export function login(email: string, password: string): AuthUser | null {
   const u = all.find(x => x.email.toLowerCase() === email.toLowerCase() && x._pw === sh(password));
   if (!u) return null;
   localStorage.setItem(SESSION_KEY, u.id);
-  const { _pw: _, ...safe } = u; return safe;
+  return publicUser(u);
 }
 
 export function logout(): void {
@@ -64,7 +71,7 @@ export function getSession(): AuthUser | null {
   const all = [...stored(), ...DEMO];
   const u = all.find(x => x.id === id);
   if (!u) return null;
-  const { _pw: _, ...safe } = u; return safe;
+  return publicUser(u);
 }
 
 // User-submitted listings (saved to localStorage)

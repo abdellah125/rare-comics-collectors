@@ -10,7 +10,7 @@ export const metadata: Metadata = pageMetadata({
   title: `About ${site.name} — Comic Dealers & Graders Since ${site.founded}`,
   description: `${site.name} has bought, sold and graded collectible comics from ${site.address.city}, ${site.address.regionName} since ${site.founded}. Meet the graders, see how we price, and read the standards we hold ourselves to.`,
   path: "/about",
-  keywords: ["comic book dealer", "professional comic graders", `${site.address.city} comic store`, "about VaultCollect"],
+  keywords: ["comic book dealer", "professional comic graders", `${site.address.city} comic store`, `about ${site.name}`],
 });
 
 const crumbs: Crumb[] = [
@@ -60,7 +60,7 @@ const timeline = [
   { year: "2017", title: "Authorised submission centre", body: "Approved for dealer-rate submission with CGC, and with CBCS the following year." },
   { year: "2019", title: "Detection lab", body: "Noor joined and built the UV and dimensional analysis protocol we still use." },
   { year: "2022", title: "The vault", body: "Moved to Congress Avenue with a climate-controlled, fire-suppressed vault and a $60M policy." },
-  { year: "2026", title: "180,000 books later", body: "Still the same standard: tell the client the truth, even when it costs us the sale." },
+  { year: "2026", title: "200,000 books later", body: "Still the same standard: tell the client the truth, even when it costs us the sale." },
 ];
 
 export default function AboutPage() {

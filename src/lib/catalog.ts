@@ -1,4 +1,4 @@
-import type { Era, Grader, Product } from "./products";
+import { products, type Era, type Grader, type Product } from "./products";
 
 // ─── types ───────────────────────────────────────────────────────────────────
 export interface Seller { id: string; name: string; joinedAt: string; rating: number; salesCount: number; }
@@ -174,6 +174,10 @@ const GRADES: Record<Era, string[]> = {
 };
 const GRADER_POOL: Grader[] = ["CGC","CGC","CGC","CGC","CBCS","CBCS","Raw","Raw","Raw"];
 
+// Fixed anchor for generated feedback dates so the catalog is identical on every
+// build and in every bundle (a Date.now() here would differ between server and client).
+const FEEDBACK_ANCHOR = Date.UTC(2026, 8, 1);
+
 // ─── deterministic RNG (xorshift32) ──────────────────────────────────────────
 function xr(seed: number) {
   let s = (seed | 1) >>> 0;
@@ -213,7 +217,7 @@ function makeProduct(idx: number): CatalogProduct {
       from: pick(fr, BUYERS),
       rating: fr() > 0.18 ? 5 : 4,
       comment: pick(fr, FC),
-      date: new Date(Date.now() - fr() * 730 * 86400000).toISOString().slice(0, 10),
+      date: new Date(FEEDBACK_ANCHOR - fr() * 730 * 86400000).toISOString().slice(0, 10),
     };
   });
 
@@ -255,4 +259,12 @@ export function getCatalogProduct(slug: string): CatalogProduct | undefined {
 }
 
 export const catalogBySeller = (sellerId: string) => catalog.filter((p) => p.sellerId === sellerId);
+
+/** Every purchasable listing: the hand-written featured books first, then the generated catalog. */
+export const allListings: Product[] = [...products, ...catalog];
+export const inventoryCount = allListings.length;
+
+export function getListing(slug: string): Product | undefined {
+  return allListings.find((p) => p.slug === slug);
+}
 

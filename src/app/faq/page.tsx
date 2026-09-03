@@ -3,8 +3,11 @@ import type { Metadata } from "next";
 
 import { Breadcrumbs, ButtonLink, Container, Section, SectionHeading, type Crumb } from "@/components/ui";
 import { JsonLd, breadcrumbJsonLd, faqJsonLd } from "@/components/json-ld";
+import { inventoryCount } from "@/lib/catalog";
 import { pageMetadata } from "@/lib/seo";
 import { fullAddress, site } from "@/lib/site";
+
+const roundedInventory = (Math.floor(inventoryCount / 100) * 100).toLocaleString("en-US");
 
 export const metadata: Metadata = pageMetadata({
   title: "Frequently Asked Questions",
@@ -36,7 +39,7 @@ const groups: Group[] = [
       },
       {
         q: "What is the difference between Buy Now and Add to Cart?",
-        a: "Add to Cart holds the book in your basket so you can keep browsing and check out with several items at once. Buy Now reserves the book and takes you straight to checkout, skipping the basket — useful for keys where stock is a single copy.",
+        a: "Add to Cart holds the book in your basket so you can keep browsing and check out with several items at once. Buy Now takes you straight to checkout, skipping the basket — the fastest route for keys where stock is a single copy. Either way, the book is only committed to you once payment completes.",
       },
       {
         q: "Is a book reserved once it is in my cart?",
@@ -48,7 +51,7 @@ const groups: Group[] = [
       },
       {
         q: "Which payment methods do you accept?",
-        a: "All major cards, Apple Pay and Google Pay at checkout, plus bank wire for orders above $5,000. Layaway is available on books over $2,500 across three monthly payments with a 25% deposit.",
+        a: "All major cards and PayPal at checkout, plus bank wire or ACH on orders above $5,000. Payment plans are available on books over $2,500 across three monthly payments with a 25% deposit — ask us before you order.",
       },
     ],
   },
@@ -62,7 +65,7 @@ const groups: Group[] = [
       },
       {
         q: "How long does grading take?",
-        a: "Turnaround depends on the tier you choose and the grader's current queue. Economy tiers typically run 45 to 70 business days; express tiers run 10 to 20. We publish the current queue on the grading service page and update it weekly, and every stage is visible on your submission tracker.",
+        a: "Turnaround depends on the tier you choose and the grader's current queue. End to end, most submissions take 18 to 45 business days, with express tiers at the low end of that range. We publish the current queue on the grading service page and update it weekly, and every stage is visible on your submission tracker.",
       },
       {
         q: "Why submit through you rather than direct?",
@@ -208,7 +211,7 @@ export default function FaqPage() {
         <SectionHeading
           eyebrow="Ready when you are"
           title="Browse the vault or start a submission"
-          lead="Over four hundred graded books in stock, and a grading desk that pre-screens every submission before a cent is spent."
+          lead={`Over ${roundedInventory} graded and raw books in stock, and a grading desk that pre-screens every submission before a cent is spent.`}
           align="center"
         />
         <div className="mt-8 flex flex-wrap justify-center gap-3">

@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { SearchIcon, CloseIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
-import type { Era, Grader, Product } from "@/lib/products";
+import type { Era, Grader, ProductSummary } from "@/lib/products";
 
 type SortKey = "featured" | "price-asc" | "price-desc" | "year-asc" | "year-desc" | "grade-desc";
 
@@ -25,31 +24,39 @@ const PRICE_BANDS = [
   { label: "$10,000+", min: 1_000_000, max: Number.POSITIVE_INFINITY },
 ];
 
-function gradeValue(p: Product) {
+/** Cards rendered per "Show more" step — keeps the initial DOM and image count sane for 1,500+ listings. */
+const PAGE_SIZE = 24;
+
+const fmt = (n: number) => n.toLocaleString("en-US");
+
+function gradeValue(p: ProductSummary) {
   const n = Number.parseFloat(p.grade.replace(/[^\d.]/g, ""));
   return Number.isFinite(n) ? n : 0;
 }
 
+type BrowserProps = {
+  products: ProductSummary[];
+  eras: Era[];
+  publishers: string[];
+  graders: Grader[];
+};
+
+/**
+ * Filterable, paginated inventory grid. Deep links like /store?q=… or
+ * /store?era=Golden+Age (used by the footer and advertised in the SearchAction
+ * structured data) are read by the store page on the server and passed in as
+ * initial state; the page re-keys this component so following a new deep link
+ * while already on /store starts fresh.
+ */
 export function StoreBrowser({
   products,
   eras,
   publishers,
   graders,
-}: {
-  products: Product[];
-  eras: Era[];
-  publishers: string[];
-  graders: Grader[];
-}) {
-  // Honour deep links like /store?q=… or /store?era=Golden+Age (used by the
-  // footer and advertised in the SearchAction structured data).
-  const searchParams = useSearchParams();
-  const paramQuery = searchParams.get("q") ?? "";
-  const paramEra = searchParams.get("era");
-  const initialEra: Era | "all" =
-    paramEra !== null && eras.includes(paramEra as Era) ? (paramEra as Era) : "all";
-
-  const [query, setQuery] = useState(paramQuery);
+  initialQuery = "",
+  initialEra = "all",
+}: BrowserProps & { initialQuery?: string; initialEra?: Era | "all" }) {
+  const [query, setQuery] = useState(initialQuery);
   const [era, setEra] = useState<Era | "all">(initialEra);
   const [publisher, setPublisher] = useState<string | "all">("all");
   const [grader, setGrader] = useState<Grader | "all">("all");
@@ -57,50 +64,63 @@ export function StoreBrowser({
   const [keysOnly, setKeysOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("featured");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // How many cards to show, remembered against the filter set that produced it
+  // so any change to the filters naturally drops back to the first page.
+  const [limitFor, setLimitFor] = useState<{ key: string; limit: number } | null>(null);
+
+  // Build the search text once per product instead of on every keystroke.
+  const indexed = useMemo(
+    () =>
+      products.map((p) => ({
+        p,
+        text: `${p.title} ${p.issue} ${p.publisher} ${p.era} ${p.grader} ${p.grade} ${p.keyIssue ?? ""} ${p.creators.writer} ${p.creators.artist}`.toLowerCase(),
+      })),
+    [products],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = products.filter((p) => {
-      if (era !== "all" && p.era !== era) return false;
-      if (publisher !== "all" && p.publisher !== publisher) return false;
-      if (grader !== "all" && p.grader !== grader) return false;
-      if (keysOnly && !p.keyIssue) return false;
-      if (band !== null) {
-        const b = PRICE_BANDS[band];
-        if (p.price < b.min || p.price >= b.max) return false;
-      }
-      if (q) {
-        const haystack =
-          `${p.title} ${p.issue} ${p.publisher} ${p.era} ${p.grader} ${p.grade} ${p.keyIssue ?? ""} ${p.creators.writer} ${p.creators.artist}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
-    });
+    const priceBand = band !== null ? PRICE_BANDS[band] : null;
+    const list: ProductSummary[] = [];
+    for (const { p, text } of indexed) {
+      if (era !== "all" && p.era !== era) continue;
+      if (publisher !== "all" && p.publisher !== publisher) continue;
+      if (grader !== "all" && p.grader !== grader) continue;
+      if (keysOnly && !p.keyIssue) continue;
+      if (priceBand && (p.price < priceBand.min || p.price >= priceBand.max)) continue;
+      if (q && !text.includes(q)) continue;
+      list.push(p);
+    }
 
-    const sorted = [...list];
     switch (sort) {
       case "price-asc":
-        sorted.sort((a, b) => a.price - b.price);
+        list.sort((a, b) => a.price - b.price);
         break;
       case "price-desc":
-        sorted.sort((a, b) => b.price - a.price);
+        list.sort((a, b) => b.price - a.price);
         break;
       case "year-asc":
-        sorted.sort((a, b) => a.year - b.year);
+        list.sort((a, b) => a.year - b.year);
         break;
       case "year-desc":
-        sorted.sort((a, b) => b.year - a.year);
+        list.sort((a, b) => b.year - a.year);
         break;
       case "grade-desc":
-        sorted.sort((a, b) => gradeValue(b) - gradeValue(a));
+        list.sort((a, b) => gradeValue(b) - gradeValue(a));
         break;
       default:
-        sorted.sort(
+        list.sort(
           (a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)) || b.reviewCount - a.reviewCount,
         );
     }
-    return sorted;
-  }, [products, query, era, publisher, grader, band, keysOnly, sort]);
+    return list;
+  }, [indexed, query, era, publisher, grader, band, keysOnly, sort]);
+
+  const filterKey = [query, era, publisher, grader, band, keysOnly, sort].join("|");
+  const limit = limitFor?.key === filterKey ? limitFor.limit : PAGE_SIZE;
+  const visible = filtered.slice(0, limit);
+  const remaining = filtered.length - visible.length;
+  const showMore = () => setLimitFor({ key: filterKey, limit: limit + PAGE_SIZE });
 
   const activeCount =
     (era !== "all" ? 1 : 0) +
@@ -131,11 +151,11 @@ export function StoreBrowser({
       <div>
         <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Age / era</h3>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className={chip(era === "all")} onClick={() => setEra("all")}>
+          <button type="button" className={chip(era === "all")} aria-pressed={era === "all"} onClick={() => setEra("all")}>
             All eras
           </button>
           {eras.map((e) => (
-            <button key={e} type="button" className={chip(era === e)} onClick={() => setEra(e)}>
+            <button key={e} type="button" className={chip(era === e)} aria-pressed={era === e} onClick={() => setEra(e)}>
               {e}
             </button>
           ))}
@@ -145,11 +165,22 @@ export function StoreBrowser({
       <div>
         <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Publisher</h3>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className={chip(publisher === "all")} onClick={() => setPublisher("all")}>
+          <button
+            type="button"
+            className={chip(publisher === "all")}
+            aria-pressed={publisher === "all"}
+            onClick={() => setPublisher("all")}
+          >
             All publishers
           </button>
           {publishers.map((pub) => (
-            <button key={pub} type="button" className={chip(publisher === pub)} onClick={() => setPublisher(pub)}>
+            <button
+              key={pub}
+              type="button"
+              className={chip(publisher === pub)}
+              aria-pressed={publisher === pub}
+              onClick={() => setPublisher(pub)}
+            >
               {pub}
             </button>
           ))}
@@ -159,11 +190,11 @@ export function StoreBrowser({
       <div>
         <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Grading</h3>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className={chip(grader === "all")} onClick={() => setGrader("all")}>
+          <button type="button" className={chip(grader === "all")} aria-pressed={grader === "all"} onClick={() => setGrader("all")}>
             Any
           </button>
           {graders.map((g) => (
-            <button key={g} type="button" className={chip(grader === g)} onClick={() => setGrader(g)}>
+            <button key={g} type="button" className={chip(grader === g)} aria-pressed={grader === g} onClick={() => setGrader(g)}>
               {g === "Raw" ? "Raw (unslabbed)" : g}
             </button>
           ))}
@@ -173,11 +204,11 @@ export function StoreBrowser({
       <div>
         <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Price</h3>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className={chip(band === null)} onClick={() => setBand(null)}>
+          <button type="button" className={chip(band === null)} aria-pressed={band === null} onClick={() => setBand(null)}>
             Any price
           </button>
           {PRICE_BANDS.map((b, i) => (
-            <button key={b.label} type="button" className={chip(band === i)} onClick={() => setBand(i)}>
+            <button key={b.label} type="button" className={chip(band === i)} aria-pressed={band === i} onClick={() => setBand(i)}>
               {b.label}
             </button>
           ))}
@@ -237,6 +268,7 @@ export function StoreBrowser({
             onClick={() => setFiltersOpen((o) => !o)}
             className={`${buttonStyles.outline} ${buttonSizes.md} lg:hidden`}
             aria-expanded={filtersOpen}
+            aria-controls="mobile-filters"
           >
             Filters{activeCount > 0 ? ` (${activeCount})` : ""}
           </button>
@@ -259,11 +291,15 @@ export function StoreBrowser({
         </div>
 
         {filtersOpen && (
-          <div className="mt-5 rounded-xl border border-ink-200 bg-ink-50 p-5 lg:hidden">{filterPanel}</div>
+          <div id="mobile-filters" className="mt-5 rounded-xl border border-ink-200 bg-ink-50 p-5 lg:hidden">
+            <h2 className="sr-only">Filter inventory</h2>
+            {filterPanel}
+          </div>
         )}
 
         <p className="mt-5 text-sm text-ink-500" aria-live="polite">
-          Showing <span className="font-semibold text-ink-900">{filtered.length}</span> of {products.length} listings
+          Showing <span className="font-semibold text-ink-900">{fmt(visible.length)}</span> of {fmt(filtered.length)}{" "}
+          {activeCount > 0 ? "matching listings" : "listings"}
           {activeCount > 0 && (
             <>
               {" · "}
@@ -286,11 +322,23 @@ export function StoreBrowser({
             </button>
           </div>
         ) : (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((p, i) => (
-              <ProductCard key={p.slug} product={p} priority={i < 3} />
-            ))}
-          </div>
+          <>
+            <h2 className="sr-only">Listings</h2>
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {visible.map((p, i) => (
+                <ProductCard key={p.slug} product={p} priority={i < 3} />
+              ))}
+            </div>
+
+            {remaining > 0 && (
+              <div className="mt-10 flex flex-col items-center gap-2.5">
+                <button type="button" onClick={showMore} className={`${buttonStyles.outline} ${buttonSizes.md}`}>
+                  Show {Math.min(PAGE_SIZE, remaining)} more
+                </button>
+                <p className="text-[13px] text-ink-500">{fmt(remaining)} more to load</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

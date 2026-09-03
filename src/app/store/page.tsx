@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 
 import { StoreBrowser } from "@/components/store-browser";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
-import { eras, graders, products, publishers } from "@/lib/products";
-import { catalog } from "@/lib/catalog";
-import { schemaPrice } from "@/lib/format";
+import { eras, graders, products, publishers, toProductSummary, type Era } from "@/lib/products";
+import { allListings, inventoryCount } from "@/lib/catalog";
+import { formatPrice, schemaPrice } from "@/lib/format";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/pricing";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 
@@ -31,9 +31,18 @@ const crumbs: Crumb[] = [
   { name: "Store", href: "/store" },
 ];
 
-export default function StorePage() {
-  const allProducts = [...products, ...catalog];
-  const prices = allProducts.map((p) => p.price);
+export default async function StorePage({ searchParams }: PageProps<"/store">) {
+  // Deep links like /store?q=… or /store?era=Golden+Age (footer links, SearchAction
+  // structured data) are read on the server so the first page of results is in
+  // the HTML rather than rendered client-side after hydration.
+  const sp = await searchParams;
+  const initialQuery = typeof sp.q === "string" ? sp.q : "";
+  const eraParam = typeof sp.era === "string" ? sp.era : null;
+  const initialEra: Era | "all" = eraParam !== null && eras.includes(eraParam as Era) ? (eraParam as Era) : "all";
+
+  // Only the fields the grid needs cross the server/client boundary.
+  const summaries = allListings.map(toProductSummary);
+  const lowestPrice = Math.min(...allListings.map((p) => p.price));
 
   const collectionJsonLd = {
     "@context": "https://schema.org",
@@ -45,8 +54,8 @@ export default function StorePage() {
     isPartOf: { "@id": `${site.url}/#website` },
     mainEntity: {
       "@type": "OfferCatalog",
-      name: "VaultCollect comic inventory",
-      numberOfItems: allProducts.length,
+      name: `${site.name} comic inventory`,
+      numberOfItems: inventoryCount,
       itemListElement: products.map((p, i) => ({
         "@type": "ListItem",
         position: i + 1,
@@ -78,16 +87,15 @@ export default function StorePage() {
           <Breadcrumbs items={crumbs} />
           <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
             <SectionHeading
-              eyebrow={`${allProducts.length} listings in the vault`}
+              as="h1"
+              eyebrow={`${inventoryCount.toLocaleString("en-US")} listings in the vault`}
               title="Graded comics for sale"
               lead="Every slab is cert-verified against the grader's census before listing, and every raw book is graded in-house with its defects photographed and disclosed. Buy now to check out immediately, or add to cart and keep browsing."
             />
             <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
               <div>
                 <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">From</dt>
-                <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">
-                  ${(Math.min(...prices) / 100).toLocaleString("en-US")}
-                </dd>
+                <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">{formatPrice(lowestPrice)}</dd>
               </div>
               <div>
                 <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Eras</dt>
@@ -95,7 +103,9 @@ export default function StorePage() {
               </div>
               <div>
                 <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Free shipping</dt>
-                <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">$250+</dd>
+                <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">
+                  {formatPrice(FREE_SHIPPING_THRESHOLD)}+
+                </dd>
               </div>
             </dl>
           </div>
@@ -103,9 +113,16 @@ export default function StorePage() {
       </section>
 
       <Container className="py-10 lg:py-14">
-        <Suspense>
-          <StoreBrowser products={allProducts} eras={[...eras]} publishers={publishers} graders={[...graders]} />
-        </Suspense>
+        {/* Keyed on the deep-link params so following a new link while on /store resets the filters. */}
+        <StoreBrowser
+          key={`${initialQuery} ${initialEra}`}
+          products={summaries}
+          eras={[...eras]}
+          publishers={publishers}
+          graders={[...graders]}
+          initialQuery={initialQuery}
+          initialEra={initialEra}
+        />
       </Container>
 
       {/* SEO copy — real, useful context for the category page */}

@@ -63,11 +63,13 @@ export const metadata: Metadata = {
     title: `${site.name} — Graded Comics, Grading & Collector Services`,
     description: site.description,
     locale: site.locale,
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: site.name }],
   },
   twitter: {
     card: "summary_large_image",
     site: site.twitter,
     creator: site.twitter,
+    images: ["/api/og"],
   },
   robots: {
     index: true,
@@ -81,7 +83,11 @@ export const metadata: Metadata = {
     },
   },
   formatDetection: { telephone: true, address: true, email: true },
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    // iOS ignores SVG touch icons, so serve a rasterised one.
+    apple: [{ url: "/api/icon?size=180", sizes: "180x180", type: "image/png" }],
+  },
   manifest: "/manifest.webmanifest",
 };
 

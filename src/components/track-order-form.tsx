@@ -19,7 +19,7 @@ const ORDER_STAGES: Stage[] = [
 
 const SUBMISSION_STAGES: Stage[] = [
   { name: "Received at vault", detail: "Signed for and scheduled on our insurance policy.", done: true },
-  { name: "Pre-screened", detail: "Grade estimate and press candidacy assessed by a VaultCollect grader.", done: true },
+  { name: "Pre-screened", detail: `Grade estimate and press candidacy assessed by a ${site.name} grader.`, done: true },
   { name: "Approved by you", detail: "Per-book recommendations accepted; tier and declared value locked.", done: true },
   { name: "Pressed", detail: "Humidity-controlled press cycle complete.", done: true, current: true },
   { name: "Submitted to grader", detail: "Shipped in a consolidated dealer submission.", done: false },
@@ -38,15 +38,15 @@ export function TrackOrderForm() {
     setError(null);
     setLoading(true);
 
-    // Demo lookup: VC-… is an order, SUB-… is a grading submission.
+    // Demo lookup: RCC-… is an order, SUB-… is a grading submission.
     window.setTimeout(() => {
       setLoading(false);
-      if (/^VC-/.test(ref)) setResult({ ref, kind: "order" });
+      if (/^RCC-/.test(ref)) setResult({ ref, kind: "order" });
       else if (/^SUB-/.test(ref)) setResult({ ref, kind: "submission" });
       else {
         setResult(null);
         setError(
-          "We couldn't find that reference. Order numbers start with VC- and submission numbers start with SUB-. Check your confirmation email, or contact support and we'll look it up.",
+          "We couldn't find that reference. Order numbers start with RCC- and submission numbers start with SUB-. Check your confirmation email, or contact support and we'll look it up.",
         );
       }
     }, 600);
@@ -67,8 +67,8 @@ export function TrackOrderForm() {
               label="Order or submission number"
               name="reference"
               required
-              placeholder="VC-2026-482910"
-              hint="Orders start with VC-. Grading submissions start with SUB-."
+              placeholder="RCC-2026-482910"
+              hint="Orders start with RCC-. Grading submissions start with SUB-."
             />
             <TextField label="Email on the order" name="email" type="email" required autoComplete="email" />
             <button type="submit" disabled={loading} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
@@ -90,7 +90,7 @@ export function TrackOrderForm() {
             to see every order and submission without a reference number.
           </p>
           <p className="mt-3 text-xs leading-relaxed text-ink-500">
-            <strong className="text-ink-900">Demo lookup.</strong> Any reference starting with VC- or SUB- returns
+            <strong className="text-ink-900">Demo lookup.</strong> Any reference starting with RCC- or SUB- returns
             sample tracking data. Connect your order database or 3PL feed before launch.
           </p>
         </div>
@@ -125,13 +125,13 @@ export function TrackOrderForm() {
                   </span>
                   <p
                     className={`font-display text-[17px] font-semibold ${
-                      s.current ? "text-brand-700" : s.done ? "text-ink-950" : "text-ink-400"
+                      s.current ? "text-brand-700" : s.done ? "text-ink-950" : "text-ink-500"
                     }`}
                   >
                     {s.name}
                     {s.current && <span className="ml-2 text-xs font-medium uppercase tracking-wide">Current</span>}
                   </p>
-                  <p className={`mt-1 text-[14px] leading-relaxed ${s.done ? "text-ink-600" : "text-ink-400"}`}>
+                  <p className={`mt-1 text-[14px] leading-relaxed ${s.done ? "text-ink-600" : "text-ink-500"}`}>
                     {s.detail}
                   </p>
                 </li>
@@ -154,7 +154,7 @@ export function TrackOrderForm() {
             </span>
             <h2 className="mt-5 font-display text-xl font-semibold text-ink-950">Enter a reference to begin</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-600">
-              Orders and grading submissions both track here. Try <span className="font-mono">VC-2026-482910</span> or{" "}
+              Orders and grading submissions both track here. Try <span className="font-mono">RCC-2026-482910</span> or{" "}
               <span className="font-mono">SUB-2026-1174</span> to see how it works.
             </p>
           </div>

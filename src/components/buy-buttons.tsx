@@ -1,14 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useCart, type CartLine } from "@/components/cart-provider";
 import { CartIcon, CheckIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
-import type { Product } from "@/lib/products";
-// Import for internal use, re-export so callers can import from here as before
-import { productToLine, serviceToLine } from "@/lib/cart-lines";
-export { productToLine, serviceToLine };
+import type { ProductSummary } from "@/lib/products";
+import { productToLine } from "@/lib/cart-lines";
 
 /* ------------------------------------------------------------------------ */
 
@@ -31,6 +29,9 @@ export function AddToCartButton({
 }) {
   const { add } = useCart();
   const [added, setAdded] = useState(false);
+  const resetTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(resetTimer.current), []);
 
   return (
     <button
@@ -39,10 +40,11 @@ export function AddToCartButton({
       onClick={() => {
         add(line, qty);
         setAdded(true);
-        window.setTimeout(() => setAdded(false), 1600);
+        window.clearTimeout(resetTimer.current);
+        resetTimer.current = window.setTimeout(() => setAdded(false), 1600);
       }}
       className={`${buttonStyles[variant]} ${buttonSizes[size]} ${className}`}
-      aria-label={`${label} — ${line.name}`}
+      aria-label={`${added ? "Added to cart" : label} — ${line.name}`}
     >
       {added ? <CheckIcon className="h-4 w-4" /> : <CartIcon className="h-4 w-4" />}
       {added ? "Added" : label}
@@ -89,7 +91,7 @@ export function BuyNowButton({
 }
 
 /** Quantity stepper + Buy Now + Add to Cart, used on the product detail page. */
-export function PurchasePanel({ product }: { product: Product }) {
+export function PurchasePanel({ product }: { product: ProductSummary }) {
   const [qty, setQty] = useState(1);
   const line = productToLine(product);
   const soldOut = product.stock <= 0;

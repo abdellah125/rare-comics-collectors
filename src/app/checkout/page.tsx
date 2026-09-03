@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { CheckoutView } from "@/components/checkout-view";
 import { Breadcrumbs, Container, type Crumb } from "@/components/ui";
 import { pageMetadata } from "@/lib/seo";
+import { site } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
   title: "Secure Checkout",
-  description: "Complete your VaultCollect order securely.",
+  description: `Complete your ${site.name} order securely.`,
   path: "/checkout",
   noIndex: true,
 });

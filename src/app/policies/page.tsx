@@ -117,7 +117,7 @@ export default function PoliciesPage() {
                     {p.title}
                   </Link>
                 </h3>
-                <span className="shrink-0 font-mono text-[11px] text-ink-400">
+                <span className="shrink-0 font-mono text-[11px] text-ink-500" aria-hidden>
                   {String(i + 1).padStart(2, "0")}
                 </span>
               </div>

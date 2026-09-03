@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/logo";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
@@ -18,10 +18,14 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close the mobile menu whenever the route changes.
+  // Close any open menu whenever the route changes.
   useEffect(() => {
-    const t = setTimeout(() => setMenuOpen(false), 0);
+    const t = setTimeout(() => {
+      setMenuOpen(false);
+      setDropdownOpen(false);
+    }, 0);
     return () => clearTimeout(t);
   }, [pathname]);
 
@@ -32,15 +36,41 @@ export function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Escape closes whichever menu is open; clicking outside closes the account menu.
+  useEffect(() => {
+    if (!menuOpen && !dropdownOpen) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setDropdownOpen(false);
+      }
+    };
+    const onPointerDown = (e: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) setDropdownOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [menuOpen, dropdownOpen]);
+
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  const signOut = () => {
+    logout();
+    setDropdownOpen(false);
+    setMenuOpen(false);
+  };
 
   return (
     <>
       {/* Utility bar — also a secondary NAP signal for local SEO */}
-      <div className="hidden bg-ink-950 text-ink-300 lg:block">
+      <section aria-label="Shipping notice and contact details" className="hidden bg-ink-950 text-ink-300 lg:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-2 text-[12px]">
           <p className="flex items-center gap-2">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-400" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-400" aria-hidden />
             Free insured shipping on US orders over $250 · Every book authenticity-guaranteed
           </p>
           <div className="flex items-center gap-5">
@@ -54,15 +84,15 @@ export function Header() {
             </a>
           </div>
         </div>
-      </div>
+      </section>
 
       <header
         className={`sticky top-0 z-50 border-b bg-white/92 backdrop-blur-md transition-shadow ${
           scrolled ? "border-ink-200 shadow-plate" : "border-transparent"
         }`}
       >
-        <div className="mx-auto flex h-[68px] max-w-7xl items-center gap-4 px-5 sm:px-8">
-          <Logo />
+        <div className="mx-auto flex h-[68px] max-w-7xl items-center gap-3 px-4 sm:gap-4 sm:px-8">
+          <Logo className="min-w-0" />
 
           <nav aria-label="Primary" className="ml-6 hidden lg:block">
             <ul className="flex items-center gap-1">
@@ -85,30 +115,37 @@ export function Header() {
             </ul>
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
-            <Link href="/services/appraisal-and-valuation" className={`${buttonStyles.dark} ${buttonSizes.sm} hidden sm:inline-flex`}>
-              Free appraisal
-            </Link>
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+            {/* Wrapped so `hidden` never competes with the button's own display utility. */}
+            <div className="hidden sm:block">
+              <Link href="/services/appraisal-and-valuation" className={`${buttonStyles.dark} ${buttonSizes.sm}`}>
+                Free appraisal
+              </Link>
+            </div>
 
             {user ? (
-              <div className="relative">
+              <div className="relative" ref={accountMenuRef}>
                 <button
                   type="button"
                   onClick={() => setDropdownOpen((o) => !o)}
                   className="grid h-9 w-9 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white hover:bg-brand-700"
-                  aria-label="User menu"
+                  aria-label={`Account menu for ${user.name}`}
                   aria-expanded={dropdownOpen}
+                  aria-controls="account-menu"
                 >
                   {user.name.slice(0, 2).toUpperCase()}
                 </button>
                 {dropdownOpen && (
-                  <div className="absolute right-0 top-11 z-50 w-48 rounded-xl border border-ink-200 bg-white py-1 shadow-lg">
+                  <div
+                    id="account-menu"
+                    className="absolute right-0 top-11 z-50 w-48 rounded-xl border border-ink-200 bg-white py-1 shadow-lg"
+                  >
                     <p className="truncate px-4 py-2 text-xs font-medium text-ink-500">{user.name}</p>
                     <hr className="my-1 border-ink-100" />
                     <Link href="/dashboard" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">Dashboard</Link>
                     <Link href="/dashboard/listings/new" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">+ New listing</Link>
                     <hr className="my-1 border-ink-100" />
-                    <button type="button" onClick={() => { logout(); setDropdownOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">Sign out</button>
+                    <button type="button" onClick={signOut} className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">Sign out</button>
                   </div>
                 )}
               </div>
@@ -156,6 +193,7 @@ export function Header() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-current={isActive(item.href) ? "page" : undefined}
                     className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-[15px] font-medium ${
                       isActive(item.href) ? "bg-brand-50 text-brand-800" : "text-ink-800 hover:bg-ink-100"
                     }`}
@@ -185,7 +223,7 @@ export function Header() {
                     </Link>
                     <button
                       type="button"
-                      onClick={logout}
+                      onClick={signOut}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 font-medium text-red-600 hover:bg-red-50"
                     >
                       Sign out

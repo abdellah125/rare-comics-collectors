@@ -50,8 +50,9 @@ function AuthShell({
             ))}
           </ul>
           <p className="mt-5 border-t border-ink-200 pt-4 text-xs leading-relaxed text-ink-500">
-            <strong className="text-ink-900">Demo only.</strong> Authentication is not connected — no credentials are
-            stored or checked. Wire this to NextAuth, Clerk, Supabase or your own backend before launch.
+            <strong className="text-ink-900">Demo only.</strong> Accounts live in this browser&apos;s local storage —
+            nothing is sent to a server, so don&apos;t use a real password. Wire this to NextAuth, Clerk, Supabase or
+            your own backend before launch.
           </p>
         </div>
       </aside>

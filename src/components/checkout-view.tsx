@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useCart } from "@/components/cart-provider";
+import { CartThumb } from "@/components/cart-thumb";
 import { SelectField, TextField } from "@/components/form-fields";
 import { CheckIcon, ShieldIcon, TruckIcon, CartIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 import { formatPriceExact } from "@/lib/format";
+import { EXPRESS_SHIPPING, TAX_LABEL, estimateShipping, estimateTax } from "@/lib/pricing";
 import { site } from "@/lib/site";
-
-const FREE_SHIPPING_THRESHOLD = 25_000;
-const FLAT_SHIPPING = 1_495;
-const EXPRESS_SHIPPING = 3_995;
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA",
@@ -21,7 +19,7 @@ const US_STATES = [
 
 function makeOrderNumber() {
   const n = Math.floor(100_000 + Math.random() * 900_000);
-  return `VC-2026-${n}`;
+  return `RCC-${new Date().getFullYear()}-${n}`;
 }
 
 export function CheckoutView() {
@@ -101,9 +99,9 @@ export function CheckoutView() {
   }
 
   const hasPhysical = lines.some((l) => l.kind === "comic");
-  const baseShipping = !hasPhysical || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING;
+  const baseShipping = estimateShipping(subtotal, hasPhysical);
   const shipping = !hasPhysical ? 0 : shippingSpeed === "express" ? EXPRESS_SHIPPING : baseShipping;
-  const tax = Math.round(subtotal * 0.0825);
+  const tax = estimateTax(subtotal);
   const total = subtotal + shipping + tax;
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -122,7 +120,7 @@ export function CheckoutView() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+    <form onSubmit={onSubmit} className="grid gap-10 lg:grid-cols-12 lg:gap-12" aria-busy={submitting}>
       <div className="lg:col-span-7">
         <div className="rounded-xl border border-ink-200 bg-white p-6">
           <h2 className="font-display text-xl font-semibold text-ink-950">Contact</h2>
@@ -135,7 +133,7 @@ export function CheckoutView() {
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <TextField label="Email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" />
-            <TextField label="Phone" name="phone" type="tel" autoComplete="tel" placeholder="(512) 555-0184" />
+            <TextField label="Phone" name="phone" type="tel" autoComplete="tel" placeholder="(555) 555-0100" />
           </div>
         </div>
 
@@ -211,7 +209,7 @@ export function CheckoutView() {
             {[
               { id: "card" as const, name: "Credit or debit card", note: "Visa, Mastercard, Amex, Discover." },
               { id: "paypal" as const, name: "PayPal", note: "You'll be redirected to approve the payment." },
-              { id: "wire" as const, name: "Bank wire / ACH", note: "Preferred on orders over $10,000. Invoice sent within one business day." },
+              { id: "wire" as const, name: "Bank wire / ACH", note: "Available on orders over $5,000. Invoice sent within one business day; goods ship on cleared funds." },
             ].map((opt) => (
               <label
                 key={opt.id}
@@ -268,15 +266,7 @@ export function CheckoutView() {
             <ul className="mt-5 grid gap-4">
               {lines.map((line) => (
                 <li key={line.id} className="flex items-start gap-3">
-                  <span
-                    className="h-16 w-11 shrink-0 rounded ring-1 ring-ink-950/10"
-                    style={{
-                      background: line.palette
-                        ? `linear-gradient(150deg, ${line.palette[0]}, ${line.palette[1]})`
-                        : "linear-gradient(150deg,#1c2130,#4e5a72)",
-                    }}
-                    aria-hidden
-                  />
+                  <CartThumb line={line} className="h-16 w-11" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold leading-snug text-ink-950">{line.name}</span>
                     <span className="mt-0.5 block text-xs text-ink-500">
@@ -302,7 +292,7 @@ export function CheckoutView() {
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-ink-600">Estimated tax (TX 8.25%)</dt>
+                <dt className="text-ink-600">Estimated tax ({TAX_LABEL})</dt>
                 <dd className="font-medium tabular-nums text-ink-950">{formatPriceExact(tax)}</dd>
               </div>
               <div className="mt-1 flex justify-between gap-4 border-t border-ink-200 pt-4">

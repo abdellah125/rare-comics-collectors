@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/auth-provider";
 import { catalogBySeller } from "@/lib/catalog";
+import { formatPriceExact } from "@/lib/format";
 
 export default function OrdersPage() {
   const { user } = useAuth();
@@ -34,11 +35,11 @@ export default function OrdersPage() {
           <table className="w-full text-sm">
             <thead className="bg-ink-50 text-left text-xs font-bold uppercase tracking-[0.1em] text-ink-500">
               <tr>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Item</th>
-                <th className="px-4 py-3">Buyer</th>
-                <th className="px-4 py-3">Price</th>
-                <th className="px-4 py-3">Status</th>
+                <th scope="col" className="px-4 py-3">Date</th>
+                <th scope="col" className="px-4 py-3">Item</th>
+                <th scope="col" className="px-4 py-3">Buyer</th>
+                <th scope="col" className="px-4 py-3">Price</th>
+                <th scope="col" className="px-4 py-3">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink-100">
@@ -49,7 +50,7 @@ export default function OrdersPage() {
                     {o.item} <span className="font-normal text-ink-500">({o.grade})</span>
                   </td>
                   <td className="px-4 py-3 text-ink-700">{o.buyer}</td>
-                  <td className="px-4 py-3 font-semibold text-ink-900">${(o.price / 100).toFixed(2)}</td>
+                  <td className="px-4 py-3 font-semibold tabular-nums text-ink-900">{formatPriceExact(o.price)}</td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
                       Completed

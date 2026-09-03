@@ -1,29 +1,68 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import { useCart } from "@/components/cart-provider";
+import { CartThumb } from "@/components/cart-thumb";
 import { CloseIcon, TrashIcon, CartIcon } from "@/components/icons";
 import { formatPriceExact } from "@/lib/format";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function CartDrawer() {
   const { isOpen, closeCart, lines, subtotal, setQty, remove, count } = useCart();
+  const panelRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreFocusTo = useRef<HTMLElement | null>(null);
+
+  // Move focus into the dialog when it opens and back to the trigger when it closes.
+  useEffect(() => {
+    if (isOpen) {
+      restoreFocusTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const t = window.setTimeout(() => closeButtonRef.current?.focus(), 30);
+      return () => window.clearTimeout(t);
+    }
+    restoreFocusTo.current?.focus();
+    restoreFocusTo.current = null;
+  }, [isOpen]);
+
+  // Keep Tab cycling inside the dialog while it is open.
+  const trapFocus = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key !== "Tab" || !panelRef.current) return;
+    const focusable = panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   return (
     <div
-      className={`fixed inset-0 z-[70] ${isOpen ? "" : "pointer-events-none"}`}
+      className={`fixed inset-0 z-[70] overflow-hidden ${isOpen ? "" : "pointer-events-none"}`}
       aria-hidden={!isOpen}
+      inert={!isOpen}
     >
       <div
         onClick={closeCart}
+        aria-hidden
         className={`absolute inset-0 bg-ink-950/55 backdrop-blur-[2px] transition-opacity duration-250 ${
           isOpen ? "opacity-100" : "opacity-0"
         }`}
       />
       <aside
+        ref={panelRef}
         role="dialog"
-        aria-modal={isOpen}
+        aria-modal="true"
         aria-label="Shopping cart"
+        onKeyDown={trapFocus}
         className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-250 ease-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
@@ -33,6 +72,7 @@ export function CartDrawer() {
             Your cart{count > 0 && <span className="ml-2 text-sm font-normal text-ink-500">({count})</span>}
           </h2>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={closeCart}
             className="grid h-9 w-9 place-items-center rounded-lg text-ink-500 hover:bg-ink-100 hover:text-ink-900"
@@ -61,15 +101,7 @@ export function CartDrawer() {
             <ul className="flex-1 divide-y divide-ink-100 overflow-y-auto px-5">
               {lines.map((line) => (
                 <li key={line.id} className="flex gap-3.5 py-4">
-                  <div
-                    className="h-20 w-14 shrink-0 rounded-md ring-1 ring-ink-950/10"
-                    style={{
-                      background: line.palette
-                        ? `linear-gradient(150deg, ${line.palette[0]}, ${line.palette[1]})`
-                        : "linear-gradient(150deg,#1c2130,#4e5a72)",
-                    }}
-                    aria-hidden
-                  />
+                  <CartThumb line={line} className="h-20 w-14" />
                   <div className="min-w-0 flex-1">
                     <Link
                       href={line.href}
@@ -89,7 +121,9 @@ export function CartDrawer() {
                         >
                           −
                         </button>
-                        <span className="w-7 text-center text-xs font-semibold tabular-nums">{line.qty}</span>
+                        <span className="w-7 text-center text-xs font-semibold tabular-nums" aria-live="polite">
+                          {line.qty}
+                        </span>
                         <button
                           type="button"
                           onClick={() => setQty(line.id, line.qty + 1)}
@@ -104,6 +138,7 @@ export function CartDrawer() {
                         type="button"
                         onClick={() => remove(line.id)}
                         className="inline-flex items-center gap-1 text-xs text-ink-500 hover:text-rose-600"
+                        aria-label={`Remove ${line.name} from cart`}
                       >
                         <TrashIcon className="h-3.5 w-3.5" /> Remove
                       </button>

@@ -45,7 +45,7 @@ export default function DashboardPage() {
         </Link>
         <Link href="/dashboard/listings/new" className="group rounded-xl border border-brand-200 bg-brand-50 p-5 hover:border-brand-300 hover:shadow-sm">
           <p className="font-semibold text-brand-800 group-hover:text-brand-700">+ Add a listing →</p>
-          <p className="mt-1 text-sm text-brand-600">List a graded or raw comic for sale.</p>
+          <p className="mt-1 text-sm text-brand-700">List a graded or raw comic for sale.</p>
         </Link>
         <Link href="/dashboard/orders" className="group rounded-xl border border-ink-200 bg-white p-5 hover:border-brand-300 hover:shadow-sm">
           <p className="font-semibold text-ink-950 group-hover:text-brand-700">Orders →</p>

@@ -15,7 +15,7 @@ const social = [
 ];
 
 export function Footer() {
-  const year = 2026;
+  const year = new Date().getFullYear();
 
   return (
     <footer className="border-t border-ink-800 bg-ink-950 text-ink-300">
@@ -177,7 +177,7 @@ export function Footer() {
           </ul>
         </nav>
 
-        <div className="mt-6 flex flex-col gap-3 text-[13px] text-ink-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-6 flex flex-col gap-3 text-[13px] text-ink-400 sm:flex-row sm:items-center sm:justify-between">
           <p>
             © {year} {site.legalName}. All rights reserved.
           </p>

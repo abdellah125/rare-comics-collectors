@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { ResetForm } from "@/components/auth-forms";
 import { Breadcrumbs, Container, type Crumb } from "@/components/ui";
 import { pageMetadata } from "@/lib/seo";
+import { site } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
   title: "Reset Your Password",
-  description: "Request a password reset link for your VaultCollect account.",
+  description: `Request a password reset link for your ${site.name} account.`,
   path: "/account/reset",
   noIndex: true,
 });

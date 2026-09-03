@@ -1,3 +1,5 @@
+import { site } from "./site";
+
 export type Service = {
   slug: string;
   name: string;
@@ -27,7 +29,7 @@ export const services: Service[] = [
       "We are an authorised submission centre for both CGC and CBCS. Send us your books and we handle packing, declared values, tier selection and the entire round trip.",
     description: [
       "Most collectors lose money on grading before the book is even opened — wrong tier, wrong declared value, or damage in transit. As an authorised submission centre we absorb that risk for you.",
-      "Every book is pre-screened by a VaultCollect grader before it goes out. If we think a book will not return the grade you are paying for, we tell you before we submit it, not after.",
+      `Every book is pre-screened by a ${site.name} grader before it goes out. If we think a book will not return the grade you are paying for, we tell you before we submit it, not after.`,
       "You get dealer submission rates, consolidated shipping, and a single point of contact for the entire process.",
     ],
     includes: [
@@ -36,11 +38,11 @@ export const services: Service[] = [
       "Declared value and tier selection handled for you",
       "Insured, tracked shipping both directions",
       "Photo documentation before and after encapsulation",
-      "Online status tracking through your VaultCollect account",
+      `Online status tracking through your ${site.name} account`,
     ],
     steps: [
       { title: "Request a submission kit", body: "Tell us how many books you're sending. We ship you archival bags, boards, and a rigid shipper." },
-      { title: "We pre-screen", body: "A VaultCollect grader inspects each book, estimates the grade, and flags press candidates or restoration concerns." },
+      { title: "We pre-screen", body: `A ${site.name} grader inspects each book, estimates the grade, and flags press candidates or restoration concerns.` },
       { title: "You approve", body: "You receive a per-book recommendation with estimated grade, tier cost, and expected value. Nothing is submitted without your sign-off." },
       { title: "We submit and track", body: "Books go out in a consolidated dealer shipment. You track progress from your account." },
       { title: "Return or consign", body: "Slabs come back to you insured, or roll straight into a consignment listing on our store." },
@@ -164,10 +166,10 @@ export const services: Service[] = [
     turnaround: "Listed within 5 business days",
     icon: "camera",
     summary:
-      "List your books through the VaultCollect store and our auction channels. Professional photography, market-priced listings, and payout within seven days of a cleared sale.",
+      `List your books through the ${site.name} store and our auction channels. Professional photography, market-priced listings, and payout within seven days of a cleared sale.`,
     description: [
       "Selling high-value books yourself means fee stacking, chargeback exposure, and buyers who negotiate against your inexperience. Consignment removes all three.",
-      "We photograph, describe, price against realised comparables, and market your books to a buyer list built over fourteen years — including private clients who never shop public marketplaces.",
+      "We photograph, describe, price against realised comparables, and market your books to a buyer list built over fifteen years — including private clients who never shop public marketplaces.",
       "Commission is 15% under $2,500, 12% to $10,000, and 8% above. No listing fees, no photography charge, no minimum term.",
     ],
     includes: [
@@ -220,7 +222,7 @@ export const services: Service[] = [
     ],
     faqs: [
       { q: "Can I visit my books?", a: "Yes, by appointment during business hours. Viewing takes place in our inspection room, not the vault floor." },
-      { q: "What happens if VaultCollect closes?", a: "Stored items are held as bailment, not as company assets. They are not exposed to our creditors and would be returned to owners." },
+      { q: `What happens if ${site.name} closes?`, a: "Stored items are held as bailment, not as company assets. They are not exposed to our creditors and would be returned to owners." },
       { q: "Is there a minimum term?", a: "Twelve months, billed annually. Retrieval before term end is permitted with no penalty; unused months are not refunded." },
     ],
   },

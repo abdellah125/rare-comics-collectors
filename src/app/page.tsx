@@ -6,7 +6,8 @@ import { ProductCard } from "@/components/product-card";
 import { Badge, ButtonLink, Eyebrow, Section, SectionHeading, Stars } from "@/components/ui";
 import { serviceIcons, CheckIcon, PinIcon, ShieldIcon } from "@/components/icons";
 import { JsonLd } from "@/components/json-ld";
-import { bestsellers, featuredProducts, products } from "@/lib/products";
+import { inventoryCount } from "@/lib/catalog";
+import { bestsellers, featuredProducts } from "@/lib/products";
 import { services } from "@/lib/services";
 import { formatPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
@@ -47,7 +48,7 @@ const trustPoints = [
 
 const steps = [
   { n: "01", title: "Request a kit", body: "Tell us what you're sending. We ship archival supplies and a rigid shipper at no charge." },
-  { n: "02", title: "We pre-screen", body: "A VaultCollect grader estimates the grade, flags press candidates and checks for restoration." },
+  { n: "02", title: "We pre-screen", body: `A ${site.name} grader estimates the grade, flags press candidates and checks for restoration.` },
   { n: "03", title: "You approve", body: "Per-book recommendations with tier costs and expected value. Nothing is submitted without your sign-off." },
   { n: "04", title: "Slab, sell or store", body: "Take your slabs back, list them on consignment, or leave them in the insured vault." },
 ];
@@ -61,7 +62,7 @@ const reviews = [
   },
   {
     quote:
-      "I inherited a 6,000-book collection and had no idea what to do with it. VaultCollect appraised it, consigned the top 200 and handled the rest. The insurance schedule alone was worth the fee.",
+      `I inherited a 6,000-book collection and had no idea what to do with it. ${site.name} appraised it, consigned the top 200 and handled the rest. The insurance schedule alone was worth the fee.`,
     name: "Priya M.",
     role: "Estate executor, Dallas TX",
   },
@@ -135,7 +136,7 @@ export default function HomePage() {
           className="absolute inset-0 opacity-[0.35]"
           style={{
             backgroundImage:
-              "radial-gradient(60% 55% at 15% 10%, rgba(16,185,129,.45), transparent 60%), radial-gradient(55% 50% at 90% 85%, rgba(245,158,11,.28), transparent 62%)",
+              "radial-gradient(60% 55% at 15% 10%, rgba(244,63,94,.42), transparent 60%), radial-gradient(55% 50% at 90% 85%, rgba(245,158,11,.28), transparent 62%)",
           }}
         />
         <div
@@ -193,28 +194,33 @@ export default function HomePage() {
           <div className="lg:col-span-5">
             <div className="relative mx-auto flex max-w-md items-end justify-center gap-3 sm:gap-4">
               {hero.map((p, i) => (
-                <Link
+                // The fan rotation lives on a wrapper so the hover lift on the link isn't overridden by it.
+                <div
                   key={p.slug}
-                  href={`/store/${p.slug}`}
-                  className="group relative block flex-1 transition-transform duration-300 hover:-translate-y-2"
+                  className="relative flex-1"
                   style={{
                     transform: `rotate(${(i - 1) * 5}deg) translateY(${i === 1 ? -22 : 0}px)`,
                     zIndex: i === 1 ? 3 : 1,
                   }}
-                  aria-label={`View ${p.title} ${p.issue}`}
                 >
-                  <CoverArt
-                    product={p}
-                    priority={i === 1}
-                    className="aspect-[2/3] w-full shadow-[0_24px_60px_-18px_rgba(0,0,0,.85)] ring-1 ring-white/15"
-                  />
-                </Link>
+                  <Link
+                    href={`/store/${p.slug}`}
+                    className="block rounded-md transition-transform duration-300 hover:-translate-y-2 focus-visible:-translate-y-2"
+                    aria-label={`View ${p.title} ${p.issue}`}
+                  >
+                    <CoverArt
+                      product={p}
+                      priority={i === 1}
+                      className="aspect-[2/3] w-full shadow-[0_24px_60px_-18px_rgba(0,0,0,.85)] ring-1 ring-white/15"
+                    />
+                  </Link>
+                </div>
               ))}
             </div>
             <p className="mt-9 text-center text-[13px] text-ink-400">
               Featured in the vault this week ·{" "}
               <Link href="/store" className="font-medium text-brand-300 underline-offset-4 hover:underline">
-                see all {products.length} listings
+                see all {inventoryCount.toLocaleString("en-US")} listings
               </Link>
             </p>
           </div>

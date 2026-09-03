@@ -24,7 +24,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-ink-500">
+      <div className="flex min-h-[60vh] items-center justify-center text-ink-500" role="status" aria-live="polite">
         Loading…
       </div>
     );
@@ -37,12 +37,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-ink-500">
             Seller dashboard
           </p>
-          <nav>
+          <nav aria-label="Dashboard">
             <ul className="grid gap-0.5">
               {NAV.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-current={pathname === item.href ? "page" : undefined}
                     className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                       pathname === item.href
                         ? "bg-brand-50 text-brand-800"
@@ -56,7 +57,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </ul>
           </nav>
         </aside>
-        <main className="min-w-0">{children}</main>
+        {/* The root layout already provides the page's <main> landmark. */}
+        <div className="min-w-0">{children}</div>
       </div>
     </div>
   );

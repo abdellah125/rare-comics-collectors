@@ -4,10 +4,10 @@
  * server pages and client components.
  */
 import type { CartLine } from "@/components/cart-provider";
-import type { Product } from "@/lib/products";
+import type { ProductSummary } from "@/lib/products";
 import type { Service } from "@/lib/services";
 
-export function productToLine(product: Product): Omit<CartLine, "qty"> {
+export function productToLine(product: ProductSummary): Omit<CartLine, "qty"> {
   return {
     id: `comic:${product.slug}`,
     kind: "comic",

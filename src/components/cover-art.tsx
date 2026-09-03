@@ -1,30 +1,30 @@
 "use client";
 import Image from "next/image";
 import { useState } from "react";
-import type { Product } from "@/lib/products";
+import type { ProductSummary } from "@/lib/products";
 import coverMap from "@/lib/gocovers-map.json";
+
 /**
  * Comic cover plate.
- * - Shows the real scan when `product.image` is set and loads successfully.
- * - Falls back to the deterministic CSS gradient palette when no image is
- *   provided or when the remote fetch fails.
- * `unoptimized` lets the browser fetch Wikimedia URLs directly, bypassing the
- * Next.js image-optimizer proxy (which Wikimedia's CDN rate-limits/rejects).
+ * Source order: a real scan from `gocovers-map.json` (JPEG/WebP under
+ * /public/covers), then the product's explicit `image`, then the generated
+ * per-product SVG. If the chosen file fails to load we drop to the SVG, and the
+ * gradient palette sits underneath everything so the plate never renders empty.
+ * `unoptimized` serves the files as-is: they are already sized for the grid and
+ * it keeps a 1,500-listing store from queueing thousands of optimizer jobs.
  */
 export function CoverArt({
   product,
   className = "",
   priority = false,
 }: {
-  product: Product;
+  product: ProductSummary;
   className?: string;
   priority?: boolean;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const [from, to] = product.palette;
   const slabbed = product.grader !== "Raw";
-  // Prefer the best local raster cover if we have one (JPEG > WebP > SVG),
-  // otherwise the product's explicit image, otherwise the generated SVG.
   const localBest = (coverMap as Record<string, string>)[product.slug] ?? null;
   const fallbackSvg = `/covers/${product.slug}.svg`;
   const src = imgFailed ? fallbackSvg : (localBest ?? product.image ?? fallbackSvg);
@@ -34,21 +34,21 @@ export function CoverArt({
       className={`relative isolate overflow-hidden rounded-md ${className}`}
       style={{ background: `linear-gradient(150deg, ${from} 0%, ${to} 100%)` }}
       role="img"
-      aria-label={`${product.title} ${product.issue} — ${product.publisher}, ${product.year}, ${product.grader} ${product.grade}`}
+      aria-label={`${product.title} ${product.issue} — ${product.publisher}, ${product.year}, ${
+        slabbed ? `${product.grader} ${product.grade}` : `raw, graded ${product.grade}`
+      }`}
     >
-      {/* cover art — remote scan if set and loads, otherwise the generated local SVG */}
-      {src && (
-        <Image
-          src={src}
-          alt={`${product.title} ${product.issue} cover`}
-          fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
-          className="object-cover"
-          priority={priority}
-          unoptimized
-          onError={() => { if (!imgFailed) setImgFailed(true); }}
-        />
-      )}
+      {/* The wrapper carries the accessible name, so the scan itself is decorative. */}
+      <Image
+        src={src}
+        alt=""
+        fill
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+        className="object-cover"
+        priority={priority}
+        unoptimized
+        onError={() => setImgFailed(true)}
+      />
 
       {/* halftone / print texture */}
       <div

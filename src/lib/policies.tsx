@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { formatPrice, formatPriceExact } from "@/lib/format";
 import { policyPages, type PolicySlug } from "@/lib/nav";
+import { EXPRESS_SHIPPING, FLAT_SHIPPING, FREE_SHIPPING_THRESHOLD } from "@/lib/pricing";
 import { fullAddress, site } from "@/lib/site";
 
 export type PolicySection = { id: string; heading: string; body: ReactNode };
@@ -79,32 +81,36 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
         heading: "Domestic shipping (United States)",
         body: (
           <>
-            <table>
-              <thead>
-                <tr>
-                  <th>Service</th>
-                  <th>Transit</th>
-                  <th>Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Standard insured ground</td>
-                  <td>3 – 6 business days</td>
-                  <td>$12 flat, free on orders over $300</td>
-                </tr>
-                <tr>
-                  <td>Expedited insured air</td>
-                  <td>2 business days</td>
-                  <td>$28 flat</td>
-                </tr>
-                <tr>
-                  <td>Overnight insured</td>
-                  <td>Next business day</td>
-                  <td>Quoted at checkout</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Domestic shipping rates">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Transit</th>
+                    <th>Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Insured standard</td>
+                    <td>2 – 5 business days</td>
+                    <td>
+                      {formatPriceExact(FLAT_SHIPPING)} flat, free on orders over {formatPrice(FREE_SHIPPING_THRESHOLD)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Insured express</td>
+                    <td>1 – 2 business days</td>
+                    <td>{formatPriceExact(EXPRESS_SHIPPING)} flat</td>
+                  </tr>
+                  <tr>
+                    <td>Overnight insured</td>
+                    <td>Next business day</td>
+                    <td>Quoted on request</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <p>
               All domestic shipments are insured to full purchase value and require an adult signature on delivery. We
               cannot mark a parcel &ldquo;no signature required&rdquo; — this is an insurance condition, not a
@@ -610,36 +616,38 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
         id: "why",
         heading: "Why we use it",
         body: (
-          <table>
-            <thead>
-              <tr>
-                <th>Purpose</th>
-                <th>Legal basis</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Fulfilling orders and providing services</td>
-                <td>Performance of a contract</td>
-              </tr>
-              <tr>
-                <td>Fraud prevention and security</td>
-                <td>Legitimate interest</td>
-              </tr>
-              <tr>
-                <td>Tax, accounting and insurance records</td>
-                <td>Legal obligation</td>
-              </tr>
-              <tr>
-                <td>Marketing email and new-arrival alerts</td>
-                <td>Consent — withdrawable at any time</td>
-              </tr>
-              <tr>
-                <td>Improving the site</td>
-                <td>Legitimate interest</td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Purposes and legal bases for processing">
+            <table>
+              <thead>
+                <tr>
+                  <th>Purpose</th>
+                  <th>Legal basis</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Fulfilling orders and providing services</td>
+                  <td>Performance of a contract</td>
+                </tr>
+                <tr>
+                  <td>Fraud prevention and security</td>
+                  <td>Legitimate interest</td>
+                </tr>
+                <tr>
+                  <td>Tax, accounting and insurance records</td>
+                  <td>Legal obligation</td>
+                </tr>
+                <tr>
+                  <td>Marketing email and new-arrival alerts</td>
+                  <td>Consent — withdrawable at any time</td>
+                </tr>
+                <tr>
+                  <td>Improving the site</td>
+                  <td>Legitimate interest</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         ),
       },
       {
@@ -720,7 +728,7 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
   /* ------------------------------------------------------ terms-of-service */
   "terms-of-service": {
     summary:
-      "The agreement between you and VaultCollect covering site use, pricing and listing accuracy, order acceptance, payment, intellectual property, liability and dispute resolution.",
+      `The agreement between you and ${site.name} covering site use, pricing and listing accuracy, order acceptance, payment, intellectual property, liability and dispute resolution.`,
     keywords: ["terms of service", "comic store terms", "conditions of sale"],
     sections: [
       {
@@ -874,45 +882,41 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
         body: (
           <>
             <p>
-              We keep this deliberately minimal. This site sets no advertising cookies and no cross-site tracking
-              cookies of any kind.
+              We keep this deliberately minimal. This site sets no advertising cookies, no analytics cookies and no
+              cross-site tracking cookies of any kind. The only data kept in your browser is listed below.
             </p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Purpose</th>
-                  <th>Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>rarecomicscollectors.cart.v1</td>
-                  <td>Local storage</td>
-                  <td>Remembers your cart between visits</td>
-                  <td>Until cleared</td>
-                </tr>
-                <tr>
-                  <td>vc_session</td>
-                  <td>Essential cookie</td>
-                  <td>Keeps you signed in and secures checkout</td>
-                  <td>Session</td>
-                </tr>
-                <tr>
-                  <td>vc_prefs</td>
-                  <td>Preference cookie</td>
-                  <td>Remembers store view and sort choices</td>
-                  <td>6 months</td>
-                </tr>
-                <tr>
-                  <td>Analytics</td>
-                  <td>Aggregate, cookieless</td>
-                  <td>Page counts only; no individual profiles</td>
-                  <td>n/a</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Browser storage we use">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Purpose</th>
+                    <th>Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>rarecomicscollectors.cart.v1</td>
+                    <td>Local storage</td>
+                    <td>Remembers your cart between visits</td>
+                    <td>Until cleared</td>
+                  </tr>
+                  <tr>
+                    <td>rcc_session</td>
+                    <td>Local storage</td>
+                    <td>Keeps you signed in to your account</td>
+                    <td>Until you sign out</td>
+                  </tr>
+                  <tr>
+                    <td>rcc_users, rcc_listings</td>
+                    <td>Local storage</td>
+                    <td>Your account profile and the listings you create in the seller dashboard</td>
+                    <td>Until cleared</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </>
         ),
       },
@@ -921,9 +925,9 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
         heading: "Essential versus optional",
         body: (
           <p>
-            Essential cookies are required for the site to function — you cannot check out without them. Preference
-            cookies are optional and only improve convenience. Because we run no advertising or profiling cookies, there
-            is nothing here to sell or share.
+            Everything listed above is essential — the cart, sign-in and the seller dashboard cannot work without it.
+            We set nothing optional. Because we run no advertising or profiling cookies, there is nothing here to sell
+            or share.
           </p>
         ),
       },
@@ -934,11 +938,11 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
           <>
             <p>
               Every major browser lets you view, block and delete cookies and local storage from its privacy settings.
-              Clearing local storage will empty your saved cart.
+              Clearing local storage will empty your saved cart and sign you out.
             </p>
             <p>
-              Blocking essential cookies will prevent sign-in and checkout from working. Everything else on the site,
-              including the whole store and every policy page, will still work fine.
+              Blocking local storage will prevent the cart, sign-in and checkout from working. Everything else on the
+              site, including the whole store and every policy page, will still work fine.
             </p>
           </>
         ),
@@ -948,9 +952,9 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
         heading: "Third-party content",
         body: (
           <p>
-            The map on our <Link href="/contact#visit">contact page</Link> is embedded from Google Maps and is subject to
-            Google&apos;s own privacy and cookie practices. It loads lazily, so it sets nothing until it scrolls into
-            view.
+            The maps on our <Link href="/#visit">home page</Link> and <Link href="/contact#visit">contact page</Link>{" "}
+            are embedded from Google Maps and are subject to Google&apos;s own privacy and cookie practices. They load
+            lazily, so nothing is set until a map scrolls into view.
           </p>
         ),
       },

@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { SelectField, TextAreaField, TextField } from "@/components/form-fields";
 import { CheckIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
+import { site } from "@/lib/site";
 
 export function ContactForm({
   topics,
@@ -65,7 +67,7 @@ export function ContactForm({
       <TextField
         label="Order number (if you have one)"
         name="orderNumber"
-        placeholder="VC-2026-000000"
+        placeholder="RCC-2026-000000"
         hint="Only needed for order or shipping questions."
       />
       <TextAreaField
@@ -78,8 +80,11 @@ export function ContactForm({
       <label className="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink-600">
         <input type="checkbox" name="consent" required className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
         <span>
-          I agree that VaultCollect may store and use my details to respond to this enquiry, as described in the
-          Privacy Policy.
+          I agree that {site.name} may store and use my details to respond to this enquiry, as described in the{" "}
+          <Link href="/policies/privacy" className="underline underline-offset-2">
+            Privacy Policy
+          </Link>
+          .
         </span>
       </label>
 

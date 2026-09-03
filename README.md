@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rare Comics Collectors
 
-## Getting Started
+Storefront and collector-services site for Rare Comics Collectors: graded comic sales
+(CGC / CBCS / raw), grading submission, pressing, restoration detection, appraisal,
+consignment and vault storage. Built with Next.js 16 (App Router), React 19 and
+Tailwind CSS 4.
 
-First, run the development server:
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+npm run dev      # http://localhost:3000
+npm run lint     # ESLint
+npm run build    # production build (prerenders every listing)
+npm run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `NEXT_PUBLIC_SITE_URL` in production so canonical URLs, the sitemap, Open Graph
+images and structured data point at the live domain.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Where things live
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Path | What it is |
+| --- | --- |
+| `src/app` | Routes: home, store + product pages, services, policies, FAQ, support, contact, cart, checkout, account, seller dashboard |
+| `src/components` | UI — header/footer, cart provider + drawer, product cards, forms |
+| `src/lib/products.ts` | The 17 featured key issues (hand-written copy) |
+| `src/lib/catalog.ts` | 1,500 deterministic generated listings + demo sellers |
+| `src/lib/services.ts`, `policies.tsx`, `site.ts` | Services, policy documents, business details (NAP, hours, socials) |
+| `src/lib/pricing.ts` | Shipping / tax rules shared by cart, checkout, product pages and the shipping policy |
+| `public/covers` | Cover art: real scans for the featured books, generated SVG plates for the rest |
+| `scripts/fetch-gocollect-covers.mjs` | Pulls cover JPEGs for the featured products into `public/covers` |
+| `wordpress/` | Separate WordPress/Elementor export — not part of the Next.js build |
 
-## Learn More
+## Demo boundaries
 
-To learn more about Next.js, take a look at the following resources:
+This is a front-end demo: checkout, the contact/track-order forms, authentication and
+seller listings run entirely in the browser (localStorage) and are labelled as such on
+each page. Before launch, connect a payment processor, a form/email backend and a real
+auth provider.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Demo sign-in: `goldenageguru@demo.com` / `demo123`.

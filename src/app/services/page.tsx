@@ -34,7 +34,7 @@ export default function ServicesPage() {
   const serviceListJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: "VaultCollect collector services",
+    name: `${site.name} collector services`,
     numberOfItems: services.length,
     itemListElement: services.map((s, i) => ({
       "@type": "ListItem",
@@ -70,7 +70,7 @@ export default function ServicesPage() {
           className="absolute inset-0 opacity-30"
           style={{
             backgroundImage:
-              "radial-gradient(55% 60% at 80% 15%, rgba(16,185,129,.5), transparent 62%), radial-gradient(50% 50% at 10% 90%, rgba(245,158,11,.22), transparent 60%)",
+              "radial-gradient(55% 60% at 80% 15%, rgba(244,63,94,.45), transparent 62%), radial-gradient(50% 50% at 10% 90%, rgba(245,158,11,.22), transparent 60%)",
           }}
         />
         <Container className="relative py-14 lg:py-20">
@@ -81,7 +81,7 @@ export default function ServicesPage() {
               Grading, pressing, appraisal and everything else your collection needs
             </h1>
             <p className="mt-5 text-[17px] leading-relaxed text-ink-300">
-              We have handled more than 180,000 books since {site.founded} — for collectors sending a single key, and
+              We have handled more than 200,000 books since {site.founded} — for collectors sending a single key, and
               for estates liquidating forty thousand issues. Every service below is run in-house by our own graders,
               not brokered out.
             </p>

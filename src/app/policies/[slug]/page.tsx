@@ -116,7 +116,8 @@ export default async function PolicyPage({ params }: { params: Promise<{ slug: s
             </div>
           </nav>
 
-          <article className="prose-doc lg:col-span-9 lg:order-1">
+          {/* min-w-0 lets wide tables scroll inside .table-wrap instead of stretching the grid column. */}
+          <article className="prose-doc min-w-0 lg:col-span-9 lg:order-1">
             {policy.sections.map((s) => (
               <section key={s.id} id={s.id}>
                 <h2>{s.heading}</h2>

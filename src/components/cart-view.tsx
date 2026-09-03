@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useCart } from "@/components/cart-provider";
+import { CartThumb } from "@/components/cart-thumb";
 import { CartIcon, TrashIcon, ShieldIcon, TruckIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 import { formatPriceExact } from "@/lib/format";
-
-const FREE_SHIPPING_THRESHOLD = 25_000;
-const FLAT_SHIPPING = 1_495;
+import { FREE_SHIPPING_THRESHOLD, TAX_LABEL, estimateShipping, estimateTax } from "@/lib/pricing";
 
 export function CartView() {
   const { lines, subtotal, setQty, remove, clear, hydrated } = useCart();
@@ -43,8 +42,8 @@ export function CartView() {
   }
 
   const hasPhysical = lines.some((l) => l.kind === "comic");
-  const shipping = !hasPhysical || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING;
-  const tax = Math.round(subtotal * 0.0825);
+  const shipping = estimateShipping(subtotal, hasPhysical);
+  const tax = estimateTax(subtotal);
   const total = subtotal + shipping + tax;
   const toFreeShipping = FREE_SHIPPING_THRESHOLD - subtotal;
 
@@ -54,15 +53,8 @@ export function CartView() {
         <ul className="divide-y divide-ink-200 rounded-xl border border-ink-200">
           {lines.map((line) => (
             <li key={line.id} className="flex gap-4 p-5">
-              <Link href={line.href} className="shrink-0" aria-label={line.name}>
-                <span
-                  className="block h-28 w-20 rounded-md ring-1 ring-ink-950/10"
-                  style={{
-                    background: line.palette
-                      ? `linear-gradient(150deg, ${line.palette[0]}, ${line.palette[1]})`
-                      : "linear-gradient(150deg,#1c2130,#4e5a72)",
-                  }}
-                />
+              <Link href={line.href} className="shrink-0" aria-label={line.name} tabIndex={-1}>
+                <CartThumb line={line} className="h-28 w-20" />
               </Link>
 
               <div className="min-w-0 flex-1">
@@ -74,7 +66,7 @@ export function CartView() {
                       </Link>
                     </h2>
                     <p className="mt-1 text-[13px] text-ink-500">{line.meta}</p>
-                    <p className="mt-1 text-[12px] uppercase tracking-wide text-ink-400">
+                    <p className="mt-1 text-[12px] uppercase tracking-wide text-ink-500">
                       {line.kind === "comic" ? "Collectible comic" : "Service booking"}
                     </p>
                   </div>
@@ -93,7 +85,9 @@ export function CartView() {
                     >
                       −
                     </button>
-                    <span className="w-9 text-center text-sm font-semibold tabular-nums">{line.qty}</span>
+                    <span className="w-9 text-center text-sm font-semibold tabular-nums" aria-live="polite">
+                      {line.qty}
+                    </span>
                     <button
                       type="button"
                       onClick={() => setQty(line.id, line.qty + 1)}
@@ -111,6 +105,7 @@ export function CartView() {
                     type="button"
                     onClick={() => remove(line.id)}
                     className="inline-flex items-center gap-1.5 text-[13px] text-ink-500 hover:text-rose-600"
+                    aria-label={`Remove ${line.name} from cart`}
                   >
                     <TrashIcon className="h-4 w-4" /> Remove
                   </button>
@@ -148,7 +143,7 @@ export function CartView() {
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-ink-600">Estimated tax (TX 8.25%)</dt>
+                <dt className="text-ink-600">Estimated tax ({TAX_LABEL})</dt>
                 <dd className="font-medium tabular-nums text-ink-950">{formatPriceExact(tax)}</dd>
               </div>
               <div className="mt-2 flex justify-between gap-4 border-t border-ink-200 pt-4">

@@ -9,6 +9,7 @@ import { site } from "@/lib/site";
 // engines treat as noise. Bump when content changes materially.
 const LAST_MODIFIED = new Date("2026-08-01T00:00:00.000Z");
 
+// Account, cart and checkout pages are noindex, so they are deliberately absent here.
 export default function sitemap(): MetadataRoute.Sitemap {
   const url = (path: string) => `${site.url}${path}`;
 
@@ -30,6 +31,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
+  const catalogUrls: MetadataRoute.Sitemap = catalog.map((p) => ({
+    url: url(`/store/${p.slug}`),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
   const serviceUrls: MetadataRoute.Sitemap = services.map((s) => ({
     url: url(`/services/${s.slug}`),
     changeFrequency: "monthly",
@@ -42,18 +49,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.3,
   }));
 
-  const catalogUrls: MetadataRoute.Sitemap = catalog.map((p) => ({
-    url: url(`/store/${p.slug}`),
-    changeFrequency: "monthly",
-    priority: 0.6,
-  }));
-
-  const accountUrls: MetadataRoute.Sitemap = [
-    { url: url("/account/login"),    changeFrequency: "yearly", priority: 0.3 },
-    { url: url("/account/register"), changeFrequency: "yearly", priority: 0.3 },
-  ];
-
-  return [...core, ...productUrls, ...catalogUrls, ...serviceUrls, ...policyUrls, ...accountUrls].map((entry) => ({
+  return [...core, ...productUrls, ...catalogUrls, ...serviceUrls, ...policyUrls].map((entry) => ({
     ...entry,
     lastModified: LAST_MODIFIED,
   }));

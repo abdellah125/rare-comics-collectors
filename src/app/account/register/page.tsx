@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { RegisterForm } from "@/components/auth-forms";
 import { Breadcrumbs, Container, type Crumb } from "@/components/ui";
 import { pageMetadata } from "@/lib/seo";
+import { site } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
   title: "Create an Account",
-  description: "Create a VaultCollect account to track orders and grading submissions, archive appraisals and manage consignments.",
+  description: `Create a ${site.name} account to track orders and grading submissions, archive appraisals and manage consignments.`,
   path: "/account/register",
   noIndex: true,
 });

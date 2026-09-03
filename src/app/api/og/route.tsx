@@ -2,8 +2,6 @@ import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
 import { site } from "@/lib/site";
 
-export const contentType = "image/png";
-
 /**
  * Dynamic Open Graph card: /api/og?title=…&subtitle=…&badge=…
  * Satori supports flexbox only — no CSS grid.
@@ -24,7 +22,7 @@ export function GET(request: NextRequest) {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: "72px",
-          background: "linear-gradient(135deg, #0d1017 0%, #1c2130 55%, #064e3b 100%)",
+          background: "linear-gradient(135deg, #0d1017 0%, #1c2130 55%, #881337 100%)",
           color: "#ffffff",
           fontFamily: "sans-serif",
         }}
@@ -36,14 +34,15 @@ export function GET(request: NextRequest) {
               width: 56,
               height: 56,
               borderRadius: 14,
-              background: "#059669",
+              background: "#e11d48",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 30,
-              fontWeight: 700,
+              fontSize: 20,
+              fontWeight: 900,
+              letterSpacing: -0.5,
             }}
           >
-            V
+            RCC
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontSize: 27, fontWeight: 700, letterSpacing: -0.5 }}>{site.name}</span>
@@ -60,9 +59,9 @@ export function GET(request: NextRequest) {
               alignSelf: "flex-start",
               padding: "8px 16px",
               borderRadius: 999,
-              background: "rgba(16,185,129,0.18)",
-              border: "1px solid rgba(52,211,153,0.45)",
-              color: "#6ee7b7",
+              background: "rgba(244,63,94,0.16)",
+              border: "1px solid rgba(251,113,133,0.45)",
+              color: "#fda4af",
               fontSize: 19,
               fontWeight: 600,
               letterSpacing: 1.5,

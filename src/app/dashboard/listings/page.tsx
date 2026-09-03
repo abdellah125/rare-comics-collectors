@@ -6,9 +6,10 @@ import Image from "next/image";
 import { useAuth } from "@/components/auth-provider";
 import { catalogBySeller, type CatalogProduct } from "@/lib/catalog";
 import { getMyListings, deleteListing, type UserListing } from "@/lib/auth-store";
+import { formatPriceExact } from "@/lib/format";
 
 function Price({ cents }: { cents: number }) {
-  return <span className="font-semibold tabular-nums text-ink-950">${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+  return <span className="font-semibold tabular-nums text-ink-950">{formatPriceExact(cents)}</span>;
 }
 
 function UserListingCard({ l, onDelete }: { l: UserListing; onDelete: (id: string) => void }) {
@@ -36,17 +37,22 @@ function UserListingCard({ l, onDelete }: { l: UserListing; onDelete: (id: strin
           {l.publisher} · {l.year} · {l.grader} {l.grade}
           {l.keyIssue && <span className="text-brand-700"> · {l.keyIssue}</span>}
         </p>
-        {l.description && <p className="mt-1 line-clamp-2 text-xs text-ink-400">{l.description}</p>}
-        <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-ink-400">
+        {l.description && <p className="mt-1 line-clamp-2 text-xs text-ink-500">{l.description}</p>}
+        <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-ink-600">
           {l.certNumber && (<><dt className="font-semibold text-ink-500">Cert</dt><dd>#{l.certNumber}</dd></>)}
           {l.writer && (<><dt className="font-semibold text-ink-500">Writer</dt><dd>{l.writer}</dd></>)}
           {l.artist && (<><dt className="font-semibold text-ink-500">Artist</dt><dd>{l.artist}</dd></>)}
           {l.label && (<><dt className="font-semibold text-ink-500">Label</dt><dd>{l.label}</dd></>)}
         </dl>
-        {l.notes && <p className="mt-1.5 text-[11px] italic text-ink-400">{l.notes}</p>}
+        {l.notes && <p className="mt-1.5 text-[11px] italic text-ink-500">{l.notes}</p>}
       </div>
 
-      <button type="button" onClick={() => onDelete(l.id)} className="shrink-0 rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">
+      <button
+        type="button"
+        onClick={() => onDelete(l.id)}
+        className="shrink-0 rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
+        aria-label={`Delete listing ${l.title} #${l.issue}`}
+      >
         Delete
       </button>
     </li>
@@ -81,7 +87,7 @@ export default function ListingsPage() {
             <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-ink-500">
               Your listings <span className="text-ink-400">({myListings.length})</span>
             </h2>
-            <p className="text-xs text-ink-400">Newest first</p>
+            <p className="text-xs text-ink-500">Newest first</p>
           </div>
           <ul className="grid gap-3">
             {myListings.map((l) => <UserListingCard key={l.id} l={l} onDelete={handleDelete} />)}
@@ -106,7 +112,7 @@ export default function ListingsPage() {
             ))}
           </ul>
           {catalogListings.length > 20 && (
-            <p className="mt-3 text-xs text-ink-400">+ {catalogListings.length - 20} more live in the store.</p>
+            <p className="mt-3 text-xs text-ink-500">+ {catalogListings.length - 20} more live in the store.</p>
           )}
         </section>
       )}
@@ -114,7 +120,7 @@ export default function ListingsPage() {
       {catalogListings.length === 0 && myListings.length === 0 && (
         <div className="mt-16 rounded-2xl border border-dashed border-ink-300 bg-ink-50 py-14 text-center">
           <p className="text-ink-500">No listings yet.</p>
-          <p className="mt-1 text-sm text-ink-400">Add your first book with a cover photo to go live instantly.</p>
+          <p className="mt-1 text-sm text-ink-500">Add your first book with a cover photo to go live instantly.</p>
           <Link href="/dashboard/listings/new" className="mt-5 inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
             Add your first listing
           </Link>

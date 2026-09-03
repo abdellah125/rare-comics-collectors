@@ -28,6 +28,8 @@
   --color-gold-400: #fbbf24;
   --color-gold-500: #f59e0b;
   --color-gold-600: #d97706;
+  --color-gold-700: #b45309;
+  --color-gold-800: #92400e;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: var(--font-display), Georgia, "Times New Roman", serif;
@@ -132,11 +134,26 @@ body {
   color: var(--color-ink-950);
   font-weight: 650;
 }
+/* Wide tables scroll inside their own (keyboard-focusable) box instead of forcing the page sideways. */
+.prose-doc .table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  border-radius: 0.375rem;
+  -webkit-overflow-scrolling: touch;
+}
+.prose-doc .table-wrap:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 4px;
+}
 .prose-doc table {
   width: 100%;
+  min-width: 32rem;
   border-collapse: collapse;
   margin-bottom: 1.5rem;
   font-size: 0.9375rem;
+}
+.prose-doc .table-wrap table {
+  margin-bottom: 0;
 }
 .prose-doc th,
 .prose-doc td {

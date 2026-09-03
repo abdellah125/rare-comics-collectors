@@ -164,13 +164,13 @@ export default function SupportPage() {
               <a
                 key={c.label}
                 href={c.href}
-                className="group rounded-xl border border-ink-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-plate"
+                className="group min-w-0 rounded-xl border border-ink-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-plate"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-50 text-brand-700 ring-1 ring-brand-100">
                   <c.icon className="h-5 w-5" />
                 </span>
                 <p className="mt-3.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{c.label}</p>
-                <p className="mt-1 font-display text-lg font-semibold text-ink-950 group-hover:text-brand-700">
+                <p className="mt-1 font-display text-lg font-semibold text-ink-950 [overflow-wrap:anywhere] group-hover:text-brand-700">
                   {c.value}
                 </p>
                 <p className="mt-1 text-[13px] text-ink-500">{c.note}</p>

@@ -36,6 +36,24 @@ type Action =
 
 const STORAGE_KEY = "rarecomicscollectors.cart.v1";
 
+/** Accept only well-formed lines from storage so a stale or hand-edited cart can't break rendering. */
+function isCartLine(value: unknown): value is CartLine {
+  if (typeof value !== "object" || value === null) return false;
+  const l = value as Record<string, unknown>;
+  return (
+    typeof l.id === "string" &&
+    (l.kind === "comic" || l.kind === "service") &&
+    typeof l.slug === "string" &&
+    typeof l.name === "string" &&
+    typeof l.meta === "string" &&
+    typeof l.href === "string" &&
+    Number.isFinite(l.price) &&
+    Number.isFinite(l.qty) &&
+    Number.isFinite(l.maxQty) &&
+    (l.qty as number) > 0
+  );
+}
+
 function reducer(state: CartState, action: Action): CartState {
   switch (action.type) {
     case "hydrate":
@@ -96,7 +114,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
-        if (Array.isArray(parsed)) lines = parsed as CartLine[];
+        if (Array.isArray(parsed)) lines = parsed.filter(isCartLine);
       }
     } catch {
       // corrupt or unavailable storage — start empty

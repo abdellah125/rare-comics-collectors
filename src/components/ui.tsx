@@ -81,6 +81,7 @@ export function SectionHeading({
   lead,
   tone = "light",
   align = "left",
+  as: Heading = "h2",
   className = "",
 }: {
   eyebrow?: string;
@@ -88,18 +89,20 @@ export function SectionHeading({
   lead?: ReactNode;
   tone?: "light" | "dark";
   align?: "left" | "center";
+  /** Use "h1" when the heading is the page title. */
+  as?: "h1" | "h2";
   className?: string;
 }) {
   return (
     <div className={`${align === "center" ? "mx-auto max-w-2xl text-center" : "max-w-2xl"} ${className}`}>
       {eyebrow && <Eyebrow tone={tone}>{eyebrow}</Eyebrow>}
-      <h2
+      <Heading
         className={`mt-3 font-display text-3xl font-semibold leading-[1.15] sm:text-4xl ${
           tone === "dark" ? "text-white" : "text-ink-950"
         }`}
       >
         {title}
-      </h2>
+      </Heading>
       {lead && (
         <p className={`mt-4 text-[15px] leading-relaxed sm:text-base ${tone === "dark" ? "text-ink-300" : "text-ink-600"}`}>
           {lead}
@@ -123,7 +126,7 @@ export function Badge({
   const tones = {
     neutral: "bg-ink-100 text-ink-700",
     brand: "bg-brand-50 text-brand-800 ring-1 ring-brand-200",
-    gold: "bg-gold-400/15 text-gold-600 ring-1 ring-gold-400/40",
+    gold: "bg-gold-400/15 text-gold-800 ring-1 ring-gold-400/40",
     dark: "bg-ink-950 text-white",
     sale: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
   } as const;
@@ -138,7 +141,11 @@ export function Badge({
 
 export function Stars({ rating, count }: { rating: number; count?: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5" aria-label={`Rated ${rating} out of 5`}>
+    <span
+      className="inline-flex items-center gap-1.5"
+      role="img"
+      aria-label={`Rated ${rating} out of 5${count !== undefined ? ` from ${count} review${count === 1 ? "" : "s"}` : ""}`}
+    >
       <span className="flex text-gold-400">
         {[1, 2, 3, 4, 5].map((i) => (
           <StarIcon key={i} className={`h-3.5 w-3.5 ${i <= Math.round(rating) ? "" : "text-ink-200"}`} />

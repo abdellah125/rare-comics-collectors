@@ -27,8 +27,63 @@ export type Product = {
   bestseller?: boolean;
   rating: number;
   reviewCount: number;
+  /** Explicit cover path; `gocovers-map.json` takes precedence when it has an entry for the slug. */
   image?: string;
 };
+
+/**
+ * The subset of product data the storefront grid needs. The store page ships
+ * every listing to a client component, so keeping this lean keeps the payload
+ * lean — long-form copy and seller data never leave the server.
+ */
+export type ProductSummary = Pick<
+  Product,
+  | "slug"
+  | "title"
+  | "issue"
+  | "publisher"
+  | "year"
+  | "era"
+  | "grader"
+  | "grade"
+  | "label"
+  | "price"
+  | "compareAt"
+  | "stock"
+  | "keyIssue"
+  | "creators"
+  | "palette"
+  | "featured"
+  | "rating"
+  | "reviewCount"
+  | "image"
+>;
+
+export function toProductSummary(p: Product): ProductSummary {
+  const summary: ProductSummary = {
+    slug: p.slug,
+    title: p.title,
+    issue: p.issue,
+    publisher: p.publisher,
+    year: p.year,
+    era: p.era,
+    grader: p.grader,
+    grade: p.grade,
+    label: p.label,
+    price: p.price,
+    stock: p.stock,
+    creators: p.creators,
+    palette: p.palette,
+    rating: p.rating,
+    reviewCount: p.reviewCount,
+  };
+  // Only carry optional fields that are set so they don't bloat the serialized payload.
+  if (p.compareAt !== undefined) summary.compareAt = p.compareAt;
+  if (p.keyIssue) summary.keyIssue = p.keyIssue;
+  if (p.featured) summary.featured = p.featured;
+  if (p.image) summary.image = p.image;
+  return summary;
+}
 
 export const products: Product[] = [
   {
@@ -64,7 +119,6 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 3,
-    // local SVG cover generated per product — never 404s
     image: "/covers/action-comics-1-cgc-2-5.jpg",
   },
   {
@@ -100,7 +154,6 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 2,
-    // no confirmed public-domain image for this title — gradient fallback renders instead
   },
   {
     slug: "marvel-comics-1-cgc-4-0",
@@ -134,8 +187,6 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 2,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "superman-1-cgc-3-5",
@@ -169,8 +220,6 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 4,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "batman-1-cgc-4-5",
@@ -204,8 +253,6 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 3,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "captain-america-comics-1-cgc-6-0",
@@ -240,8 +287,6 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 5,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "all-star-comics-8-cgc-5-0",
@@ -275,8 +320,6 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 4,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "flash-comics-1-cgc-7-0",
@@ -310,8 +353,6 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 3,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "whiz-comics-2-cgc-3-0",
@@ -377,8 +418,6 @@ export const products: Product[] = [
     palette: ["#065f46", "#a3e635"],
     rating: 4,
     reviewCount: 2,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "showcase-4-cgc-5-0",
@@ -413,8 +452,6 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 4,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "fantastic-four-1-cgc-7-0",
@@ -449,8 +486,6 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 6,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "amazing-fantasy-15-cgc-6-5",
@@ -519,8 +554,6 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 5,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "x-men-1-cgc-9-0",
@@ -555,8 +588,6 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 7,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "avengers-1-cgc-8-5",
@@ -591,8 +622,6 @@ export const products: Product[] = [
     bestseller: true,
     rating: 5,
     reviewCount: 9,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
   {
     slug: "tales-of-suspense-39-cgc-8-0",
@@ -626,8 +655,6 @@ export const products: Product[] = [
     featured: true,
     rating: 5,
     reviewCount: 6,
-// image intentionally omitted — broken URL returns 404; gradient fallback renders.
-
   },
 ];
 

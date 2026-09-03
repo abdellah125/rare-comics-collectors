@@ -8,19 +8,19 @@ import { ProductCard } from "@/components/product-card";
 import { Badge, Breadcrumbs, Container, Stars, ButtonLink, type Crumb } from "@/components/ui";
 import { CheckIcon, ShieldIcon, TruckIcon, SearchIcon } from "@/components/icons";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
-import { getProduct, products } from "@/lib/products";
-import { catalog, getCatalogProduct } from "@/lib/catalog";
+import { allListings, getListing } from "@/lib/catalog";
 import { formatPrice, formatPriceExact, schemaPrice } from "@/lib/format";
+import { FLAT_SHIPPING, FREE_SHIPPING_THRESHOLD } from "@/lib/pricing";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 
 export function generateStaticParams() {
-  return [...products, ...catalog].map((p) => ({ slug: p.slug }));
+  return allListings.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(slug) ?? getCatalogProduct(slug);
+  const product = getListing(slug);
   if (!product) return pageMetadata({ title: "Comic not found", description: "This listing is no longer available.", path: `/store/${slug}`, noIndex: true });
 
   const gradeLabel = product.grader === "Raw" ? `Raw ${product.grade}` : `${product.grader} ${product.grade}`;
@@ -51,18 +51,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 const assurances = [
   { icon: ShieldIcon, title: "Authenticity guaranteed", body: "Cert-verified against the grader's census. Undisclosed restoration refunded in full, forever." },
-  { icon: TruckIcon, title: "Insured & tracked", body: "Double-boxed, signature required, insured to full value. Free on US orders over $250." },
+  { icon: TruckIcon, title: "Insured & tracked", body: `Double-boxed, signature required, insured to full value. Free on US orders over ${formatPrice(FREE_SHIPPING_THRESHOLD)}.` },
   { icon: SearchIcon, title: "14-day inspection", body: "Return in the original holder within 14 days of delivery for a full refund." },
 ];
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const product = getProduct(slug) ?? getCatalogProduct(slug);
+  const product = getListing(slug);
   if (!product) notFound();
 
-  const related = [...products, ...catalog]
-    .filter((p) => p.slug !== slug && p.era === product.era)
-    .slice(0, 4);
+  // Other issues of the same title first, then books from the same era.
+  const others = allListings.filter((p) => p.slug !== slug);
+  const sameTitle = others.filter((p) => p.title === product.title && p.publisher === product.publisher);
+  const sameEra = others.filter((p) => p.era === product.era && !sameTitle.includes(p));
+  const related = [...sameTitle, ...sameEra].slice(0, 4);
   const onSale = product.compareAt !== undefined && product.compareAt > product.price;
   const gradeLabel = product.grader === "Raw" ? `Raw · ${product.grade}` : `${product.grader} ${product.grade}`;
 
@@ -115,7 +117,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       seller: { "@id": `${site.url}/#organization` },
       shippingDetails: {
         "@type": "OfferShippingDetails",
-        shippingRate: { "@type": "MonetaryAmount", value: product.price >= 25000 ? "0" : "14.95", currency: site.currency },
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: schemaPrice(product.price >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING),
+          currency: site.currency,
+        },
         shippingDestination: { "@type": "DefinedRegion", addressCountry: "US" },
         deliveryTime: {
           "@type": "ShippingDeliveryTime",
@@ -211,7 +217,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   {product.stock > 0 ? `In stock — ${product.stock} available` : "Sold out"}
                 </span>
                 <span>·</span>
-                <span>{product.price >= 25000 ? "Free insured US shipping" : "Insured shipping $14.95"}</span>
+                <span>
+                  {product.price >= FREE_SHIPPING_THRESHOLD
+                    ? "Free insured US shipping"
+                    : `Insured shipping ${formatPriceExact(FLAT_SHIPPING)}`}
+                </span>
                 <span>·</span>
                 <span>Ships in 1–2 business days</span>
               </p>
@@ -262,8 +272,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <div className="lg:col-span-7">
             <h2 className="font-display text-2xl font-semibold text-ink-950">About this copy</h2>
             <div className="prose-doc mt-4">
-              {product.description.map((para) => (
-                <p key={para.slice(0, 30)}>{para}</p>
+              {product.description.map((para, i) => (
+                <p key={i}>{para}</p>
               ))}
             </div>
 

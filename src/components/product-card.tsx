@@ -4,26 +4,26 @@ import { AddToCartButton, BuyNowButton } from "@/components/buy-buttons";
 import { productToLine } from "@/lib/cart-lines";
 import { Badge, Stars } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
-import type { Product } from "@/lib/products";
+import type { ProductSummary } from "@/lib/products";
 
-export function ProductCard({ product, priority = false }: { product: Product; priority?: boolean }) {
+export function ProductCard({ product, priority = false }: { product: ProductSummary; priority?: boolean }) {
   const line = productToLine(product);
   const onSale = product.compareAt !== undefined && product.compareAt > product.price;
   const soldOut = product.stock <= 0;
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-xl border border-ink-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-lift">
-      <div className="relative">
-        <CoverArt product={product} priority={priority} className="aspect-[2/3] w-full" />
-
-        <div className="pointer-events-none absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1.5">
-          {onSale && <Badge tone="sale">Sale</Badge>}
-          {product.keyIssue && <Badge tone="gold">Key issue</Badge>}
-          {product.stock === 1 && !soldOut && <Badge tone="dark">Last copy</Badge>}
-        </div>
-      </div>
+      <CoverArt product={product} priority={priority} className="aspect-[2/3] w-full" />
 
       <div className="flex flex-1 flex-col p-4">
+        {/* Badges live in the body: every corner of the cover plate already carries a chip. */}
+        {(onSale || product.keyIssue || (product.stock === 1 && !soldOut)) && (
+          <div className="mb-2.5 flex flex-wrap gap-1.5">
+            {onSale && <Badge tone="sale">Sale</Badge>}
+            {product.keyIssue && <Badge tone="gold">Key issue</Badge>}
+            {product.stock === 1 && !soldOut && <Badge tone="dark">Last copy</Badge>}
+          </div>
+        )}
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500">
           {product.publisher} · {product.era}
         </p>
