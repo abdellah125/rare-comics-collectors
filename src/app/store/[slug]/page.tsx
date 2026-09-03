@@ -8,19 +8,19 @@ import { ProductCard } from "@/components/product-card";
 import { Badge, Breadcrumbs, Container, Stars, ButtonLink, type Crumb } from "@/components/ui";
 import { CheckIcon, ShieldIcon, TruckIcon, SearchIcon } from "@/components/icons";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
-import { allListings, getListing } from "@/lib/catalog";
 import { formatPrice, formatPriceExact, schemaPrice } from "@/lib/format";
+import { getProduct, products } from "@/lib/products";
 import { FLAT_SHIPPING, FREE_SHIPPING_THRESHOLD } from "@/lib/pricing";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 
 export function generateStaticParams() {
-  return allListings.map((p) => ({ slug: p.slug }));
+  return products.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getListing(slug);
+  const product = getProduct(slug);
   if (!product) return pageMetadata({ title: "Comic not found", description: "This listing is no longer available.", path: `/store/${slug}`, noIndex: true });
 
   const gradeLabel = product.grader === "Raw" ? `Raw ${product.grade}` : `${product.grader} ${product.grade}`;
@@ -57,11 +57,11 @@ const assurances = [
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const product = getListing(slug);
+  const product = getProduct(slug);
   if (!product) notFound();
 
   // Other issues of the same title first, then books from the same era.
-  const others = allListings.filter((p) => p.slug !== slug);
+  const others = products.filter((p) => p.slug !== slug);
   const sameTitle = others.filter((p) => p.title === product.title && p.publisher === product.publisher);
   const sameEra = others.filter((p) => p.era === product.era && !sameTitle.includes(p));
   const related = [...sameTitle, ...sameEra].slice(0, 4);

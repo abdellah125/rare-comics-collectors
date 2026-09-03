@@ -24,19 +24,22 @@ images and structured data point at the live domain.
 | --- | --- |
 | `src/app` | Routes: home, store + product pages, services, policies, FAQ, support, contact, cart, checkout, account, seller dashboard |
 | `src/components` | UI — header/footer, cart provider + drawer, product cards, forms |
-| `src/lib/products.ts` | The 17 featured key issues (hand-written copy) |
-| `src/lib/catalog.ts` | 1,500 deterministic generated listings + demo sellers |
+| `src/lib/products.ts` | The 17 key issues for sale (hand-written copy, real cover scans) |
 | `src/lib/services.ts`, `policies.tsx`, `site.ts` | Services, policy documents, business details (NAP, hours, socials) |
 | `src/lib/pricing.ts` | Shipping / tax rules shared by cart, checkout, product pages and the shipping policy |
-| `public/covers` | Cover art: real scans for the featured books, generated SVG plates for the rest |
-| `scripts/fetch-gocollect-covers.mjs` | Pulls cover JPEGs for the featured products into `public/covers` |
+| `public/covers` | Cover scans for every listing (`gocovers-map.json` maps slug → file), plus an SVG fallback per book |
+| `scripts/fetch-gocollect-covers.mjs` | Pulls cover JPEGs for the products into `public/covers` |
 | `wordpress/` | Separate WordPress/Elementor export — not part of the Next.js build |
 
 ## Demo boundaries
 
 This is a front-end demo: checkout, the contact/track-order forms, authentication and
 seller listings run entirely in the browser (localStorage) and are labelled as such on
-each page. Before launch, connect a payment processor, a form/email backend and a real
-auth provider.
+each page. The seller dashboard's orders and feedback pages stay empty until a sales
+backend exists. Before launch, connect a payment processor, a form/email backend and a
+real auth provider.
+
+Only books with a real cover scan are listed. To add one, append it to `products.ts` and
+map its slug to the scan in `src/lib/gocovers-map.json`.
 
 Demo sign-in: `goldenageguru@demo.com` / `demo123`.

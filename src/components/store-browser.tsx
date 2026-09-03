@@ -24,7 +24,7 @@ const PRICE_BANDS = [
   { label: "$10,000+", min: 1_000_000, max: Number.POSITIVE_INFINITY },
 ];
 
-/** Cards rendered per "Show more" step — keeps the initial DOM and image count sane for 1,500+ listings. */
+/** Cards rendered per "Show more" step — keeps the initial DOM and image count sane as the inventory grows. */
 const PAGE_SIZE = 24;
 
 const fmt = (n: number) => n.toLocaleString("en-US");

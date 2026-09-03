@@ -4,8 +4,7 @@ import Link from "next/link";
 import { StoreBrowser } from "@/components/store-browser";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
-import { eras, graders, products, publishers, toProductSummary, type Era } from "@/lib/products";
-import { allListings, inventoryCount } from "@/lib/catalog";
+import { eras, graders, inventoryCount, products, publishers, toProductSummary, type Era } from "@/lib/products";
 import { formatPrice, schemaPrice } from "@/lib/format";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/pricing";
 import { pageMetadata } from "@/lib/seo";
@@ -14,14 +13,14 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = pageMetadata({
   title: "Graded Comics for Sale — CGC & CBCS Key Issues",
   description:
-    "Browse CGC and CBCS graded comic books for sale: Golden, Silver, Bronze, Copper and Modern Age key issues. Cert-verified, restoration-checked, insured shipping and a 14-day return window. Buy now or add to cart.",
+    "Browse CGC-graded Golden Age and Silver Age key issues for sale. Cert-verified, restoration-checked, insured shipping and a 14-day return window. Buy now or add to cart.",
   path: "/store",
   keywords: [
     "graded comics for sale",
     "CGC comics for sale",
     "CBCS slabbed comics",
     "silver age key issues",
-    "bronze age comics",
+    "golden age key issues",
     "buy comic books online",
   ],
 });
@@ -41,8 +40,8 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
   const initialEra: Era | "all" = eraParam !== null && eras.includes(eraParam as Era) ? (eraParam as Era) : "all";
 
   // Only the fields the grid needs cross the server/client boundary.
-  const summaries = allListings.map(toProductSummary);
-  const lowestPrice = Math.min(...allListings.map((p) => p.price));
+  const summaries = products.map(toProductSummary);
+  const lowestPrice = Math.min(...products.map((p) => p.price));
 
   const collectionJsonLd = {
     "@context": "https://schema.org",

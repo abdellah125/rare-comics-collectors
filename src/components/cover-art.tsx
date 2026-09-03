@@ -10,8 +10,7 @@ import coverMap from "@/lib/gocovers-map.json";
  * /public/covers), then the product's explicit `image`, then the generated
  * per-product SVG. If the chosen file fails to load we drop to the SVG, and the
  * gradient palette sits underneath everything so the plate never renders empty.
- * `unoptimized` serves the files as-is: they are already sized for the grid and
- * it keeps a 1,500-listing store from queueing thousands of optimizer jobs.
+ * `unoptimized` serves the files as-is: the scans are already sized for the grid.
  */
 export function CoverArt({
   product,

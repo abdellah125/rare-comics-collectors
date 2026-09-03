@@ -2,24 +2,17 @@
 
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
-import { catalogBySeller } from "@/lib/catalog";
 import { getMyListings } from "@/lib/auth-store";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const catalogListings = user ? catalogBySeller(user.id) : [];
   const myListings = user ? getMyListings(user.id) : [];
-  const allListings = [...catalogListings, ...myListings];
-  const allFeedback = catalogListings.flatMap((p) => p.feedback);
-  const avgRating =
-    allFeedback.length > 0
-      ? (allFeedback.reduce((s, f) => s + f.rating, 0) / allFeedback.length).toFixed(1)
-      : null;
 
+  // Sales and buyer feedback need a real order backend; until then they are empty.
   const stats = [
-    { label: "Active listings", value: allListings.length },
-    { label: "Feedback received", value: allFeedback.length },
-    { label: "Avg rating", value: avgRating ? `${avgRating} / 5` : "—" },
+    { label: "Active listings", value: myListings.length },
+    { label: "Completed sales", value: 0 },
+    { label: "Avg rating", value: "—" },
   ];
 
   return (
@@ -41,7 +34,7 @@ export default function DashboardPage() {
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <Link href="/dashboard/listings" className="group rounded-xl border border-ink-200 bg-white p-5 hover:border-brand-300 hover:shadow-sm">
           <p className="font-semibold text-ink-950 group-hover:text-brand-700">My listings →</p>
-          <p className="mt-1 text-sm text-ink-500">{allListings.length} comics currently for sale.</p>
+          <p className="mt-1 text-sm text-ink-500">{myListings.length} comics currently for sale.</p>
         </Link>
         <Link href="/dashboard/listings/new" className="group rounded-xl border border-brand-200 bg-brand-50 p-5 hover:border-brand-300 hover:shadow-sm">
           <p className="font-semibold text-brand-800 group-hover:text-brand-700">+ Add a listing →</p>
@@ -53,7 +46,7 @@ export default function DashboardPage() {
         </Link>
         <Link href="/dashboard/feedback" className="group rounded-xl border border-ink-200 bg-white p-5 hover:border-brand-300 hover:shadow-sm">
           <p className="font-semibold text-ink-950 group-hover:text-brand-700">Feedback →</p>
-          <p className="mt-1 text-sm text-ink-500">{allFeedback.length} positive reviews from buyers.</p>
+          <p className="mt-1 text-sm text-ink-500">Reviews from your buyers.</p>
         </Link>
       </div>
     </div>

@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/components/auth-provider";
-import { catalogBySeller, type CatalogProduct } from "@/lib/catalog";
 import { getMyListings, deleteListing, type UserListing } from "@/lib/auth-store";
 import { formatPriceExact } from "@/lib/format";
 
@@ -61,7 +60,6 @@ function UserListingCard({ l, onDelete }: { l: UserListing; onDelete: (id: strin
 
 export default function ListingsPage() {
   const { user } = useAuth();
-  const catalogListings = user ? catalogBySeller(user.id) : [];
   const [myListings, setMyListings] = useState<UserListing[]>(user ? getMyListings(user.id) : []);
 
   const handleDelete = (id: string) => {
@@ -95,29 +93,7 @@ export default function ListingsPage() {
         </section>
       )}
 
-      {catalogListings.length > 0 && (
-        <section className="mt-10">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-[0.12em] text-ink-500">
-            Catalog listings <span className="text-ink-400">({catalogListings.length} in the store)</span>
-          </h2>
-          <ul className="grid gap-3">
-            {catalogListings.slice(0, 20).map((p: CatalogProduct) => (
-              <li key={p.slug} className="flex items-center justify-between gap-4 rounded-xl border border-ink-200 bg-ink-50 p-4">
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-ink-950">{p.title} <span className="text-ink-500">#{p.issue}</span></p>
-                  <p className="text-sm text-ink-500">{p.publisher} · {p.year} · {p.grader} {p.grade} · <Price cents={p.price} /></p>
-                </div>
-                <Link href={`/store/${p.slug}`} className="shrink-0 rounded-lg px-3 py-1.5 text-sm text-brand-700 hover:bg-brand-50">View</Link>
-              </li>
-            ))}
-          </ul>
-          {catalogListings.length > 20 && (
-            <p className="mt-3 text-xs text-ink-500">+ {catalogListings.length - 20} more live in the store.</p>
-          )}
-        </section>
-      )}
-
-      {catalogListings.length === 0 && myListings.length === 0 && (
+      {myListings.length === 0 && (
         <div className="mt-16 rounded-2xl border border-dashed border-ink-300 bg-ink-50 py-14 text-center">
           <p className="text-ink-500">No listings yet.</p>
           <p className="mt-1 text-sm text-ink-500">Add your first book with a cover photo to go live instantly.</p>

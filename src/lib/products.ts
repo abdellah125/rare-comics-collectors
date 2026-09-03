@@ -684,6 +684,9 @@ export function relatedProducts(product: Product, limit = 4): Product[] {
 
 // ─── derived lists used by store filters & UI ────────────────────────────────
 
+/** Books currently for sale. Every listing has a real cover scan (see gocovers-map.json). */
+export const inventoryCount = products.length;
+
 export const goldenAge = getByEra("Golden Age");
 export const silverAge = getByEra("Silver Age");
 export const featuredProducts = products.filter((p) => p.featured);

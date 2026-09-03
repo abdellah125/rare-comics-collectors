@@ -1,15 +1,18 @@
 "use client";
 
-import { useAuth } from "@/components/auth-provider";
-import { catalogBySeller } from "@/lib/catalog";
+interface SellerFeedback {
+  id: string;
+  from: string;
+  item: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
 
 export default function FeedbackPage() {
-  const { user } = useAuth();
-  const catalogListings = user ? catalogBySeller(user.id) : [];
-
-  const allFeedback = catalogListings
-    .flatMap((p) => p.feedback.map((f) => ({ ...f, item: `${p.title} ${p.issue}` })))
-    .sort((a, b) => b.date.localeCompare(a.date));
+  // Buyer feedback comes from the order backend once checkout is wired up;
+  // the demo has no sales history, so this stays empty.
+  const allFeedback: SellerFeedback[] = [];
 
   const avgRating =
     allFeedback.length > 0

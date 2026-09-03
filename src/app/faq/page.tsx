@@ -3,11 +3,9 @@ import type { Metadata } from "next";
 
 import { Breadcrumbs, ButtonLink, Container, Section, SectionHeading, type Crumb } from "@/components/ui";
 import { JsonLd, breadcrumbJsonLd, faqJsonLd } from "@/components/json-ld";
-import { inventoryCount } from "@/lib/catalog";
+import { inventoryCount } from "@/lib/products";
 import { pageMetadata } from "@/lib/seo";
 import { fullAddress, site } from "@/lib/site";
-
-const roundedInventory = (Math.floor(inventoryCount / 100) * 100).toLocaleString("en-US");
 
 export const metadata: Metadata = pageMetadata({
   title: "Frequently Asked Questions",
@@ -211,7 +209,7 @@ export default function FaqPage() {
         <SectionHeading
           eyebrow="Ready when you are"
           title="Browse the vault or start a submission"
-          lead={`Over ${roundedInventory} graded and raw books in stock, and a grading desk that pre-screens every submission before a cent is spent.`}
+          lead={`${inventoryCount} graded key issues in stock, and a grading desk that pre-screens every submission before a cent is spent.`}
           align="center"
         />
         <div className="mt-8 flex flex-wrap justify-center gap-3">

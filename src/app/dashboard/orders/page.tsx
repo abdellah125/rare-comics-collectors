@@ -1,27 +1,20 @@
 "use client";
 
-import { useAuth } from "@/components/auth-provider";
-import { catalogBySeller } from "@/lib/catalog";
 import { formatPriceExact } from "@/lib/format";
 
-export default function OrdersPage() {
-  const { user } = useAuth();
-  const catalogListings = user ? catalogBySeller(user.id) : [];
+interface SellerOrder {
+  id: string;
+  buyer: string;
+  item: string;
+  grade: string;
+  price: number;
+  date: string;
+}
 
-  // Each feedback entry represents a completed sale
-  const orders = catalogListings
-    .flatMap((p) =>
-      p.feedback.map((f) => ({
-        id: f.id,
-        buyer: f.from,
-        item: `${p.title} ${p.issue}`,
-        grade: `${p.grader} ${p.grade}`,
-        price: p.price,
-        date: f.date,
-      }))
-    )
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 50);
+export default function OrdersPage() {
+  // Completed sales come from the order backend once checkout is wired up;
+  // the demo has no sales history, so this stays empty.
+  const orders: SellerOrder[] = [];
 
   return (
     <div>

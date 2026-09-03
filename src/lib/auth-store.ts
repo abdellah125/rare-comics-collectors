@@ -8,7 +8,7 @@ export interface AuthUser {
 const USERS_KEY = "rcc_users";
 const SESSION_KEY = "rcc_session";
 
-// Demo accounts matching catalog.ts SELLERS (password: demo123 for all)
+// Demo seller accounts (password: demo123 for all)
 const DEMO: (AuthUser & { _pw: string })[] = [
   { id:"s01", name:"GoldenAgeGuru",     email:"goldenageguru@demo.com",     joinedAt:"2016-04-12", isSeller:true, _pw:"17pex1y" },
   { id:"s02", name:"SilverStacker42",   email:"silverstacker42@demo.com",   joinedAt:"2017-09-03", isSeller:true, _pw:"17pex1y" },
