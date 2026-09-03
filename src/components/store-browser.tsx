@@ -251,7 +251,8 @@ export function StoreBrowser({
       <div className="lg:col-span-9">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-0 flex-1">
+          {/* Full-width on phones so the placeholder isn't squeezed to a few letters */}
+          <div className="relative min-w-0 basis-full sm:basis-0 sm:flex-1">
             <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
             <input
               type="search"
@@ -273,7 +274,7 @@ export function StoreBrowser({
             Filters{activeCount > 0 ? ` (${activeCount})` : ""}
           </button>
 
-          <label className="flex items-center gap-2 text-sm text-ink-600">
+          <label className="ml-auto flex items-center gap-2 text-sm text-ink-600 sm:ml-0">
             <span className="hidden sm:inline">Sort</span>
             <select
               value={sort}
