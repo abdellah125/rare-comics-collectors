@@ -1374,3 +1374,13 @@ model IdempotencyKey {
 
   @@index([expiresAt])
 }
+
+// ───────────────────────────── instance secrets ─────────────────────────────
+
+/// Signing/encryption keys generated on first boot when the environment does not
+/// provide SESSION_SECRET / APP_ENCRYPTION_KEY (see src/lib/secrets.ts).
+model AppSecret {
+  name      String   @id
+  value     String
+  createdAt DateTime @default(now())
+}

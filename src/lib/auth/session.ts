@@ -1,4 +1,5 @@
 import "server-only";
+import { ensureInstanceSecrets } from "@/lib/secrets";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -101,6 +102,7 @@ function toCurrentUser(s: SessionWithUser): CurrentUser {
  * Returns null for missing/expired/revoked sessions and banned or deleted users.
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
+  await ensureInstanceSecrets();
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const session = await loadSession(hashToken(token));

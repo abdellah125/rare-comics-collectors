@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { signValue } from "@/lib/crypto";
+import { ensureInstanceSecrets } from "@/lib/secrets";
 import { getCurrentUser } from "@/lib/auth/session";
 import { PlaceOrderSchema, QuoteSchema, placeOrder, quoteCheckout, type PlaceOrderResult, type Quote } from "@/lib/commerce/checkout";
 import { rateLimit } from "@/lib/rate-limit";
@@ -26,6 +27,7 @@ export async function quoteAction(input: unknown): Promise<Quote | { error: stri
 
 /** Marks an order as "just placed in this browser" so the confirmation page can show it to a guest. */
 export async function rememberRecentOrder(orderNumber: string) {
+  await ensureInstanceSecrets();
   (await cookies()).set(`rcc_o_${orderNumber}`, signValue(orderNumber, 48 * 3600), {
     httpOnly: true,
     sameSite: "lax",

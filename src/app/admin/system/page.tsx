@@ -9,6 +9,7 @@ import { listParams, pageCount } from "@/lib/admin/query";
 import { db, type Prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { formatDateTime } from "@/lib/i18n";
+import { secretSource } from "@/lib/secrets-cache";
 import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Jobs & system" };
@@ -133,7 +134,7 @@ export default async function AdminSystemPage({ searchParams }: PageProps<"/admi
             </ul>
           </Card>
           <Card title="Runtime">
-            <Kv items={[{ label: "Environment", value: process.env.NODE_ENV ?? "development" }, { label: "Site URL", value: env.siteUrl }, { label: "Database", value: (process.env.DATABASE_URL ?? "").replace(/:\/\/.*@/, "://***@").split("?")[0] || "—" }, { label: "Uploads", value: env.blobToken ? "Vercel Blob" : env.uploadDir }, { label: "SMTP", value: env.smtp.host ? env.smtp.host : "not configured (log only)" }, { label: "Cron endpoint", value: "GET|POST /api/jobs/run (Bearer JOBS_SECRET or CRON_SECRET)" }, { label: "Exchange rates", value: settings["system.exchangeRatesAuto"] ? "auto (6h)" : "manual" }]} />
+            <Kv items={[{ label: "Environment", value: process.env.NODE_ENV ?? "development" }, { label: "Site URL", value: env.siteUrl }, { label: "Database", value: (process.env.DATABASE_URL ?? "").replace(/:\/\/.*@/, "://***@").split("?")[0] || "—" }, { label: "Uploads", value: env.blobToken ? "Vercel Blob" : env.uploadDir }, { label: "Secrets", value: `SESSION_SECRET from ${secretSource("session_secret")} · APP_ENCRYPTION_KEY from ${secretSource("encryption_key")}` }, { label: "SMTP", value: env.smtp.host ? env.smtp.host : "not configured (log only)" }, { label: "Cron endpoint", value: "GET|POST /api/jobs/run (Bearer JOBS_SECRET or CRON_SECRET)" }, { label: "Exchange rates", value: settings["system.exchangeRatesAuto"] ? "auto (6h)" : "manual" }]} />
           </Card>
         </div>
       </div>

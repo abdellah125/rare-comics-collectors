@@ -143,3 +143,12 @@ test.describe("admin access control", () => {
     await expect(page.getByText(/settings saved/i)).toBeVisible();
   });
 });
+
+test("first-run setup is closed once an administrator exists", async ({ request }) => {
+  const page = await request.get("/admin/setup");
+  expect(page.status()).toBe(404);
+  const post = await request.post("/api/admin/setup", {
+    data: { name: "Intruder", email: "intruder@example.com", password: "Password123456", confirm: "Password123456" },
+  });
+  expect(post.status()).toBe(404);
+});

@@ -30,7 +30,9 @@ Generate secrets with `node -e "console.log(require('crypto').randomBytes(32).to
 ## Admin panel
 
 The panel lives at **`/admin`** (login at `/admin/login`). The first super admin comes from
-`ADMIN_EMAIL` / `ADMIN_PASSWORD` when you seed; change the password after the first login.
+`ADMIN_EMAIL` / `ADMIN_PASSWORD` when you seed, or, when those are not set, from the one-time
+**`/admin/setup`** page that exists only while the database has no super admin (optionally
+guarded by `ADMIN_SETUP_KEY`). Change the password after the first login.
 Two-factor authentication is required for every admin account by default (`Settings › Security`),
 so the first sign-in walks through authenticator enrolment.
 
@@ -125,13 +127,15 @@ run a sandbox transaction before launch.
 2. Storage › Create Database › **Neon** (or Prisma Postgres) and connect it to the project;
    this sets `DATABASE_URL` (and the unpooled URL the migration step prefers).
 3. Storage › Create › **Blob** and connect it; this sets `BLOB_READ_WRITE_TOKEN`.
-4. Settings › Environment Variables: `SESSION_SECRET`, `APP_ENCRYPTION_KEY`, `JOBS_SECRET`,
-   `CRON_SECRET` (random 32-byte base64 values, see above), `NEXT_PUBLIC_SITE_URL`
-   (`https://<project>.vercel.app` or your domain), `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
-   `JOBS_INLINE_WORKER=false`, plus SMTP and payment keys when you have them.
-5. Deployments › Redeploy. The first build creates the super admin from `ADMIN_EMAIL` /
-   `ADMIN_PASSWORD`; sign in at `/admin/login`, enrol 2FA and change the password. Later
-   builds only fill gaps and never overwrite what was edited in the panel.
+4. Deploy, open `https://<project>.vercel.app/admin/setup`, create the first administrator,
+   sign in and enrol 2FA. Nothing else is required: signing and encryption keys are generated
+   into the database on first boot, the site URL falls back to the Vercel host, and queued
+   jobs run after each request.
+5. Recommended hardening once it works, under Settings › Environment Variables:
+   `SESSION_SECRET` and `APP_ENCRYPTION_KEY` (random 32-byte base64 values; set them before
+   any admin enrols 2FA, because changing the encryption key later invalidates encrypted data),
+   `CRON_SECRET` so the daily cron in `vercel.json` is accepted, `NEXT_PUBLIC_SITE_URL` for a
+   custom domain, SMTP and payment keys when you have them.
 
 ## Deployment checklist (any host)
 

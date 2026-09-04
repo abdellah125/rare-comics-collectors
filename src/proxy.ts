@@ -7,7 +7,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * and enforces the optional admin IP allowlist.
  */
 const SESSION_COOKIE = "rcc_session";
-const ADMIN_PUBLIC = ["/admin/login", "/admin/login/verify", "/admin/denied"];
+const ADMIN_PUBLIC = ["/admin/login", "/admin/login/verify", "/admin/denied", "/admin/setup"];
 
 function ipAllowed(ip: string | null, allowlist: string[]): boolean {
   if (allowlist.length === 0) return true;

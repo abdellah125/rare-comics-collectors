@@ -24,10 +24,14 @@ export const env = {
     return process.env.NODE_ENV === "production";
   },
   get siteUrl() {
-    return str("NEXT_PUBLIC_SITE_URL", "http://localhost:3000").replace(/\/$/, "");
+    const explicit = str("NEXT_PUBLIC_SITE_URL");
+    // Vercel exposes the production host; fall back to it so links and emails work unconfigured.
+    const vercel = str("VERCEL_PROJECT_PRODUCTION_URL") || str("VERCEL_URL");
+    return (explicit || (vercel ? `https://${vercel}` : "http://localhost:3000")).replace(/\/$/, "");
   },
+  /** Empty when unset: src/lib/crypto.ts then uses the database-generated instance secret. */
   get sessionSecret() {
-    return str("SESSION_SECRET", "dev-only-session-secret-change-me");
+    return str("SESSION_SECRET");
   },
   get encryptionKey() {
     return str("APP_ENCRYPTION_KEY");
@@ -45,6 +49,10 @@ export const env = {
   /** Vercel Cron authenticates with this header value. */
   get cronSecret() {
     return str("CRON_SECRET");
+  },
+  /** Optional shared secret required by the first-run /admin/setup page. */
+  get adminSetupKey() {
+    return str("ADMIN_SETUP_KEY");
   },
   get adminIpAllowlist(): string[] {
     return str("ADMIN_IP_ALLOWLIST")

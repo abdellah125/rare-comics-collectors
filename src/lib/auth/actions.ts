@@ -9,6 +9,7 @@ import { hashToken, randomToken, decrypt } from "@/lib/crypto";
 import { audit, securityEvent } from "@/lib/audit";
 import { burnPasswordCheck, hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createSession, destroyCurrentSession, getCurrentUser, revokeAllSessions } from "@/lib/auth/session";
+import { ensureInstanceSecrets } from "@/lib/secrets";
 import { hashRecoveryCode, verifyTotp } from "@/lib/auth/totp";
 import { parseJsonArray, isString } from "@/lib/json";
 import { queueTemplateEmail } from "@/lib/mail";
@@ -52,6 +53,7 @@ async function finishLogin(user: LoginUser, remember: boolean, asAdmin: boolean)
 }
 
 export async function loginAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
+  await ensureInstanceSecrets();
   const parsed = LoginSchema.safeParse(formToObject(formData));
   if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
   const { email, password } = parsed.data;
@@ -119,6 +121,7 @@ export async function loginAction(_prev: ActionState | undefined, formData: Form
 const VerifySchema = z.object({ code: zTrimmed(64), next: z.string().optional() });
 
 export async function verifyTwoFactorAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
+  await ensureInstanceSecrets();
   const parsed = VerifySchema.safeParse(formToObject(formData));
   if (!parsed.success) return failState("Enter the 6-digit code from your authenticator app.");
   const store = await cookies();

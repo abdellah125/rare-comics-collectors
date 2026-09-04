@@ -57,8 +57,14 @@ function isCartLine(value: unknown): value is CartLine {
 
 function reducer(state: CartState, action: Action): CartState {
   switch (action.type) {
-    case "hydrate":
-      return { lines: action.lines, hydrated: true };
+    case "hydrate": {
+      if (state.hydrated) return state;
+      if (state.lines.length === 0) return { lines: action.lines, hydrated: true };
+      // The shopper acted before storage was read (React replays clicks made during
+      // hydration before passive effects run): keep those lines and add the stored ones.
+      const ids = new Set(state.lines.map((l) => l.id));
+      return { lines: [...state.lines, ...action.lines.filter((l) => !ids.has(l.id))], hydrated: true };
+    }
     case "add": {
       const existing = state.lines.find((l) => l.id === action.line.id);
       if (existing) {

@@ -1,6 +1,7 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/env";
+import { cachedSecret } from "@/lib/secrets-cache";
 
 /** URL-safe random token (default 32 bytes = 43 chars). */
 export function randomToken(bytes = 32): string {
@@ -19,7 +20,17 @@ export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export function hmac(value: string, secret = env.sessionSecret): string {
+function sessionSecret(): string {
+  const fromEnv = env.sessionSecret;
+  if (fromEnv) return fromEnv;
+  const stored = cachedSecret("session_secret");
+  if (stored) return stored;
+  if (env.isProd) throw new Error("No session secret: set SESSION_SECRET or let ensureInstanceSecrets() run first");
+  // Deterministic dev value so local sessions survive restarts. Never used in production.
+  return "dev-only-session-secret-change-me";
+}
+
+export function hmac(value: string, secret = sessionSecret()): string {
   return createHmac("sha256", secret).update(value).digest("base64url");
 }
 
@@ -31,9 +42,9 @@ export function safeEqual(a: string, b: string): boolean {
 }
 
 function key(): Buffer {
-  const raw = env.encryptionKey;
+  const raw = env.encryptionKey || cachedSecret("encryption_key");
   if (!raw) {
-    if (env.isProd) throw new Error("APP_ENCRYPTION_KEY is not set");
+    if (env.isProd) throw new Error("No encryption key: set APP_ENCRYPTION_KEY or let ensureInstanceSecrets() run first");
     // Deterministic dev key so local data survives restarts. Never used in production.
     return createHash("sha256").update("dev-only-encryption-key").digest();
   }

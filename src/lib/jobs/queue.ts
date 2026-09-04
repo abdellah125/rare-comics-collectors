@@ -57,13 +57,33 @@ export async function enqueueJob(
  * response has been sent, and the platform keeps the function alive for it.
  */
 function kickWorker(runAt: Date) {
-  if (process.env.JOBS_INLINE_WORKER !== "false" && !process.env.VERCEL) return;
   if (runAt.getTime() > Date.now() + 1_000) return;
+  driveJobsAfterResponse();
+}
+
+let draining = false;
+
+/**
+ * Serverless drain: once the current response is sent, make sure the recurring jobs
+ * are scheduled and run a few due ones. No-op where the polling worker exists.
+ * Cheap enough to call from every admin page render, so ordinary traffic keeps the
+ * queue moving even when no cron is configured.
+ */
+export function driveJobsAfterResponse(): void {
+  if (process.env.JOBS_INLINE_WORKER !== "false" && !process.env.VERCEL) return;
+  if (draining) return;
   try {
     after(async () => {
-      const { registerJobHandlers } = await import("@/lib/jobs/handlers");
-      registerJobHandlers();
-      await processJobs(10).catch((err) => console.error("[jobs] post-response drain failed", err));
+      if (draining) return;
+      draining = true;
+      try {
+        const { registerJobHandlers, ensureRecurringJobs } = await import("@/lib/jobs/handlers");
+        registerJobHandlers();
+        await ensureRecurringJobs().catch((err) => console.error("[jobs] could not schedule recurring jobs", err));
+        await processJobs(10).catch((err) => console.error("[jobs] post-response drain failed", err));
+      } finally {
+        draining = false;
+      }
     });
   } catch {
     // Not inside a request (e.g. queued by another job): the cron picks it up.

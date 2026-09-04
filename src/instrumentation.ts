@@ -7,7 +7,11 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === "phase-production-build") return;
-  if (process.env.JOBS_INLINE_WORKER === "false") return;
+  const { ensureInstanceSecrets } = await import("@/lib/secrets");
+  await ensureInstanceSecrets().catch((err) => console.error("[secrets] could not load instance secrets", err));
+
+  // Serverless hosts have no long-lived process: jobs run after requests and from the cron instead.
+  if (process.env.JOBS_INLINE_WORKER === "false" || process.env.VERCEL) return;
 
   const { registerJobHandlers, ensureRecurringJobs } = await import("@/lib/jobs/handlers");
   const { processJobs } = await import("@/lib/jobs/queue");
