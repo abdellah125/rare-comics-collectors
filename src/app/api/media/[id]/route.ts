@@ -9,6 +9,9 @@ export const dynamic = "force-dynamic";
  * Serves uploaded files. Public media (product images, branding) is cacheable;
  * private media (seller documents, case attachments) requires the owner, the
  * related seller, or an admin with the matching permission.
+ *
+ * Files on object storage: public ones redirect to the CDN, private ones are
+ * fetched server-side so their storage URL is never handed out.
  */
 export async function GET(_req: NextRequest, ctx: RouteContext<"/api/media/[id]">) {
   const { id } = await ctx.params;
@@ -22,9 +25,11 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/media/[id]"
     const adminOk =
       media.purpose === "seller_document" ? can(user, "sellers.view") : can(user, "support.view") || can(user, "disputes.manage") || can(user, "orders.view");
     if (!isOwner && !adminOk) return new Response("Forbidden", { status: 403 });
+  } else if (media.storage === "blob" && media.externalUrl) {
+    return new Response(null, { status: 302, headers: { location: media.externalUrl, "cache-control": "public, max-age=3600" } });
   }
 
-  const buf = await readMedia(media.key);
+  const buf = await readMedia(media);
   if (!buf) return new Response("Not found", { status: 404 });
   return new Response(new Uint8Array(buf), {
     headers: {

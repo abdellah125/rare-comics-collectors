@@ -31,7 +31,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
     ...(era ? { era } : {}),
     ...(grader ? { grader } : {}),
     ...(p.get("featured") ? { featured: true } : {}),
-    ...(p.q ? { OR: [{ title: { contains: p.q } }, { issue: { contains: p.q } }, { sku: { contains: p.q } }, { certNumber: { contains: p.q } }, { publisher: { contains: p.q } }] } : {}),
+    ...(p.q ? { OR: [{ title: { contains: p.q, mode: "insensitive" as const } }, { issue: { contains: p.q, mode: "insensitive" as const } }, { sku: { contains: p.q, mode: "insensitive" as const } }, { certNumber: { contains: p.q, mode: "insensitive" as const } }, { publisher: { contains: p.q, mode: "insensitive" as const } }] } : {}),
   };
   const [rows, total, counts] = await Promise.all([
     db.product.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { seller: { select: { id: true, displayName: true } }, images: { orderBy: { position: "asc" }, take: 1, select: { url: true } } } }),

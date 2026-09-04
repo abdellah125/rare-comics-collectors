@@ -1,7 +1,8 @@
 /**
  * Starts the in-process job worker on a long-running Node server. On
- * serverless hosts, leave this in place (it is harmless) and call
- * POST /api/jobs/run from a cron every minute instead.
+ * serverless hosts set JOBS_INLINE_WORKER=false: jobs then run right after the
+ * request that queued them (see kickWorker in src/lib/jobs/queue.ts) and from
+ * the cron that calls /api/jobs/run.
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;

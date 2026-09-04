@@ -24,7 +24,7 @@ export default async function AdminSellersPage({ searchParams }: PageProps<"/adm
   const where: Prisma.SellerProfileWhereInput = {
     ...(status ? { status } : {}),
     ...(verification ? { verificationStatus: verification } : {}),
-    ...(p.q ? { OR: [{ displayName: { contains: p.q } }, { businessName: { contains: p.q } }, { user: { email: { contains: p.q } } }] } : {}),
+    ...(p.q ? { OR: [{ displayName: { contains: p.q, mode: "insensitive" as const } }, { businessName: { contains: p.q, mode: "insensitive" as const } }, { user: { email: { contains: p.q, mode: "insensitive" as const } } }] } : {}),
   };
   const [rows, total] = await Promise.all([
     db.sellerProfile.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { user: { select: { email: true, name: true } }, _count: { select: { products: true, disputes: true } } } }),

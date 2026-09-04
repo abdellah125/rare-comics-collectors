@@ -27,7 +27,7 @@ export default async function AdminPromotionsPage({ searchParams }: PageProps<"/
   monthAgo.setDate(monthAgo.getDate() - 30);
   const where: Prisma.CouponWhereInput = {
     ...(state === "active" ? { isActive: true, OR: [{ endsAt: null }, { endsAt: { gte: now } }] } : state === "expired" ? { endsAt: { lt: now } } : state === "disabled" ? { isActive: false } : {}),
-    ...(p.q ? { OR: [{ code: { contains: p.q.toUpperCase() } }, { name: { contains: p.q } }] } : {}),
+    ...(p.q ? { OR: [{ code: { contains: p.q.toUpperCase(), mode: "insensitive" as const } }, { name: { contains: p.q, mode: "insensitive" as const } }] } : {}),
   };
   const [rows, total, redeemed] = await Promise.all([
     db.coupon.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { seller: { select: { displayName: true } }, _count: { select: { redemptions: true } } } }),

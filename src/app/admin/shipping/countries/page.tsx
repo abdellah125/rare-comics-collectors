@@ -16,7 +16,7 @@ export default async function AdminCountriesPage({ searchParams }: PageProps<"/a
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const zoneFilter = typeof sp.zone === "string" ? sp.zone : "";
   const [countries, zones, currencies] = await Promise.all([
-    db.country.findMany({ where: { ...(q ? { OR: [{ name: { contains: q } }, { code: { contains: q.toUpperCase() } }] } : {}), ...(zoneFilter === "none" ? { shippingZoneId: null } : zoneFilter ? { shippingZoneId: zoneFilter } : {}) }, orderBy: { name: "asc" }, include: { shippingZone: { select: { name: true } } } }),
+    db.country.findMany({ where: { ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { code: { contains: q.toUpperCase(), mode: "insensitive" as const } }] } : {}), ...(zoneFilter === "none" ? { shippingZoneId: null } : zoneFilter ? { shippingZoneId: zoneFilter } : {}) }, orderBy: { name: "asc" }, include: { shippingZone: { select: { name: true } } } }),
     db.shippingZone.findMany({ orderBy: { position: "asc" }, select: { id: true, name: true } }),
     db.currency.findMany({ select: { code: true } }),
   ]);

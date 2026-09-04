@@ -98,7 +98,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps<"/admin
 
   if (tab === "security") {
     const type = p.get("type") || "";
-    const where: Prisma.SecurityEventWhereInput = { ...(type ? { type } : {}), ...dateWhere, ...(p.q ? { OR: [{ user: { email: { contains: p.q } } }, { ip: { contains: p.q } }, { type: { contains: p.q } }] } : {}) };
+    const where: Prisma.SecurityEventWhereInput = { ...(type ? { type } : {}), ...dateWhere, ...(p.q ? { OR: [{ user: { email: { contains: p.q, mode: "insensitive" as const } } }, { ip: { contains: p.q, mode: "insensitive" as const } }, { type: { contains: p.q, mode: "insensitive" as const } }] } : {}) };
     const [rows, total, types] = await Promise.all([db.securityEvent.findMany({ where, orderBy: { createdAt: p.dir }, skip: p.skip, take: p.per, include: { user: { select: { id: true, email: true } } } }), db.securityEvent.count({ where }), db.securityEvent.groupBy({ by: ["type"], _count: { _all: true }, orderBy: { type: "asc" } })]);
     return (
       <>
@@ -181,9 +181,9 @@ export default async function AdminAuditPage({ searchParams }: PageProps<"/admin
   const where: Prisma.AuditLogWhereInput = {
     ...(action ? { action: { startsWith: action } } : {}),
     ...(targetType ? { targetType } : {}),
-    ...(actor ? { actorEmail: { contains: actor } } : {}),
+    ...(actor ? { actorEmail: { contains: actor, mode: "insensitive" as const } } : {}),
     ...dateWhere,
-    ...(p.q ? { OR: [{ summary: { contains: p.q } }, { targetId: p.q }, { actorEmail: { contains: p.q } }] } : {}),
+    ...(p.q ? { OR: [{ summary: { contains: p.q, mode: "insensitive" as const } }, { targetId: p.q }, { actorEmail: { contains: p.q, mode: "insensitive" as const } }] } : {}),
   };
   const [rows, total, targetTypes] = await Promise.all([db.auditLog.findMany({ where, orderBy: { createdAt: p.dir }, skip: p.skip, take: p.per, include: { actor: { select: { id: true } } } }), db.auditLog.count({ where }), db.auditLog.groupBy({ by: ["targetType"], orderBy: { targetType: "asc" } })]);
   return (

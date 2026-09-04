@@ -19,7 +19,7 @@ export default async function AdminViolationsPage({ searchParams }: PageProps<"/
   const sp = await searchParams;
   const p = listParams(sp, { defaultSort: "createdAt", sorts: ["createdAt", "severity"] });
   const status = p.get("status") || "";
-  const where: Prisma.ViolationWhereInput = { ...(status ? { status } : {}), ...(p.q ? { OR: [{ user: { email: { contains: p.q } } }, { user: { name: { contains: p.q } } }, { description: { contains: p.q } }] } : {}) };
+  const where: Prisma.ViolationWhereInput = { ...(status ? { status } : {}), ...(p.q ? { OR: [{ user: { email: { contains: p.q, mode: "insensitive" as const } } }, { user: { name: { contains: p.q, mode: "insensitive" as const } } }, { description: { contains: p.q, mode: "insensitive" as const } }] } : {}) };
   const [rows, total] = await Promise.all([db.violation.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { user: { select: { id: true, name: true, email: true, status: true } }, issuedBy: { select: { name: true } }, appeals: { select: { id: true, status: true } } } }), db.violation.count({ where })]);
   const prefillEmail = typeof sp.email === "string" ? sp.email : "";
   const reportId = typeof sp.reportId === "string" ? sp.reportId : "";

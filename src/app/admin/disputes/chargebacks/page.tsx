@@ -17,7 +17,7 @@ export default async function AdminChargebacksPage({ searchParams }: PageProps<"
   const sp = await searchParams;
   const p = listParams(sp, { defaultSort: "createdAt", sorts: ["createdAt"] });
   const status = p.get("status") || "";
-  const where: Prisma.ChargebackWhereInput = { ...(status ? { status } : {}), ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase() } } }, { providerRef: { contains: p.q } }] } : {}) };
+  const where: Prisma.ChargebackWhereInput = { ...(status ? { status } : {}), ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase(), mode: "insensitive" as const } } }, { providerRef: { contains: p.q, mode: "insensitive" as const } }] } : {}) };
   const [rows, total, lost] = await Promise.all([
     db.chargeback.findMany({ where, orderBy: { createdAt: p.dir }, skip: p.skip, take: p.per, include: { order: { select: { id: true, number: true, email: true } }, payment: { select: { provider: true } } } }),
     db.chargeback.count({ where }),

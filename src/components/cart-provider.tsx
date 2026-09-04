@@ -84,7 +84,9 @@ function reducer(state: CartState, action: Action): CartState {
     case "remove":
       return { ...state, lines: state.lines.filter((l) => l.id !== action.id) };
     case "clear":
-      return { ...state, lines: [] };
+      // Same state object when already empty, so consumers whose callbacks depend on
+      // `lines` (the confirmation page's ClearCart effect) do not re-render in a loop.
+      return state.lines.length === 0 ? state : { ...state, lines: [] };
   }
 }
 

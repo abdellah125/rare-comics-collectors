@@ -5,6 +5,11 @@
  *
  *   npm run db:seed              # production-safe (no demo accounts)
  *   SEED_DEMO=true npm run db:seed   # also creates demo buyer/seller/support accounts
+ *   SEED_REFRESH_CATALOG=true …      # also overwrite the house inventory rows from src/lib/products.ts
+ *
+ * It also runs inside `npm run build` (scripts/db-deploy.mjs), so re-running must only fill
+ * gaps: rows edited in the admin panel (products, categories, templates, base currency) are
+ * left alone.
  */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -60,7 +65,7 @@ const CURRENCIES = [
 
 async function seedCurrencies() {
   for (const c of CURRENCIES) {
-    await db.currency.upsert({ where: { code: c.code }, create: { ...c, rateSource: "seed" }, update: { name: c.name, symbol: c.symbol, decimals: c.decimals, isBase: c.isBase } });
+    await db.currency.upsert({ where: { code: c.code }, create: { ...c, rateSource: "seed" }, update: { name: c.name, symbol: c.symbol, decimals: c.decimals } });
   }
   log(`${CURRENCIES.length} currencies`);
 }
@@ -250,7 +255,7 @@ async function seedTemplates() {
     await db.emailTemplate.upsert({
       where: { key: t.key },
       create: { key: t.key, name: t.name, subject: t.subject, bodyText: t.body, variablesJson: JSON.stringify(t.vars) },
-      update: { name: t.name, variablesJson: JSON.stringify(t.vars) },
+      update: { variablesJson: JSON.stringify(t.vars) },
     });
   }
   log(`${TEMPLATES.length} email templates`);
@@ -268,11 +273,11 @@ const CATEGORIES = [
 const ERA_CATEGORY: Record<string, string> = { "Golden Age": "golden-age", "Silver Age": "silver-age", "Bronze Age": "bronze-age", "Copper Age": "copper-age", "Modern Age": "modern-age" };
 
 async function seedCatalog() {
-  for (const c of CATEGORIES) await db.category.upsert({ where: { slug: c.slug }, create: c, update: { name: c.name, position: c.position } });
+  for (const c of CATEGORIES) await db.category.upsert({ where: { slug: c.slug }, create: c, update: {} });
   const publishers = [...new Set(products.map((p) => p.publisher))];
   for (const name of publishers) {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    await db.brand.upsert({ where: { slug }, create: { slug, name }, update: { name } });
+    await db.brand.upsert({ where: { slug }, create: { slug, name }, update: {} });
   }
   const cats = Object.fromEntries((await db.category.findMany()).map((c) => [c.slug, c.id]));
   const brands = Object.fromEntries((await db.brand.findMany()).map((b) => [b.name, b.id]));
@@ -311,7 +316,7 @@ async function seedCatalog() {
     };
     const existing = await db.product.findUnique({ where: { slug: p.slug }, select: { id: true } });
     if (existing) {
-      await db.product.update({ where: { id: existing.id }, data: { ...data } });
+      if (process.env.SEED_REFRESH_CATALOG === "true") await db.product.update({ where: { id: existing.id }, data: { ...data } });
       continue;
     }
     const url = covers[p.slug] ?? p.image ?? `/covers/${p.slug}.svg`;

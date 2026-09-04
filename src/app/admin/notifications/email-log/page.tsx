@@ -17,7 +17,7 @@ export default async function AdminEmailLogPage({ searchParams }: PageProps<"/ad
   const p = listParams(sp, { defaultSort: "createdAt", sorts: ["createdAt"] });
   const status = p.get("status") || "";
   const template = p.get("template") || "";
-  const where: Prisma.EmailLogWhereInput = { ...(status ? { status } : {}), ...(template ? { templateKey: template } : {}), ...(p.q ? { OR: [{ toEmail: { contains: p.q } }, { subject: { contains: p.q } }] } : {}) };
+  const where: Prisma.EmailLogWhereInput = { ...(status ? { status } : {}), ...(template ? { templateKey: template } : {}), ...(p.q ? { OR: [{ toEmail: { contains: p.q, mode: "insensitive" as const } }, { subject: { contains: p.q, mode: "insensitive" as const } }] } : {}) };
   const [rows, total, templates] = await Promise.all([db.emailLog.findMany({ where, orderBy: { createdAt: p.dir }, skip: p.skip, take: p.per }), db.emailLog.count({ where }), db.emailTemplate.findMany({ select: { key: true, name: true }, orderBy: { name: "asc" } })]);
   const base = "/admin/notifications/email-log";
   return (

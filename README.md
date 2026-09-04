@@ -9,7 +9,8 @@ Turbopack), React 19, Tailwind CSS 4, Prisma 6.
 ```bash
 npm ci
 cp .env.example .env          # then fill in SESSION_SECRET, APP_ENCRYPTION_KEY, ADMIN_EMAIL/PASSWORD
-npm run db:migrate:dev        # creates the SQLite database from prisma/schema.prisma
+npm run db:local              # zero-install local Postgres on localhost:5433 (keep this terminal open)
+npm run db:migrate            # applies prisma/migrations to DATABASE_URL
 npm run db:seed               # roles, super admin, currencies, countries, shipping, tax, templates, catalogue
 npm run dev                   # http://localhost:3000
 ```
@@ -18,11 +19,12 @@ Generate secrets with `node -e "console.log(require('crypto').randomBytes(32).to
 
 | Script | What it does |
 | --- | --- |
-| `npm run dev` / `build` / `start` | Development server, production build (`prisma generate` first), production server |
+| `npm run dev` / `build` / `start` | Development server, production build (`prisma generate`, `prisma migrate deploy`, seed, `next build`), production server |
 | `npm run lint`, `npm run typecheck` | ESLint, `tsc --noEmit` |
 | `npm test` | Vitest unit tests (`tests/unit`) |
 | `npm run test:e2e` | Playwright end-to-end suite (`tests/e2e`; seeds its own accounts, starts the dev server) |
-| `npm run db:migrate` / `db:migrate:dev` / `db:studio` / `db:reset` | Prisma migrations and tooling |
+| `npm run db:local` | Local Postgres on port 5433 (`.postgres/` holds the data) |
+| `npm run db:migrate` / `db:migrate:dev` / `db:deploy` / `db:studio` / `db:reset` | Prisma migrations and tooling (`db:deploy` = migrate + seed, what the build runs) |
 | `npm run db:seed` | Idempotent seed (`SEED_DEMO=true` also creates demo buyer/seller accounts and orders) |
 
 ## Admin panel
@@ -79,21 +81,32 @@ Key rules baked into the code:
 
 ## Database
 
-Development uses SQLite (`DATABASE_URL="file:./dev.db"`). The schema avoids SQLite-only and
-Postgres-only features (no enums, JSON stored as text, integers for money), so switching is:
+PostgreSQL in every environment. Locally `npm run db:local` runs a real Postgres server from
+the `embedded-postgres` dev dependency (binaries downloaded on install, data in `.postgres/`);
+any other Postgres works the same way through `DATABASE_URL`. The schema avoids
+provider-specific features (no enums, JSON stored as text, integers for money).
 
-1. Set `provider = "postgresql"` in `prisma/schema.prisma` and `DATABASE_URL` to the Postgres URL.
-2. Delete `prisma/migrations` and run `npm run db:migrate:dev -- --name init` to generate a
-   fresh migration for the new provider (or hand-port the existing one).
-3. `npm run db:seed`.
+Schema changes: edit `prisma/schema.prisma`, run `npm run db:migrate:dev -- --name <change>`
+and commit the new folder under `prisma/migrations`. Deployments apply pending migrations with
+`prisma migrate deploy` during the build (`scripts/db-deploy.mjs`, which prefers the direct,
+unpooled URL when the host provides one), then run the idempotent seed.
+
+## Uploads
+
+`src/lib/media.ts` writes files to `UPLOAD_DIR` and serves them through `/api/media/[id]`
+with an access check. When `BLOB_READ_WRITE_TOKEN` is set (Vercel Blob) new uploads go to
+object storage instead; every `MediaFile` row records its backend, so both can coexist.
 
 ## Background jobs
 
 Emails, exchange rates, unpaid-order expiry, auto-completion, payout scheduling and cleanup
 run through the `Job` table. On a long-running Node server the in-process worker in
-`src/instrumentation.ts` polls it. On serverless hosts schedule a cron that calls
-`POST /api/jobs/run` with `Authorization: Bearer $JOBS_SECRET` every minute. The admin panel
-(`Jobs & webhooks`) can retry, cancel and run jobs manually.
+`src/instrumentation.ts` polls it. On serverless hosts set `JOBS_INLINE_WORKER=false`: a job
+queued during a request is drained right after the response (`after()`), and
+`/api/jobs/run` (GET or POST, `Authorization: Bearer $JOBS_SECRET` or `$CRON_SECRET`) runs
+the recurring jobs from a cron. `vercel.json` schedules it daily, the most a Vercel Hobby plan
+allows; on Pro change the schedule to `* * * * *`. The admin panel (`Jobs & system`) can
+retry, cancel and run jobs manually.
 
 ## Payments
 
@@ -104,14 +117,30 @@ offline instructions; `test` is a zero-cost provider for local development and t
 Live Stripe/PayPal flows have not been exercised against real accounts in this repository —
 run a sandbox transaction before launch.
 
-## Deployment checklist
+## Deploying to Vercel
 
-- `NEXT_PUBLIC_SITE_URL`, `SESSION_SECRET`, `APP_ENCRYPTION_KEY`, `JOBS_SECRET` set; `UPLOAD_DIR`
-  on persistent storage (or put uploads behind object storage by swapping `src/lib/media.ts`).
+1. Import the GitHub repository (production branch `main_Code`). Keep the default build
+   command: `npm run build` runs `prisma generate`, `prisma migrate deploy`, the seed and
+   `next build`.
+2. Storage › Create Database › **Neon** (or Prisma Postgres) and connect it to the project;
+   this sets `DATABASE_URL` (and the unpooled URL the migration step prefers).
+3. Storage › Create › **Blob** and connect it; this sets `BLOB_READ_WRITE_TOKEN`.
+4. Settings › Environment Variables: `SESSION_SECRET`, `APP_ENCRYPTION_KEY`, `JOBS_SECRET`,
+   `CRON_SECRET` (random 32-byte base64 values, see above), `NEXT_PUBLIC_SITE_URL`
+   (`https://<project>.vercel.app` or your domain), `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
+   `JOBS_INLINE_WORKER=false`, plus SMTP and payment keys when you have them.
+5. Deployments › Redeploy. The first build creates the super admin from `ADMIN_EMAIL` /
+   `ADMIN_PASSWORD`; sign in at `/admin/login`, enrol 2FA and change the password. Later
+   builds only fill gaps and never overwrite what was edited in the panel.
+
+## Deployment checklist (any host)
+
+- `NEXT_PUBLIC_SITE_URL`, `SESSION_SECRET`, `APP_ENCRYPTION_KEY`, `JOBS_SECRET` set; uploads on
+  persistent storage (`UPLOAD_DIR`) or object storage (`BLOB_READ_WRITE_TOKEN`).
 - SMTP configured (otherwise mail is only logged), payment keys and webhook secrets set.
 - `npm run build && npm run start` behind HTTPS; a cron for `/api/jobs/run` if the process is
   not long-lived; database backups.
-- Seed, sign in at `/admin/login`, enrol 2FA, rotate the seeded password, review
-  `Settings` and `Finance` before opening the store.
+- Sign in at `/admin/login`, enrol 2FA, rotate the seeded password, review `Settings` and
+  `Finance` before opening the store.
 
 `wordpress/` contains an unrelated WordPress/Elementor export and is not part of the build.

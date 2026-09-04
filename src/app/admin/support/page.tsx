@@ -26,7 +26,7 @@ export default async function AdminSupportPage({ searchParams }: PageProps<"/adm
     ...(priority ? { priority } : {}),
     ...(category ? { category } : {}),
     ...(assignee === "me" ? { assignedToId: admin.id } : assignee === "none" ? { assignedToId: null } : assignee ? { assignedToId: assignee } : {}),
-    ...(p.q ? { OR: [{ number: { contains: p.q.toUpperCase() } }, { subject: { contains: p.q } }, { email: { contains: p.q } }, { name: { contains: p.q } }, { order: { number: { contains: p.q.toUpperCase() } } }] } : {}),
+    ...(p.q ? { OR: [{ number: { contains: p.q.toUpperCase(), mode: "insensitive" as const } }, { subject: { contains: p.q, mode: "insensitive" as const } }, { email: { contains: p.q, mode: "insensitive" as const } }, { name: { contains: p.q, mode: "insensitive" as const } }, { order: { number: { contains: p.q.toUpperCase(), mode: "insensitive" as const } } }] } : {}),
   };
   const [rows, total, agents, unassigned, urgent] = await Promise.all([
     db.ticket.findMany({ where, orderBy: [{ isEscalated: "desc" }, { [p.sort]: p.dir }], skip: p.skip, take: p.per, include: { user: { select: { id: true, name: true } }, order: { select: { id: true, number: true } }, assignedTo: { select: { name: true } }, _count: { select: { messages: true } } } }),

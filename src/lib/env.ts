@@ -38,6 +38,14 @@ export const env = {
   get uploadDir() {
     return str("UPLOAD_DIR", "./uploads");
   },
+  /** Vercel Blob read/write token; when present uploads go to object storage. */
+  get blobToken() {
+    return str("BLOB_READ_WRITE_TOKEN");
+  },
+  /** Vercel Cron authenticates with this header value. */
+  get cronSecret() {
+    return str("CRON_SECRET");
+  },
   get adminIpAllowlist(): string[] {
     return str("ADMIN_IP_ALLOWLIST")
       .split(",")

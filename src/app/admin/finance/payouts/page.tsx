@@ -19,7 +19,7 @@ export default async function AdminPayoutsPage({ searchParams }: PageProps<"/adm
   const sp = await searchParams;
   const p = listParams(sp, { defaultSort: "createdAt", sorts: ["createdAt", "amount", "status", "scheduledFor"] });
   const status = p.get("status");
-  const where: Prisma.PayoutWhereInput = { ...(status ? { status } : {}), ...(p.q ? { OR: [{ seller: { displayName: { contains: p.q } } }, { reference: { contains: p.q } }] } : {}) };
+  const where: Prisma.PayoutWhereInput = { ...(status ? { status } : {}), ...(p.q ? { OR: [{ seller: { displayName: { contains: p.q, mode: "insensitive" as const } } }, { reference: { contains: p.q, mode: "insensitive" as const } }] } : {}) };
   const [rows, total, open] = await Promise.all([
     db.payout.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { seller: { select: { id: true, displayName: true, verificationStatus: true } } } }),
     db.payout.count({ where }),

@@ -36,9 +36,9 @@ export function pageCount(total: number, per: number) {
   return Math.max(1, Math.ceil(total / per));
 }
 
-/** SQLite/Postgres-agnostic case-insensitive contains (Prisma mode:"insensitive" is Postgres-only). */
+/** Case-insensitive substring filter (Postgres `ILIKE`). */
 export function contains(value: string) {
-  return { contains: value };
+  return { contains: value, mode: "insensitive" as const };
 }
 
 export function parseDate(value: string | undefined, fallback: Date): Date {

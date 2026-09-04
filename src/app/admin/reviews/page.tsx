@@ -25,7 +25,7 @@ export default async function AdminReviewsPage({ searchParams }: PageProps<"/adm
     ...(status ? { status } : {}),
     ...(rating ? { rating: Number(rating) } : {}),
     ...(flagged ? { OR: [{ reportCount: { gt: 0 } }, { spamScore: { gte: 50 } }] } : {}),
-    ...(p.q ? { OR: [{ body: { contains: p.q } }, { title: { contains: p.q } }, { user: { email: { contains: p.q } } }, { product: { title: { contains: p.q } } }, { seller: { displayName: { contains: p.q } } }] } : {}),
+    ...(p.q ? { OR: [{ body: { contains: p.q, mode: "insensitive" as const } }, { title: { contains: p.q, mode: "insensitive" as const } }, { user: { email: { contains: p.q, mode: "insensitive" as const } } }, { product: { title: { contains: p.q, mode: "insensitive" as const } } }, { seller: { displayName: { contains: p.q, mode: "insensitive" as const } } }] } : {}),
   };
   const [rows, total, flaggedCount, pendingCount] = await Promise.all([
     db.review.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { user: { select: { id: true, name: true, email: true } }, product: { select: { id: true, title: true, slug: true } }, seller: { select: { id: true, displayName: true } }, order: { select: { id: true, number: true } } } }),

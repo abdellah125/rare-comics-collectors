@@ -34,7 +34,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
     ...(provider ? { payments: { some: { provider } } } : {}),
     ...(p.get("risk") ? { riskScore: { gte: 40 } } : {}),
     ...(from || to ? { placedAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
-    ...(p.q ? { OR: [{ number: { contains: p.q.toUpperCase() } }, { email: { contains: p.q } }, { user: { name: { contains: p.q } } }, { items: { some: { title: { contains: p.q } } } }] } : {}),
+    ...(p.q ? { OR: [{ number: { contains: p.q.toUpperCase(), mode: "insensitive" as const } }, { email: { contains: p.q, mode: "insensitive" as const } }, { user: { name: { contains: p.q, mode: "insensitive" as const } } }, { items: { some: { title: { contains: p.q, mode: "insensitive" as const } } } }] } : {}),
   };
   const [rows, total, sum] = await Promise.all([
     db.order.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { user: { select: { id: true, name: true } }, items: { select: { title: true, qty: true, sellerId: true } }, payments: { orderBy: { createdAt: "desc" }, take: 1, select: { provider: true, status: true } } } }),

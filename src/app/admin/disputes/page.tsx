@@ -19,7 +19,7 @@ export default async function AdminDisputesPage({ searchParams }: PageProps<"/ad
   const status = p.get("status") || "";
   const where: Prisma.DisputeWhereInput = {
     ...(status === "open" ? { status: { notIn: ["resolved", "closed"] } } : status ? { status } : {}),
-    ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase() } } }, { openedBy: { email: { contains: p.q } } }, { seller: { displayName: { contains: p.q } } }] } : {}),
+    ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase(), mode: "insensitive" as const } } }, { openedBy: { email: { contains: p.q, mode: "insensitive" as const } } }, { seller: { displayName: { contains: p.q, mode: "insensitive" as const } } }] } : {}),
   };
   const [rows, total, openCount, cbCount] = await Promise.all([
     db.dispute.findMany({ where, orderBy: [{ [p.sort]: p.dir }], skip: p.skip, take: p.per, include: { order: { select: { id: true, number: true, total: true } }, openedBy: { select: { name: true, email: true } }, seller: { select: { displayName: true } }, orderItem: { select: { title: true } } } }),

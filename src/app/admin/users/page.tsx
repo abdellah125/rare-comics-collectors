@@ -26,7 +26,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
     ...(status ? { status } : {}),
     ...(kind === "sellers" ? { isSeller: true } : kind === "admins" ? { roleId: { not: null } } : kind === "buyers" ? { isSeller: false, roleId: null } : {}),
     ...(p.get("buyers") ? { orders: { some: { paymentStatus: "paid" } } } : {}),
-    ...(p.q ? { OR: [{ email: { contains: p.q } }, { name: { contains: p.q } }, { phone: { contains: p.q } }] } : {}),
+    ...(p.q ? { OR: [{ email: { contains: p.q, mode: "insensitive" as const } }, { name: { contains: p.q, mode: "insensitive" as const } }, { phone: { contains: p.q, mode: "insensitive" as const } }] } : {}),
   };
   const [rows, total] = await Promise.all([
     db.user.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { role: { select: { name: true } }, sellerProfile: { select: { status: true } }, _count: { select: { orders: true } } } }),

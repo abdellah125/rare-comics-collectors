@@ -19,7 +19,7 @@ export default async function AdminReturnsPage({ searchParams }: PageProps<"/adm
   const status = p.get("status") || "";
   const where: Prisma.ReturnRequestWhereInput = {
     ...(status === "open" ? { status: { in: ["requested", "approved", "shipped_back", "received"] } } : status ? { status } : {}),
-    ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase() } } }, { user: { email: { contains: p.q } } }, { user: { name: { contains: p.q } } }] } : {}),
+    ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase(), mode: "insensitive" as const } } }, { user: { email: { contains: p.q, mode: "insensitive" as const } } }, { user: { name: { contains: p.q, mode: "insensitive" as const } } }] } : {}),
   };
   const [rows, total, counts] = await Promise.all([
     db.returnRequest.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { order: { select: { id: true, number: true } }, user: { select: { name: true, email: true } }, orderItem: { select: { title: true, subtotal: true, discountAmount: true, seller: { select: { displayName: true } } } } } }),

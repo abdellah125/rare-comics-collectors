@@ -24,7 +24,7 @@ export default async function AdminModerationPage({ searchParams }: PageProps<"/
   const where: Prisma.ReportWhereInput = {
     ...(effectiveStatus === "open" ? { status: { in: ["open", "reviewing"] } } : effectiveStatus ? { status: effectiveStatus } : {}),
     ...(type ? { targetType: type } : {}),
-    ...(p.q ? { OR: [{ reason: { contains: p.q } }, { details: { contains: p.q } }, { reporterEmail: { contains: p.q } }, { reporter: { email: { contains: p.q } } }, { targetId: p.q }] } : {}),
+    ...(p.q ? { OR: [{ reason: { contains: p.q, mode: "insensitive" as const } }, { details: { contains: p.q, mode: "insensitive" as const } }, { reporterEmail: { contains: p.q, mode: "insensitive" as const } }, { reporter: { email: { contains: p.q, mode: "insensitive" as const } } }, { targetId: p.q }] } : {}),
   };
   const [rows, total, openCount, violations, appeals] = await Promise.all([
     db.report.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { reporter: { select: { name: true, email: true } }, handledBy: { select: { name: true } } } }),

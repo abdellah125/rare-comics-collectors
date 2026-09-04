@@ -22,7 +22,7 @@ export default async function AdminWebhooksPage({ searchParams }: PageProps<"/ad
   const p = listParams(sp, { defaultSort: "createdAt", sorts: ["createdAt"] });
   const status = p.get("status") || "";
   const provider = p.get("provider") || "";
-  const where: Prisma.WebhookEventWhereInput = { ...(status ? { status } : {}), ...(provider ? { provider } : {}), ...(p.q ? { OR: [{ type: { contains: p.q } }, { eventId: { contains: p.q } }] } : {}) };
+  const where: Prisma.WebhookEventWhereInput = { ...(status ? { status } : {}), ...(provider ? { provider } : {}), ...(p.q ? { OR: [{ type: { contains: p.q, mode: "insensitive" as const } }, { eventId: { contains: p.q, mode: "insensitive" as const } }] } : {}) };
   const [rows, total] = await Promise.all([db.webhookEvent.findMany({ where, orderBy: { createdAt: p.dir }, skip: p.skip, take: p.per }), db.webhookEvent.count({ where })]);
   const base = "/admin/system/webhooks";
   return (

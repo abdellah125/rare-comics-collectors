@@ -1,7 +1,7 @@
 // Rare Comics Collectors — marketplace schema.
 //
-// Portability rules (so this can move from SQLite to Postgres/MySQL by changing
-// the datasource provider and regenerating migrations):
+// Portability rules (PostgreSQL in every environment; the schema still avoids
+// provider-specific features so it could move to MySQL by regenerating migrations):
 //   - no enums: status-like fields are strings validated by zod in src/lib/domain
 //   - no Json columns: JSON is stored as text and parsed by the data layer
 //   - money is an Int in minor units (cents) of the currency named alongside it
@@ -12,7 +12,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -1285,6 +1285,9 @@ model MediaFile {
   purpose      String
   /// public | private
   visibility   String   @default("private")
+  /// local (UPLOAD_DIR on disk) | blob (Vercel Blob; the object's URL is in externalUrl)
+  storage      String   @default("local")
+  externalUrl  String?
   createdAt    DateTime @default(now())
 
   productImages   ProductImage[]

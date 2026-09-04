@@ -18,7 +18,7 @@ export default async function SellerListingsPage({ searchParams }: PageProps<"/d
   const sp = await searchParams;
   const status = typeof sp.status === "string" ? sp.status : "";
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
-  const where = { sellerId: user.seller.id, deletedAt: null, ...(status ? { status } : {}), ...(q ? { OR: [{ title: { contains: q } }, { issue: { contains: q } }, { sku: { contains: q } }] } : {}) };
+  const where = { sellerId: user.seller.id, deletedAt: null, ...(status ? { status } : {}), ...(q ? { OR: [{ title: { contains: q, mode: "insensitive" as const } }, { issue: { contains: q, mode: "insensitive" as const } }, { sku: { contains: q, mode: "insensitive" as const } }] } : {}) };
   const [listings, counts] = await Promise.all([
     db.product.findMany({ where, orderBy: { updatedAt: "desc" }, take: 200, include: { images: { orderBy: { position: "asc" }, take: 1 } } }),
     db.product.groupBy({ by: ["status"], where: { sellerId: user.seller.id, deletedAt: null }, _count: { _all: true } }),

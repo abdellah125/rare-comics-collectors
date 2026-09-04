@@ -19,7 +19,7 @@ export default async function AdminSearchPage({ searchParams }: PageProps<"/admi
       </>
     );
   }
-  const like = { contains: q };
+  const like = { contains: q, mode: "insensitive" as const };
   const [orders, users, products, sellers, tickets] = await Promise.all([
     can(admin, "orders.view") ? db.order.findMany({ where: { OR: [{ number: like }, { email: like }] }, take: 10, orderBy: { placedAt: "desc" }, select: { id: true, number: true, email: true, status: true, total: true } }) : [],
     can(admin, "users.view") ? db.user.findMany({ where: { deletedAt: null, OR: [{ email: like }, { name: like }] }, take: 10, select: { id: true, name: true, email: true, status: true, isSeller: true } }) : [],

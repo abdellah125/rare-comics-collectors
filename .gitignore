@@ -48,5 +48,6 @@ wordpress/scraper/node_modules
 /uploads
 /prisma/*.db
 /prisma/*.db-journal
+/.postgres
 /test-results
 /playwright-report

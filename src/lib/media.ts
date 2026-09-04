@@ -8,6 +8,27 @@ import { getSettings } from "@/lib/settings";
 
 export type MediaPurpose = "product_image" | "seller_document" | "attachment" | "avatar" | "branding";
 
+/**
+ * Where a file's bytes live. Every MediaFile row records its own backend so a
+ * deployment can move from local disk to object storage without touching
+ * existing rows.
+ *
+ * - `local`: UPLOAD_DIR on the server's disk (long-running Node hosts).
+ * - `blob`:  Vercel Blob, selected automatically when BLOB_READ_WRITE_TOKEN is
+ *            present (serverless hosts have no persistent, shared disk).
+ *
+ * Blob objects get unguessable names and private documents are only ever
+ * linked through /api/media/[id], so the access check in that route stays
+ * the single gate.
+ */
+export type MediaStorage = "local" | "blob";
+
+export function activeStorage(): MediaStorage {
+  return env.blobToken ? "blob" : "local";
+}
+
+export type StoredMedia = { key: string; storage: string; externalUrl: string | null };
+
 const IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -51,6 +72,52 @@ function imageSize(buf: Buffer, mime: string): { width: number; height: number }
 
 export class UploadError extends Error {}
 
+// ───────────────────────────── storage backends ─────────────────────────────
+
+function localPath(key: string): string | null {
+  const root = path.resolve(env.uploadDir);
+  const abs = path.join(root, key);
+  // Guard against traversal even though keys are generated server-side.
+  return abs.startsWith(root) ? abs : null;
+}
+
+async function localWrite(key: string, buf: Buffer): Promise<void> {
+  const abs = localPath(key);
+  if (!abs) throw new UploadError("Invalid storage key");
+  await mkdir(path.dirname(abs), { recursive: true });
+  await writeFile(abs, buf);
+}
+
+async function localRead(key: string): Promise<Buffer | null> {
+  const abs = localPath(key);
+  if (!abs) return null;
+  try {
+    await stat(abs);
+    return await readFile(abs);
+  } catch {
+    return null;
+  }
+}
+
+async function blobWrite(key: string, buf: Buffer, mime: string): Promise<string> {
+  const { put } = await import("@vercel/blob");
+  const res = await put(`uploads/${key}`, buf, { access: "public", contentType: mime, addRandomSuffix: true, token: env.blobToken });
+  return res.url;
+}
+
+async function blobRead(url: string): Promise<Buffer | null> {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) return null;
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function blobDelete(url: string): Promise<void> {
+  const { del } = await import("@vercel/blob");
+  await del(url, { token: env.blobToken });
+}
+
+// ─────────────────────────────── public API ─────────────────────────────────
+
 export async function saveUpload(
   file: File,
   opts: { purpose: MediaPurpose; ownerId: string | null; visibility?: "public" | "private" },
@@ -68,10 +135,11 @@ export async function saveUpload(
   const dir = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
   const name = `${randomBytes(12).toString("hex")}.${allowed[mime]}`;
   const key = `${dir}/${name}`;
-  const abs = path.join(path.resolve(env.uploadDir), key);
-  await mkdir(path.dirname(abs), { recursive: true });
-  await writeFile(abs, buf);
+  const storage = activeStorage();
+  const externalUrl = storage === "blob" ? await blobWrite(key, buf, mime) : null;
+  if (storage === "local") await localWrite(key, buf);
   const dims = mime.startsWith("image/") ? imageSize(buf, mime) : null;
+  const visibility = opts.visibility ?? (opts.purpose === "product_image" || opts.purpose === "branding" || opts.purpose === "avatar" ? "public" : "private");
 
   const media = await db.mediaFile.create({
     data: {
@@ -83,32 +151,34 @@ export async function saveUpload(
       height: dims?.height ?? null,
       ownerId: opts.ownerId,
       purpose: opts.purpose,
-      visibility: opts.visibility ?? (opts.purpose === "product_image" || opts.purpose === "branding" || opts.purpose === "avatar" ? "public" : "private"),
+      visibility,
+      storage,
+      externalUrl,
     },
   });
-  return { id: media.id, url: mediaUrl(media.id), mime, width: media.width, height: media.height };
+  // Public files on object storage are linked straight to the CDN; everything else goes
+  // through /api/media so the access check runs.
+  const url = visibility === "public" && externalUrl ? externalUrl : mediaUrl(media.id);
+  return { id: media.id, url, mime, width: media.width, height: media.height };
 }
 
 export function mediaUrl(id: string): string {
   return `/api/media/${id}`;
 }
 
-export async function readMedia(key: string): Promise<Buffer | null> {
-  const abs = path.join(path.resolve(env.uploadDir), key);
-  // Guard against traversal even though keys are generated server-side.
-  if (!abs.startsWith(path.resolve(env.uploadDir))) return null;
-  try {
-    await stat(abs);
-    return await readFile(abs);
-  } catch {
-    return null;
-  }
+export async function readMedia(media: StoredMedia): Promise<Buffer | null> {
+  if (media.storage === "blob") return media.externalUrl ? blobRead(media.externalUrl) : null;
+  return localRead(media.key);
 }
 
 export async function deleteMedia(id: string): Promise<void> {
   const media = await db.mediaFile.findUnique({ where: { id } });
   if (!media) return;
-  const abs = path.join(path.resolve(env.uploadDir), media.key);
-  await unlink(abs).catch(() => {});
+  if (media.storage === "blob") {
+    if (media.externalUrl) await blobDelete(media.externalUrl).catch(() => {});
+  } else {
+    const abs = localPath(media.key);
+    if (abs) await unlink(abs).catch(() => {});
+  }
   await db.mediaFile.delete({ where: { id } }).catch(() => {});
 }

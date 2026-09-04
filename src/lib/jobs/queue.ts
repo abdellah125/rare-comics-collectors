@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 
 /**
@@ -6,7 +7,8 @@ import { db } from "@/lib/db";
  *
  * - `enqueueJob` is called from request handlers (email, payouts, cleanup…).
  * - `processJobs` is invoked by the in-process worker (instrumentation.ts on a
- *   Node server) and by POST /api/jobs/run for cron-driven hosts.
+ *   Node server), by /api/jobs/run for cron-driven hosts, and right after the
+ *   response that queued a job when there is no worker (serverless).
  * - Recurring jobs re-schedule themselves from their handler.
  */
 export type JobType =
@@ -45,7 +47,27 @@ export async function enqueueJob(
       maxAttempts: opts.maxAttempts ?? 5,
     },
   });
+  kickWorker(job.runAt);
   return job.id;
+}
+
+/**
+ * Without a polling worker (JOBS_INLINE_WORKER=false, or any Vercel deployment) a
+ * freshly queued job would wait for the next cron tick. `after()` runs once the
+ * response has been sent, and the platform keeps the function alive for it.
+ */
+function kickWorker(runAt: Date) {
+  if (process.env.JOBS_INLINE_WORKER !== "false" && !process.env.VERCEL) return;
+  if (runAt.getTime() > Date.now() + 1_000) return;
+  try {
+    after(async () => {
+      const { registerJobHandlers } = await import("@/lib/jobs/handlers");
+      registerJobHandlers();
+      await processJobs(10).catch((err) => console.error("[jobs] post-response drain failed", err));
+    });
+  } catch {
+    // Not inside a request (e.g. queued by another job): the cron picks it up.
+  }
 }
 
 const STALE_LOCK_MS = 10 * 60_000;

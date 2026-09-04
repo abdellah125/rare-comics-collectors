@@ -28,7 +28,7 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps<"/ad
   const dateWhere = from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {};
 
   if (tab === "refunds") {
-    const where: Prisma.RefundWhereInput = { ...(status ? { status } : {}), ...dateWhere, ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase() } } }, { order: { email: { contains: p.q } } }, { providerRef: { contains: p.q } }] } : {}) };
+    const where: Prisma.RefundWhereInput = { ...(status ? { status } : {}), ...dateWhere, ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase(), mode: "insensitive" as const } } }, { order: { email: { contains: p.q, mode: "insensitive" as const } } }, { providerRef: { contains: p.q, mode: "insensitive" as const } }] } : {}) };
     const [rows, total, sum] = await Promise.all([
       db.refund.findMany({ where, orderBy: { [p.sort === "status" ? "status" : p.sort]: p.dir }, skip: p.skip, take: p.per, include: { order: { select: { id: true, number: true, email: true } }, payment: { select: { provider: true } }, createdBy: { select: { name: true } } } }),
       db.refund.count({ where }),
@@ -109,7 +109,7 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps<"/ad
     );
   }
 
-  const where: Prisma.PaymentWhereInput = { ...(status ? { status } : {}), ...(provider ? { provider } : {}), ...dateWhere, ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase() } } }, { order: { email: { contains: p.q } } }, { providerRef: { contains: p.q } }, { cardLast4: { contains: p.q } }] } : {}) };
+  const where: Prisma.PaymentWhereInput = { ...(status ? { status } : {}), ...(provider ? { provider } : {}), ...dateWhere, ...(p.q ? { OR: [{ order: { number: { contains: p.q.toUpperCase(), mode: "insensitive" as const } } }, { order: { email: { contains: p.q, mode: "insensitive" as const } } }, { providerRef: { contains: p.q, mode: "insensitive" as const } }, { cardLast4: { contains: p.q, mode: "insensitive" as const } }] } : {}) };
   const [rows, total, sum, fees] = await Promise.all([
     db.payment.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per, include: { order: { select: { id: true, number: true, email: true, status: true } } } }),
     db.payment.count({ where }),
