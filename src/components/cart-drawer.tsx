@@ -5,7 +5,7 @@ import { useEffect, useRef, type KeyboardEvent } from "react";
 import { useCart } from "@/components/cart-provider";
 import { CartThumb } from "@/components/cart-thumb";
 import { CloseIcon, TrashIcon, CartIcon } from "@/components/icons";
-import { formatPriceExact } from "@/lib/format";
+import { usePrice } from "@/components/currency-provider";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 
 const FOCUSABLE =
@@ -13,6 +13,7 @@ const FOCUSABLE =
 
 export function CartDrawer() {
   const { isOpen, closeCart, lines, subtotal, setQty, remove, count } = useCart();
+  const { formatExact } = usePrice();
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const restoreFocusTo = useRef<HTMLElement | null>(null);
@@ -145,7 +146,7 @@ export function CartDrawer() {
                     </div>
                   </div>
                   <p className="shrink-0 text-sm font-semibold tabular-nums text-ink-950">
-                    {formatPriceExact(line.price * line.qty)}
+                    {formatExact(line.price * line.qty)}
                   </p>
                 </li>
               ))}
@@ -155,7 +156,7 @@ export function CartDrawer() {
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-ink-600">Subtotal</span>
                 <span className="font-display text-xl font-semibold tabular-nums text-ink-950">
-                  {formatPriceExact(subtotal)}
+                  {formatExact(subtotal)}
                 </span>
               </div>
               <p className="mt-1 text-xs text-ink-500">

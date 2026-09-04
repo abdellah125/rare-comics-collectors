@@ -18,6 +18,7 @@ export function productToLine(product: ProductSummary): Omit<CartLine, "qty"> {
     maxQty: product.stock,
     href: `/store/${product.slug}`,
     palette: product.palette,
+    ...(product.image ? { image: product.image } : {}),
   };
 }
 

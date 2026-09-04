@@ -5,6 +5,7 @@ import { policyPages } from "@/lib/nav";
 import { services } from "@/lib/services";
 import { eras } from "@/lib/products";
 import { fullAddress, mapDirectionsLink, mapLink, site } from "@/lib/site";
+import { CurrencySelect } from "@/components/currency-select";
 
 const social = [
   { name: "Facebook", href: site.social.facebook },
@@ -14,7 +15,13 @@ const social = [
   { name: "LinkedIn", href: site.social.linkedin },
 ];
 
-export function Footer() {
+export function Footer({
+  currencies = [],
+  currentCurrency = "USD",
+}: {
+  currencies?: { code: string; name: string; symbol: string }[];
+  currentCurrency?: string;
+}) {
   const year = new Date().getFullYear();
 
   return (
@@ -178,9 +185,12 @@ export function Footer() {
         </nav>
 
         <div className="mt-6 flex flex-col gap-3 text-[13px] text-ink-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {year} {site.legalName}. All rights reserved.
-          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <p>
+              © {year} {site.legalName}. All rights reserved.
+            </p>
+            <CurrencySelect currencies={currencies} current={currentCurrency} />
+          </div>
           <p>
             Comic characters, titles and cover art are the property of their respective publishers. {site.name} is an
             independent dealer and is not affiliated with CGC or CBCS.

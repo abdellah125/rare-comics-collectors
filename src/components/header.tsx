@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Logo } from "@/components/logo";
+import { Logo, type Brand } from "@/components/logo";
 import { useCart } from "@/components/cart-provider";
 import { useAuth } from "@/components/auth-provider";
 import { CartIcon, CloseIcon, MenuIcon, PhoneIcon, PinIcon } from "@/components/icons";
@@ -11,7 +11,7 @@ import { buttonSizes, buttonStyles } from "@/components/ui";
 import { primaryNav } from "@/lib/nav";
 import { mapLink, site, fullAddress } from "@/lib/site";
 
-export function Header() {
+export function Header({ brand }: { brand?: Brand }) {
   const pathname = usePathname();
   const { count, openCart, hydrated } = useCart();
   const { user, logout } = useAuth();
@@ -92,7 +92,7 @@ export function Header() {
         }`}
       >
         <div className="mx-auto flex h-[68px] max-w-7xl items-center gap-3 px-4 sm:gap-4 sm:px-8">
-          <Logo className="min-w-0" />
+          <Logo className="min-w-0" brand={brand} />
 
           <nav aria-label="Primary" className="ml-6 hidden lg:block">
             <ul className="flex items-center gap-1">
@@ -142,8 +142,22 @@ export function Header() {
                   >
                     <p className="truncate px-4 py-2 text-xs font-medium text-ink-500">{user.name}</p>
                     <hr className="my-1 border-ink-100" />
-                    <Link href="/dashboard" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">Dashboard</Link>
-                    <Link href="/dashboard/listings/new" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">+ New listing</Link>
+                    <Link href="/account" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">My account</Link>
+                    <Link href="/account/orders" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">Orders</Link>
+                    <Link href="/account/notifications" onClick={() => setDropdownOpen(false)} className="flex items-center justify-between px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">
+                      Notifications
+                      {user.unreadNotifications > 0 && (
+                        <span className="rounded-full bg-brand-600 px-1.5 text-[10px] font-bold text-white">{user.unreadNotifications}</span>
+                      )}
+                    </Link>
+                    {user.isSeller ? (
+                      <Link href="/dashboard" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">Seller dashboard</Link>
+                    ) : (
+                      <Link href="/account/seller" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-ink-800 hover:bg-ink-50">Become a seller</Link>
+                    )}
+                    {user.isAdmin && (
+                      <Link href="/admin" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-ink-50">Admin panel</Link>
+                    )}
                     <hr className="my-1 border-ink-100" />
                     <button type="button" onClick={signOut} className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">Sign out</button>
                   </div>
@@ -218,9 +232,22 @@ export function Header() {
               <div className="border-t border-ink-200 pt-2">
                 {user ? (
                   <>
-                    <Link href="/dashboard" className="flex items-center gap-2 rounded-lg px-3 py-2 font-medium text-ink-800 hover:bg-ink-100">
-                      Dashboard
+                    <Link href="/account" className="flex items-center gap-2 rounded-lg px-3 py-2 font-medium text-ink-800 hover:bg-ink-100">
+                      My account
                     </Link>
+                    <Link href="/account/orders" className="flex items-center gap-2 rounded-lg px-3 py-2 font-medium text-ink-800 hover:bg-ink-100">
+                      Orders
+                    </Link>
+                    {user.isSeller && (
+                      <Link href="/dashboard" className="flex items-center gap-2 rounded-lg px-3 py-2 font-medium text-ink-800 hover:bg-ink-100">
+                        Seller dashboard
+                      </Link>
+                    )}
+                    {user.isAdmin && (
+                      <Link href="/admin" className="flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-brand-700 hover:bg-ink-100">
+                        Admin panel
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={signOut}

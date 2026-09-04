@@ -1,57 +1,71 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import {
-  type AuthUser,
-  getSession,
-  login as storeLogin,
-  logout as storeLogout,
-  register as storeRegister,
-} from "@/lib/auth-store";
+import { useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useState, useTransition, type ReactNode } from "react";
+import { logoutAction } from "@/lib/auth/actions";
+
+/** Minimal, non-sensitive view of the signed-in user for client components (header, menus). */
+export type SessionUser = {
+  id: string;
+  name: string;
+  email: string;
+  isSeller: boolean;
+  sellerStatus: string | null;
+  isAdmin: boolean;
+  impersonatedBy: string | null;
+  unreadNotifications: number;
+};
 
 interface AuthCtx {
-  user: AuthUser | null;
+  user: SessionUser | null;
   loading: boolean;
-  login: (email: string, password: string) => AuthUser | null;
+  refresh: () => Promise<void>;
   logout: () => void;
-  register: (name: string, email: string, password: string) => AuthUser | null;
 }
 
-const Ctx = createContext<AuthCtx>({
-  user: null, loading: true,
-  login: () => null, logout: () => {}, register: () => null,
-});
+const Ctx = createContext<AuthCtx>({ user: null, loading: true, refresh: async () => {}, logout: () => {} });
 
+/**
+ * Session state for client components. The source of truth is the httpOnly
+ * session cookie on the server; this provider only mirrors a safe DTO from
+ * /api/auth/session so public pages can stay cacheable.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const [, startTransition] = useTransition();
 
-  useEffect(() => {
-    // Hydrate session from localStorage after mount (client-only storage).
-    const t = setTimeout(() => {
-      setUser(getSession());
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" });
+      const data = (await res.json()) as { user: SessionUser | null };
+      setUser(data.user);
+    } catch {
+      setUser(null);
+    } finally {
       setLoading(false);
-    }, 0);
-    return () => clearTimeout(t);
+    }
   }, []);
 
-  const login = (email: string, password: string) => {
-    const u = storeLogin(email, password);
-    setUser(u);
-    return u;
-  };
-  const logout = () => { storeLogout(); setUser(null); };
-  const register = (name: string, email: string, password: string) => {
-    const u = storeRegister(name, email, password);
-    setUser(u);
-    return u;
-  };
+  useEffect(() => {
+    // Deferred so the initial session fetch doesn't set state synchronously inside the effect body.
+    const id = setTimeout(() => void refresh(), 0);
+    return () => clearTimeout(id);
+  }, [refresh]);
 
-  return (
-    <Ctx.Provider value={{ user, loading, login, logout, register }}>
-      {children}
-    </Ctx.Provider>
-  );
+  const logout = useCallback(() => {
+    setUser(null);
+    startTransition(async () => {
+      await logoutAction();
+      router.push("/");
+      router.refresh();
+    });
+  }, [router]);
+
+  return <Ctx.Provider value={{ user, loading, refresh, logout }}>{children}</Ctx.Provider>;
 }
 
-export function useAuth() { return useContext(Ctx); }
+export function useAuth() {
+  return useContext(Ctx);
+}

@@ -2,34 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces, Orbitron } from "next/font/google";
 import "./globals.css";
 
-import { AuthProvider } from "@/components/auth-provider";
-import { CartProvider } from "@/components/cart-provider";
-import { CartDrawer } from "@/components/cart-drawer";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { JsonLd } from "@/components/json-ld";
-import { organizationJsonLd } from "@/lib/seo";
 import { site } from "@/lib/site";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const display = Fraunces({
-  variable: "--font-display",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["600", "700"],
-});
-
-const orbitron = Orbitron({
-  variable: "--font-orbitron",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["700", "900"],
-});
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
+const display = Fraunces({ variable: "--font-display", subsets: ["latin"], display: "swap", weight: ["600", "700"] });
+const orbitron = Orbitron({ variable: "--font-orbitron", subsets: ["latin"], display: "swap", weight: ["700", "900"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -65,22 +42,11 @@ export const metadata: Metadata = {
     locale: site.locale,
     images: [{ url: "/api/og", width: 1200, height: 630, alt: site.name }],
   },
-  twitter: {
-    card: "summary_large_image",
-    site: site.twitter,
-    creator: site.twitter,
-    images: ["/api/og"],
-  },
+  twitter: { card: "summary_large_image", site: site.twitter, creator: site.twitter, images: ["/api/og"] },
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
   },
   formatDetection: { telephone: true, address: true, email: true },
   icons: {
@@ -91,35 +57,13 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
 };
 
-export const viewport: Viewport = {
-  themeColor: "#0d1017",
-  width: "device-width",
-  initialScale: 1,
-  colorScheme: "light",
-};
+export const viewport: Viewport = { themeColor: "#0d1017", width: "device-width", initialScale: 1, colorScheme: "light" };
 
+/** Root layout: document shell only. Storefront chrome lives in (site)/layout, the admin has its own. */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${display.variable} ${orbitron.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col bg-white">
-        <JsonLd id="org-schema" data={organizationJsonLd()} />
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-ink-950 focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white"
-        >
-          Skip to main content
-        </a>
-        <AuthProvider>
-          <CartProvider>
-            <Header />
-            <main id="main" className="flex-1">
-              {children}
-            </main>
-            <Footer />
-            <CartDrawer />
-          </CartProvider>
-        </AuthProvider>
-      </body>
+      <body className="flex min-h-full flex-col bg-white">{children}</body>
     </html>
   );
 }

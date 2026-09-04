@@ -1,12 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { CoverArt } from "@/components/cover-art";
 import { AddToCartButton, BuyNowButton } from "@/components/buy-buttons";
 import { productToLine } from "@/lib/cart-lines";
 import { Badge, Stars } from "@/components/ui";
-import { formatPrice } from "@/lib/format";
+import { usePrice } from "@/components/currency-provider";
 import type { ProductSummary } from "@/lib/products";
 
 export function ProductCard({ product, priority = false }: { product: ProductSummary; priority?: boolean }) {
+  const { format } = usePrice();
   const line = productToLine(product);
   const onSale = product.compareAt !== undefined && product.compareAt > product.price;
   const soldOut = product.stock <= 0;
@@ -57,10 +60,10 @@ export function ProductCard({ product, priority = false }: { product: ProductSum
         <div className="mt-auto pt-4">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-xl font-semibold tabular-nums text-ink-950">
-              {formatPrice(product.price)}
+              {format(product.price)}
             </span>
             {onSale && (
-              <span className="text-sm text-ink-400 line-through tabular-nums">{formatPrice(product.compareAt!)}</span>
+              <span className="text-sm text-ink-400 line-through tabular-nums">{format(product.compareAt!)}</span>
             )}
           </div>
 

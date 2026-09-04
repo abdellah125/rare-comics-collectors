@@ -1,24 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactNode } from "react";
-import { useAuth } from "@/components/auth-provider";
+import { useActionState, type ReactNode } from "react";
 import { TextField } from "@/components/form-fields";
 import { CheckIcon, ShieldIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
+import { loginAction, registerAction, requestPasswordResetAction, resetPasswordAction, verifyTwoFactorAction } from "@/lib/auth/actions";
+import type { ActionState } from "@/lib/validation";
 
-function AuthShell({
-  title,
-  lead,
-  children,
-  footer,
-}: {
-  title: string;
-  lead: string;
-  children: ReactNode;
-  footer: ReactNode;
-}) {
+function AuthShell({ title, lead, children, footer }: { title: string; lead: string; children: ReactNode; footer: ReactNode }) {
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-12 lg:gap-14">
       <div className="lg:col-span-7">
@@ -37,11 +27,11 @@ function AuthShell({
           <ul className="mt-4 grid gap-3 text-[14px] leading-relaxed text-ink-700">
             {[
               "Track orders and submissions in one place",
-              "Live grading status — received, pressed, submitted, graded, shipped",
-              "Your appraisal reports and condition documents, permanently archived",
-              "Consignment dashboard with views, offers and payouts",
               "Saved addresses and faster checkout",
-              "First refusal on books matching your want list",
+              "Order history, invoices and refunds",
+              "Two-factor authentication and device management",
+              "Apply to sell — listings, payouts and performance in your dashboard",
+              "Support tickets linked to your orders",
             ].map((b) => (
               <li key={b} className="flex items-start gap-2.5">
                 <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
@@ -49,63 +39,60 @@ function AuthShell({
               </li>
             ))}
           </ul>
-          <p className="mt-5 border-t border-ink-200 pt-4 text-xs leading-relaxed text-ink-500">
-            <strong className="text-ink-900">Demo only.</strong> Accounts live in this browser&apos;s local storage —
-            nothing is sent to a server, so don&apos;t use a real password. Wire this to NextAuth, Clerk, Supabase or
-            your own backend before launch.
-          </p>
         </div>
       </aside>
     </div>
   );
 }
 
+export function FormError({ state }: { state: ActionState<unknown> | undefined }) {
+  if (!state || state.ok || !state.message) return null;
+  return (
+    <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      {state.message}
+    </p>
+  );
+}
+
+export function FormSuccess({ state }: { state: ActionState<unknown> | undefined }) {
+  if (!state || !state.ok || !state.message) return null;
+  return (
+    <p role="status" className="rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800">
+      {state.message}
+    </p>
+  );
+}
+
+const fieldError = (state: ActionState | undefined, name: string) => (state && !state.ok ? state.errors?.[name] : undefined);
+
 /* --------------------------------------------------------------- sign in */
 
-export function LoginForm() {
-  const auth = useAuth();
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") ?? "");
-    const password = String(fd.get("password") ?? "");
-    setLoading(true);
-    setError("");
-    const user = auth.login(email, password);
-    if (user) {
-      router.push("/dashboard");
-    } else {
-      setError("Email or password didn't match. Try goldenageguru@demo.com / demo123.");
-      setLoading(false);
-    }
-  };
-
+export function LoginForm({ next, notice }: { next?: string; notice?: string | null }) {
+  const [state, action, pending] = useActionState(loginAction, undefined);
   return (
     <AuthShell
       title="Sign in"
-      lead="Access your orders, grading submissions, appraisal reports and consignment dashboard."
+      lead="Access your orders, grading submissions, seller dashboard and account security."
       footer={
         <>
           Don&apos;t have an account?{" "}
-          <Link href="/account/register" className="font-semibold text-brand-700 underline-offset-2 hover:underline">
+          <Link href={`/account/register${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand-700 underline-offset-2 hover:underline">
             Create one
           </Link>{" "}
           — it takes about thirty seconds.
         </>
       }
     >
-      <form onSubmit={onSubmit} className="grid gap-5">
-        <TextField label="Email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" />
-        <TextField label="Password" name="password" type="password" required autoComplete="current-password" />
-
-        {error && (
-          <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+      <form action={action} className="grid gap-5">
+        {next && <input type="hidden" name="next" value={next} />}
+        {notice && (
+          <p role="status" className="rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800">
+            {notice}
+          </p>
         )}
-
+        <TextField label="Email" name="email" type="email" required autoComplete="email" placeholder="you@example.com" hint={fieldError(state, "email")} />
+        <TextField label="Password" name="password" type="password" required autoComplete="current-password" />
+        <FormError state={state} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2.5 text-sm text-ink-700">
             <input type="checkbox" name="remember" className="h-4 w-4 rounded border-ink-300 accent-brand-600" />
@@ -115,45 +102,47 @@ export function LoginForm() {
             Forgot password?
           </Link>
         </div>
-
-        <button type="submit" disabled={loading} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
-          {loading ? "Signing in…" : "Sign in"}
+        <button type="submit" disabled={pending} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
+          {pending ? "Signing in…" : "Sign in"}
         </button>
       </form>
     </AuthShell>
   );
 }
 
+/* ---------------------------------------------------------- 2FA verify */
+
+export function TwoFactorForm({ next }: { next?: string }) {
+  const [state, action, pending] = useActionState(verifyTwoFactorAction, undefined);
+  return (
+    <form action={action} className="grid gap-5">
+      {next && <input type="hidden" name="next" value={next} />}
+      <TextField
+        label="Authentication code"
+        name="code"
+        required
+        autoComplete="one-time-code"
+        inputMode="numeric"
+        placeholder="123 456"
+        autoFocus
+        hint="Enter the 6-digit code from your authenticator app, or one of your recovery codes."
+      />
+      <FormError state={state} />
+      <button type="submit" disabled={pending} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
+        {pending ? "Verifying…" : "Verify and continue"}
+      </button>
+    </form>
+  );
+}
+
 /* --------------------------------------------------------------- sign up */
 
-export function RegisterForm() {
-  const auth = useAuth();
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const first = String(fd.get("firstName") ?? "").trim();
-    const last = String(fd.get("lastName") ?? "").trim();
-    const email = String(fd.get("email") ?? "");
-    const password = String(fd.get("password") ?? "");
-    setLoading(true);
-    setError("");
-    const user = auth.register(`${first} ${last}`.trim(), email, password);
-    if (user) {
-      router.push("/dashboard");
-    } else {
-      setError("That email is already registered. Try signing in instead.");
-      setLoading(false);
-    }
-  };
-
+export function RegisterForm({ next }: { next?: string }) {
+  const [state, action, pending] = useActionState(registerAction, undefined);
   return (
     <AuthShell
       title="Create your account"
-      lead="One account covers buying, grading submissions, consignment and vault storage."
+      lead="One account covers buying, grading submissions, selling and vault storage."
       footer={
         <>
           Already have an account?{" "}
@@ -164,38 +153,39 @@ export function RegisterForm() {
         </>
       }
     >
-      <form onSubmit={onSubmit} className="grid gap-5">
+      <form action={action} className="grid gap-5">
+        {next && <input type="hidden" name="next" value={next} />}
         <div className="grid gap-5 sm:grid-cols-2">
-          <TextField label="First name" name="firstName" required autoComplete="given-name" />
-          <TextField label="Last name" name="lastName" required autoComplete="family-name" />
+          <TextField label="First name" name="firstName" required autoComplete="given-name" hint={fieldError(state, "firstName")} />
+          <TextField label="Last name" name="lastName" required autoComplete="family-name" hint={fieldError(state, "lastName")} />
         </div>
-        <TextField label="Email" name="email" type="email" required autoComplete="email" />
+        <TextField label="Email" name="email" type="email" required autoComplete="email" hint={fieldError(state, "email")} />
         <TextField
           label="Password"
           name="password"
           type="password"
           required
           autoComplete="new-password"
-          minLength={8}
-          hint="At least 8 characters."
+          minLength={10}
+          hint={fieldError(state, "password") ?? "At least 10 characters with a letter and a number."}
         />
-
-        {error && (
-          <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
-        )}
-
+        <FormError state={state} />
         <label className="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink-600">
           <input type="checkbox" name="terms" required className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
           <span>
             I agree to the{" "}
-            <Link href="/policies/terms-of-service" className="underline underline-offset-2">Terms of Service</Link>{" "}
+            <Link href="/policies/terms-of-service" className="underline underline-offset-2">
+              Terms of Service
+            </Link>{" "}
             and{" "}
-            <Link href="/policies/privacy" className="underline underline-offset-2">Privacy Policy</Link>.
+            <Link href="/policies/privacy" className="underline underline-offset-2">
+              Privacy Policy
+            </Link>
+            .
           </span>
         </label>
-
-        <button type="submit" disabled={loading} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
-          {loading ? "Creating account…" : "Create account"}
+        <button type="submit" disabled={pending} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
+          {pending ? "Creating account…" : "Create account"}
         </button>
       </form>
     </AuthShell>
@@ -204,19 +194,12 @@ export function RegisterForm() {
 
 /* -------------------------------------------------------- password reset */
 
-export function ResetForm() {
-  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
-
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setState("sending");
-    window.setTimeout(() => setState("sent"), 700);
-  };
-
+export function ResetRequestForm() {
+  const [state, action, pending] = useActionState(requestPasswordResetAction, undefined);
   return (
     <AuthShell
       title="Reset your password"
-      lead="Enter the email on your account and we'll send a reset link that expires in fifteen minutes."
+      lead="Enter the email on your account and we'll send a reset link that expires in thirty minutes."
       footer={
         <>
           Remembered it?{" "}
@@ -227,25 +210,52 @@ export function ResetForm() {
         </>
       }
     >
-      {state === "sent" ? (
+      {state?.ok ? (
         <div className="text-center" role="status">
           <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-600 text-white">
             <CheckIcon className="h-6 w-6" />
           </span>
-          <h2 className="mt-5 font-display text-xl font-semibold text-ink-950">Reset link sent</h2>
-          <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-ink-600">
-            If that address matches an account, the link is on its way. Check your spam folder if it doesn&apos;t
-            arrive within a few minutes.
-          </p>
+          <h2 className="mt-5 font-display text-xl font-semibold text-ink-950">Check your inbox</h2>
+          <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-ink-600">{state.message}</p>
         </div>
       ) : (
-        <form onSubmit={onSubmit} className="grid gap-5">
+        <form action={action} className="grid gap-5">
           <TextField label="Email" name="email" type="email" required autoComplete="email" />
-          <button type="submit" disabled={state === "sending"} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
-            {state === "sending" ? "Sending…" : "Send reset link"}
+          <FormError state={state} />
+          <button type="submit" disabled={pending} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
+            {pending ? "Sending…" : "Send reset link"}
           </button>
         </form>
       )}
+    </AuthShell>
+  );
+}
+
+export function ResetPasswordForm({ token }: { token: string }) {
+  const [state, action, pending] = useActionState(resetPasswordAction, undefined);
+  return (
+    <AuthShell
+      title="Choose a new password"
+      lead="This signs you out of every other device once the password is changed."
+      footer={
+        <>
+          Link expired?{" "}
+          <Link href="/account/reset" className="font-semibold text-brand-700 underline-offset-2 hover:underline">
+            Request a new one
+          </Link>
+          .
+        </>
+      }
+    >
+      <form action={action} className="grid gap-5">
+        <input type="hidden" name="token" value={token} />
+        <TextField label="New password" name="password" type="password" required autoComplete="new-password" minLength={10} hint={fieldError(state, "password") ?? "At least 10 characters with a letter and a number."} />
+        <TextField label="Confirm new password" name="confirm" type="password" required autoComplete="new-password" hint={fieldError(state, "confirm")} />
+        <FormError state={state} />
+        <button type="submit" disabled={pending} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}>
+          {pending ? "Saving…" : "Save new password"}
+        </button>
+      </form>
     </AuthShell>
   );
 }

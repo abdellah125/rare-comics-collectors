@@ -42,3 +42,11 @@ next-env.d.ts
 
 # scraper deps
 wordpress/scraper/node_modules
+
+# marketplace runtime data
+!.env.example
+/uploads
+/prisma/*.db
+/prisma/*.db-journal
+/test-results
+/playwright-report

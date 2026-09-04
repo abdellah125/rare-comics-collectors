@@ -14,7 +14,7 @@ export function CartThumb({
   line,
   className = "",
 }: {
-  line: Pick<CartLine, "kind" | "slug" | "palette">;
+  line: Pick<CartLine, "kind" | "slug" | "palette" | "image">;
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
@@ -23,7 +23,7 @@ export function CartThumb({
     : "linear-gradient(150deg,#1c2130,#4e5a72)";
   const fallback = `/covers/${line.slug}.svg`;
   const src =
-    line.kind === "comic" ? (failed ? fallback : ((coverMap as Record<string, string>)[line.slug] ?? fallback)) : null;
+    line.kind === "comic" ? (failed ? fallback : (line.image ?? (coverMap as Record<string, string>)[line.slug] ?? fallback)) : null;
 
   return (
     <span

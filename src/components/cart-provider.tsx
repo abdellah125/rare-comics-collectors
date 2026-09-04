@@ -23,6 +23,7 @@ export type CartLine = {
   maxQty: number;
   href: string;
   palette?: [string, string];
+  image?: string;
 };
 
 type CartState = { lines: CartLine[]; hydrated: boolean };
