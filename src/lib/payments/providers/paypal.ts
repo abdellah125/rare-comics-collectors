@@ -111,13 +111,18 @@ export const paypalProvider: PaymentProvider = {
   async verifyWebhook(req, rawBody) {
     if (!env.paypal.webhookId) return null;
     const h = (name: string) => req.headers.get(name) ?? "";
+    // Without PayPal's transmission headers there is nothing to verify: answer 400 without an API round-trip.
+    if (!h("paypal-transmission-id") || !h("paypal-transmission-sig") || !h("paypal-cert-url") || !h("paypal-auth-algo") || !h("paypal-transmission-time")) return null;
     let event: { id: string; event_type: string; resource: unknown };
     try {
       event = JSON.parse(rawBody);
     } catch {
       return null;
     }
-    const result = await api<{ verification_status: string }>("/v1/notifications/verify-webhook-signature", {
+    if (!event || typeof event !== "object" || typeof event.id !== "string" || typeof event.event_type !== "string") return null;
+    let result: { verification_status: string };
+    try {
+      result = await api<{ verification_status: string }>("/v1/notifications/verify-webhook-signature", {
       method: "POST",
       body: JSON.stringify({
         auth_algo: h("paypal-auth-algo"),
@@ -129,6 +134,11 @@ export const paypalProvider: PaymentProvider = {
         webhook_event: event,
       }),
     });
+    } catch (err) {
+      // A verification call that fails (bad credentials, PayPal outage) must not surface as a 500.
+      console.error("[webhook:paypal] signature verification call failed", err instanceof Error ? err.message : err);
+      return null;
+    }
     if (result.verification_status !== "SUCCESS") return null;
     return { eventId: event.id, type: event.event_type, data: event.resource };
   },

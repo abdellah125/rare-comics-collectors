@@ -17,7 +17,12 @@ export async function ingestWebhook(providerId: string, req: Request): Promise<R
   const provider = getProvider(providerId);
   if (!provider?.verifyWebhook) return new Response("Unknown provider", { status: 404 });
   const rawBody = await req.text();
-  const envelope = await provider.verifyWebhook(req, rawBody);
+  let envelope: Awaited<ReturnType<NonNullable<typeof provider.verifyWebhook>>> = null;
+  try {
+    envelope = await provider.verifyWebhook(req, rawBody);
+  } catch (err) {
+    console.error(`[webhook:${providerId}] verification threw`, err instanceof Error ? err.message : err);
+  }
   if (!envelope) return new Response("Invalid signature", { status: 400 });
 
   let stored;
