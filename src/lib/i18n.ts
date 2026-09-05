@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const LOCALE_COOKIE = "rcc_locale";
 
@@ -12,7 +13,8 @@ export const getEnabledLocales = cache(async () => db.locale.findMany({ where: {
 export const getLocale = cache(async (): Promise<string> => {
   const settings = await getSettings();
   const fallback = settings["marketplace.defaultLocale"];
-  const wanted = (await cookies()).get(LOCALE_COOKIE)?.value;
+  let wanted = (await cookies()).get(LOCALE_COOKIE)?.value;
+  if (!wanted) wanted = (await getCurrentUser())?.locale ?? undefined;
   if (!wanted || wanted === fallback) return fallback;
   const list = await getEnabledLocales();
   return list.some((l) => l.code === wanted) ? wanted : fallback;

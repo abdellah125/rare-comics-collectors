@@ -47,7 +47,7 @@ export async function submitPublicAppealAction(_prev: ActionState | undefined, f
   const generic = okState(undefined, "Thanks — if that email belongs to an account with an active restriction, our Trust & Safety team will review the appeal and reply by email.");
   if (parsed.data.website) return generic; // honeypot
   const meta = await requestMeta();
-  if (!rateLimit(`appeal:${meta.ip ?? "unknown"}`, 3, 60 * 60_000).ok) return failState("Too many requests from this network. Try again later.");
+  if (!(await rateLimit(`appeal:${meta.ip ?? "unknown"}`, 3, 60 * 60_000)).ok) return failState("Too many requests from this network. Try again later.");
   const user = await db.user.findUnique({ where: { email: parsed.data.email }, select: { id: true, status: true } });
   if (!user || user.status === "active") return generic;
   const pending = await db.appeal.count({ where: { userId: user.id, status: "pending" } });

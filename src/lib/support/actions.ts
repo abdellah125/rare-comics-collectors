@@ -31,7 +31,7 @@ export async function createTicketAction(_prev: ActionState<{ number: string }> 
     if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
     if (parsed.data.website) return okState({ number: "TCK-000000" }, "Thanks — we've received your message."); // bot
     const meta = await requestMeta();
-    const limiter = rateLimit(`ticket:${meta.ip ?? "unknown"}`, 6, 60 * 60_000);
+    const limiter = await rateLimit(`ticket:${meta.ip ?? "unknown"}`, 6, 60 * 60_000);
     if (!limiter.ok) return failState("Too many messages from this network. Please try again later.");
     const user = await getCurrentUser();
     if (user?.restrictions.includes("no_support")) return failState("Support access is restricted on this account.");

@@ -234,6 +234,10 @@ model SellerProfile {
   returnPolicy          String?
   handlingDays          Int       @default(2)
   shipsFromCountry      String?
+  /// ISO country codes the seller ships to; empty = everywhere the marketplace ships
+  shipsToJson           String    @default("[]")
+  /// shown to buyers ordering from another country (duties, customs forms, transit)
+  customsNote           String?
   ratingAvg             Float     @default(0)
   ratingCount           Int       @default(0)
   salesCount            Int       @default(0)
@@ -1383,4 +1387,13 @@ model AppSecret {
   name      String   @id
   value     String
   createdAt DateTime @default(now())
+}
+
+/// Shared fixed-window rate-limit counters (see src/lib/rate-limit.ts).
+model RateLimitBucket {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+
+  @@index([resetAt])
 }

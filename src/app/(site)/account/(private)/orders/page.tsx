@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { statusLabel, statusTone } from "@/lib/domain";
 import { formatDateTime } from "@/lib/i18n";
+import { countryLabel, countryNames, isInternational } from "@/lib/geo";
 import { formatMoney } from "@/lib/money";
 import { pageMetadata } from "@/lib/seo";
 
@@ -23,10 +24,11 @@ export default async function OrdersPage({ searchParams }: PageProps<"/account/o
       orderBy: { placedAt: "desc" },
       skip: (page - 1) * PAGE,
       take: PAGE,
-      select: { id: true, number: true, status: true, paymentStatus: true, fulfillmentStatus: true, currency: true, presentmentTotal: true, placedAt: true, items: { select: { title: true, qty: true, imageUrl: true } } },
+      select: { id: true, number: true, status: true, paymentStatus: true, fulfillmentStatus: true, currency: true, presentmentTotal: true, placedAt: true, countryCode: true, items: { select: { title: true, qty: true, imageUrl: true, seller: { select: { shipsFromCountry: true, countryCode: true } } } } },
     }),
     db.order.count({ where: { userId: user.id } }),
   ]);
+  const names = await countryNames();
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const tone = (s: string) => {
     const t = statusTone(s);
@@ -47,9 +49,12 @@ export default async function OrdersPage({ searchParams }: PageProps<"/account/o
                   <Link href={`/account/orders/${o.number}`} className="font-mono text-sm font-semibold text-ink-950 hover:text-brand-700">
                     {o.number}
                   </Link>
-                  <p className="mt-0.5 text-[13px] text-ink-600">Placed {formatDateTime(o.placedAt, { timeZone: user.timezone })}</p>
+                  <p className="mt-0.5 text-[13px] text-ink-600">
+                    Placed {formatDateTime(o.placedAt, { timeZone: user.timezone })} · to {countryLabel(names, o.countryCode)}
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {o.items.some((i) => isInternational(i.seller?.shipsFromCountry ?? i.seller?.countryCode, o.countryCode)) && <Badge tone="neutral">International</Badge>}
                   <Badge tone={tone(o.status)}>{statusLabel(o.status)}</Badge>
                   <span className="font-display text-lg font-semibold tabular-nums text-ink-950">{formatMoney(o.presentmentTotal, o.currency)}</span>
                 </div>

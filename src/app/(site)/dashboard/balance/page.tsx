@@ -62,6 +62,7 @@ export default async function BalancePage({ searchParams }: PageProps<"/dashboar
           </p>
         )}
         {profile.verificationStatus !== "verified" && <p className="mt-2 text-[13px] text-ink-600">Payouts are released once identity verification is complete ({profile.verificationStatus}).</p>}
+        <p className="mt-2 text-[13px] text-ink-600">Balances and payouts are settled in USD. Buyers may pay in other currencies; the exchange rate at checkout fixes the USD amount credited here, and your bank or PayPal converts to your local currency at their own rate.</p>
       </Panel>
       <Panel title="Payouts">
         {payouts.length === 0 ? (

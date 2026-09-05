@@ -76,6 +76,7 @@ export default async function EditListingPage({ params, searchParams }: PageProp
           categoryId: product.categoryId,
           weightGrams: product.weightGrams,
           restrictedCountries: parseJsonArray(product.restrictedCountriesJson, isString),
+          allowedCountries: parseJsonArray(product.allowedCountriesJson, isString),
           tags: parseJsonArray(product.tagsJson, isString),
           status: product.status,
           images: product.images.map((i) => ({ id: i.id, url: i.url })),

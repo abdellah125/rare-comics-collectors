@@ -23,7 +23,6 @@ const AdminSchema = ListingSchema.extend({
   featured: zBool.optional(),
   bestseller: zBool.optional(),
   featuredUntil: zDateOptional,
-  allowedCountries: zOptionalTrimmed(500),
   moderationNote: zOptionalTrimmed(500),
 });
 
@@ -33,7 +32,6 @@ function extras(d: z.infer<typeof AdminSchema>) {
     featured: d.featured ?? false,
     bestseller: d.bestseller ?? false,
     featuredUntil: d.featuredUntil ?? null,
-    allowedCountriesJson: JSON.stringify((d.allowedCountries ?? "").split(/[,\s]+/).map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z]{2}$/.test(s))),
     moderationNote: d.moderationNote ?? null,
   };
 }

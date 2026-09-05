@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { decrypt, encrypt, hashToken, maskSecret, safeEqual, signValue, verifySignedValue } from "@/lib/crypto";
 import { verifyStripeSignature } from "@/lib/payments/providers/stripe";
-import { rateLimit, resetRateLimit } from "@/lib/rate-limit";
+import { rateLimitMemory as rateLimit, resetRateLimitMemory as resetRateLimit } from "@/lib/rate-limit";
 
 describe("crypto", () => {
   it("encrypts and decrypts with AES-GCM", () => {

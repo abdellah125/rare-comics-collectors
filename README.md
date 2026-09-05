@@ -107,9 +107,19 @@ run through the `Job` table. On a long-running Node server the in-process worker
 `src/instrumentation.ts` polls it. On serverless hosts set `JOBS_INLINE_WORKER=false`: a job
 queued during a request is drained right after the response (`after()`), and
 `/api/jobs/run` (GET or POST, `Authorization: Bearer $JOBS_SECRET` or `$CRON_SECRET`) runs
-the recurring jobs from a cron. `vercel.json` schedules it daily, the most a Vercel Hobby plan
-allows; on Pro change the schedule to `* * * * *`. The admin panel (`Jobs & system`) can
+the recurring jobs from a cron. `vercel.json` schedules it daily as a backstop, but on serverless
+hosts ordinary traffic keeps the queue moving: any storefront or admin request may drain due jobs
+after its response (at most every 30 s per instance), so reservations expire, orders auto-complete
+and payouts get scheduled within minutes of normal use. The admin panel (`Jobs & system`) can
 retry, cancel and run jobs manually.
+
+## Rate limiting
+
+Login, 2FA, registration, password reset, checkout, order tracking, tickets, reports and appeals
+are rate-limited per IP through the `RateLimitBucket` table (`src/lib/rate-limit.ts`), so the
+counters are shared by every instance of a serverless deployment. If the database is unreachable a
+process-local limiter takes over. Account lockout after repeated failed logins is separate and
+always database-backed.
 
 ## Payments
 

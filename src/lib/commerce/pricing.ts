@@ -100,8 +100,13 @@ export async function taxFor(destination: { countryCode: string; region?: string
   return { amount, label: rule.label, rateBps: rule.rateBps, inclusive: rule.isInclusive };
 }
 
-/** Can this product ship to the destination country? Listing restrictions win over zone availability. */
-export function productShipsTo(product: { restrictedCountries: string[]; allowedCountries: string[] }, countryCode: string): boolean {
+/**
+ * Can this product ship to the destination country? The seller's ship-to list
+ * applies first, then the listing's own allow/deny lists; zone availability is
+ * checked separately by shippingOptionsFor.
+ */
+export function productShipsTo(product: { restrictedCountries: string[]; allowedCountries: string[] }, countryCode: string, seller?: { shipsTo: string[] } | null): boolean {
+  if (seller && seller.shipsTo.length > 0 && !seller.shipsTo.includes(countryCode)) return false;
   if (product.restrictedCountries.includes(countryCode)) return false;
   if (product.allowedCountries.length > 0 && !product.allowedCountries.includes(countryCode)) return false;
   return true;

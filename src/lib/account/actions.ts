@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { CURRENCY_COOKIE } from "@/lib/currency";
+import { LOCALE_COOKIE } from "@/lib/i18n";
 import { env } from "@/lib/env";
 import { audit, securityEvent } from "@/lib/audit";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
@@ -34,6 +36,8 @@ const ProfileSchema = z.object({
   countryCode: z.string().length(2).toUpperCase().optional(),
   timezone: zTrimmed(64).optional(),
   marketingOptIn: zBool.optional(),
+  currency: z.string().trim().toUpperCase().length(3).optional(),
+  locale: z.string().trim().max(8).optional(),
 });
 
 export async function updateProfileAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
@@ -41,7 +45,18 @@ export async function updateProfileAction(_prev: ActionState | undefined, formDa
     const user = await assertUser();
     const parsed = ProfileSchema.safeParse(formToObject(formData));
     if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
-    const { name, phone, countryCode, timezone, marketingOptIn } = parsed.data;
+    const { name, phone, countryCode, timezone, marketingOptIn, currency, locale } = parsed.data;
+    const store = await cookies();
+    if (currency) {
+      const enabled = await db.currency.findFirst({ where: { code: currency, isEnabled: true }, select: { code: true } });
+      if (!enabled) return failState("That currency isn't available.", { currency: "Unavailable" });
+      store.set(CURRENCY_COOKIE, enabled.code, { path: "/", sameSite: "lax", secure: env.isProd, maxAge: 365 * 86_400 });
+    }
+    if (locale) {
+      const enabled = await db.locale.findFirst({ where: { code: locale, isEnabled: true }, select: { code: true } });
+      if (!enabled) return failState("That language isn't available.", { locale: "Unavailable" });
+      store.set(LOCALE_COOKIE, enabled.code, { path: "/", sameSite: "lax", secure: env.isProd, maxAge: 365 * 86_400 });
+    }
     if (timezone) {
       try {
         Intl.DateTimeFormat(undefined, { timeZone: timezone });
@@ -49,7 +64,7 @@ export async function updateProfileAction(_prev: ActionState | undefined, formDa
         return failState("Unknown timezone.", { timezone: "Unknown timezone" });
       }
     }
-    await db.user.update({ where: { id: user.id }, data: { name, phone: phone || null, countryCode, timezone, marketingOptIn: marketingOptIn ?? false } });
+    await db.user.update({ where: { id: user.id }, data: { name, phone: phone || null, countryCode, timezone, marketingOptIn: marketingOptIn ?? false, ...(currency ? { currency } : {}), ...(locale ? { locale } : {}) } });
     revalidatePath("/account", "layout");
     return okState(undefined, "Profile saved.");
   } catch (err) {

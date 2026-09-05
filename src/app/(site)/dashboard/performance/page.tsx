@@ -6,6 +6,7 @@ import { StatTile } from "@/components/charts/stat-tile";
 import { requireSeller } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
+import { countryLabel, countryNames } from "@/lib/geo";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({ title: "Performance", description: "Sales, conversion and service metrics.", path: "/dashboard/performance", noIndex: true });
@@ -26,7 +27,7 @@ export default async function PerformancePage() {
   }
   const since = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 5, 1));
   const [items, profile, views, disputes, returns, shippedItems, listings] = await Promise.all([
-    db.orderItem.findMany({ where: { sellerId, order: { paidAt: { gte: since } }, status: { notIn: ["cancelled", "refunded"] } }, select: { sellerNet: true, subtotal: true, discountAmount: true, qty: true, order: { select: { paidAt: true } } } }),
+    db.orderItem.findMany({ where: { sellerId, order: { paidAt: { gte: since } }, status: { notIn: ["cancelled", "refunded"] } }, select: { sellerNet: true, subtotal: true, discountAmount: true, qty: true, order: { select: { paidAt: true, countryCode: true } } } }),
     db.sellerProfile.findUniqueOrThrow({ where: { id: sellerId }, select: { ratingAvg: true, ratingCount: true, salesCount: true, handlingDays: true } }),
     db.product.aggregate({ _sum: { viewCount: true, soldCount: true }, where: { sellerId } }),
     db.dispute.count({ where: { sellerId, createdAt: { gte: since } } }),
@@ -41,6 +42,10 @@ export default async function PerformancePage() {
   const onTime = shippedItems.filter((s) => s.shipment?.shippedAt && s.order.paidAt && s.shipment.shippedAt.getTime() - s.order.paidAt.getTime() <= profile.handlingDays * 86_400_000 * 1.4).length;
   const onTimeRate = shippedItems.length ? Math.round((onTime / shippedItems.length) * 100) : null;
   const conversion = (views._sum.viewCount ?? 0) > 0 ? ((views._sum.soldCount ?? 0) / (views._sum.viewCount ?? 1)) * 100 : null;
+  const names = await countryNames();
+  const unitsByCountry = new Map<string, number>();
+  for (const i of items) unitsByCountry.set(i.order.countryCode ?? "??", (unitsByCountry.get(i.order.countryCode ?? "??") ?? 0) + i.qty);
+  const countries = [...unitsByCountry.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
   const lastIdx = months.length - 1;
   const delta = grossByMonth[lastIdx - 1] > 0 ? ((grossByMonth[lastIdx] - grossByMonth[lastIdx - 1]) / grossByMonth[lastIdx - 1]) * 100 : null;
 
@@ -55,6 +60,7 @@ export default async function PerformancePage() {
       </div>
       <LineChart title="Sales by month" labels={months.map((m) => m.label)} series={[{ name: "Gross", points: grossByMonth.map((v) => v / 100) }, { name: "Net", points: netByMonth.map((v) => v / 100) }]} format="moneyCompact" />
       <BarChart title="Units sold by month" labels={months.map((m) => m.label)} values={unitsByMonth} />
+      {countries.length > 0 && <BarChart title="Units by destination country (6 months)" labels={countries.map(([code]) => countryLabel(names, code))} values={countries.map(([, n]) => n)} />}
       <Panel title="Service quality">
         <dl className="grid gap-4 sm:grid-cols-3 text-sm">
           <div>

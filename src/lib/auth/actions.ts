@@ -60,7 +60,7 @@ export async function loginAction(_prev: ActionState | undefined, formData: Form
   const settings = await getSettings();
 
   const limiterKey = `login:${meta.ip ?? "unknown"}:${email}`;
-  const limiter = rateLimit(limiterKey, 10, 15 * 60_000);
+  const limiter = await rateLimit(limiterKey, 10, 15 * 60_000);
   if (!limiter.ok) return failState(`Too many sign-in attempts. Try again in ${Math.ceil(limiter.retryAfterSeconds / 60)} minutes.`);
 
   const user = await db.user.findUnique({ where: { email } });
@@ -93,7 +93,7 @@ export async function loginAction(_prev: ActionState | undefined, formData: Form
     await securityEvent("login_failed", user.id, { reason: "not_admin" });
     return failState("This account doesn't have admin access.");
   }
-  resetRateLimit(limiterKey);
+  await resetRateLimit(limiterKey);
 
   if (user.twoFactorEnabled) {
     const token = randomToken(32);
@@ -126,7 +126,7 @@ export async function verifyTwoFactorAction(_prev: ActionState | undefined, form
   const [token, modeFlag] = raw.split(".");
   const asAdmin = modeFlag === "a";
   const meta = await requestMeta();
-  const limiter = rateLimit(`2fa:${meta.ip ?? "unknown"}`, 10, 10 * 60_000);
+  const limiter = await rateLimit(`2fa:${meta.ip ?? "unknown"}`, 10, 10 * 60_000);
   if (!limiter.ok) return failState("Too many attempts. Please sign in again in a few minutes.");
 
   const challenge = await db.loginChallenge.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
@@ -179,7 +179,7 @@ export async function registerAction(_prev: ActionState | undefined, formData: F
   if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
   if (parsed.data.terms !== "on") return failState("Please accept the terms to continue.", { terms: "Required" });
   const meta = await requestMeta();
-  const limiter = rateLimit(`register:${meta.ip ?? "unknown"}`, 5, 60 * 60_000);
+  const limiter = await rateLimit(`register:${meta.ip ?? "unknown"}`, 5, 60 * 60_000);
   if (!limiter.ok) return failState("Too many accounts created from this network. Try again later.");
 
   const { email, password, firstName, lastName } = parsed.data;
@@ -210,7 +210,7 @@ export async function requestPasswordResetAction(_prev: ActionState | undefined,
   const parsed = ResetRequestSchema.safeParse(formToObject(formData));
   if (!parsed.success) return failState("Enter a valid email address.", fieldErrors(parsed.error));
   const meta = await requestMeta();
-  const limiter = rateLimit(`reset:${meta.ip ?? "unknown"}`, 5, 15 * 60_000);
+  const limiter = await rateLimit(`reset:${meta.ip ?? "unknown"}`, 5, 15 * 60_000);
   if (!limiter.ok) return failState("Too many reset requests. Try again in a few minutes.");
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
   if (user && !user.deletedAt && user.status !== "banned") {

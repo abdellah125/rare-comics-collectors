@@ -5,7 +5,8 @@ import { SellerDocsForm } from "@/components/seller/seller-docs-form";
 import { StoreProfileForm } from "@/components/seller/store-profile-form";
 import { Badge } from "@/components/ui";
 import { requireSeller } from "@/lib/auth/session";
-import { getSellerCountries } from "@/lib/commerce/countries";
+import { getBuyerCountries, getSellerCountries } from "@/lib/commerce/countries";
+import { isString, parseJsonArray } from "@/lib/json";
 import { db } from "@/lib/db";
 import { statusLabel } from "@/lib/domain";
 import { bpsToPercent, formatMoney } from "@/lib/money";
@@ -16,9 +17,10 @@ export const metadata: Metadata = pageMetadata({ title: "Store settings", descri
 
 export default async function SellerSettingsPage() {
   const user = await requireSeller({ next: "/dashboard/settings" });
-  const [profile, countries, settings] = await Promise.all([
+  const [profile, countries, buyerCountries, settings] = await Promise.all([
     db.sellerProfile.findUniqueOrThrow({ where: { id: user.seller.id }, include: { documents: { orderBy: { createdAt: "desc" } } } }),
     getSellerCountries(),
+    getBuyerCountries(),
     getSettings(),
   ]);
   const commission = profile.commissionBps ?? settings["commerce.commissionBps"];
@@ -26,7 +28,7 @@ export default async function SellerSettingsPage() {
     <div className="grid gap-8">
       <PageHeader title="Store settings" lead={`Commission on your sales: ${bpsToPercent(commission)}. Payout hold ${settings["payouts.holdDays"]} days, minimum ${formatMoney(Math.max(profile.minPayout ?? 0, settings["payouts.minAmount"]))}.`} />
       <Panel title="Store profile" description="Shown on your storefront and listings.">
-        <StoreProfileForm profile={{ displayName: profile.displayName, bio: profile.bio, shippingPolicy: profile.shippingPolicy, returnPolicy: profile.returnPolicy, handlingDays: profile.handlingDays, shipsFromCountry: profile.shipsFromCountry ?? profile.countryCode }} countries={countries} />
+        <StoreProfileForm profile={{ displayName: profile.displayName, bio: profile.bio, shippingPolicy: profile.shippingPolicy, returnPolicy: profile.returnPolicy, handlingDays: profile.handlingDays, shipsFromCountry: profile.shipsFromCountry ?? profile.countryCode, shipsTo: parseJsonArray(profile.shipsToJson, isString), customsNote: profile.customsNote }} countries={countries} buyerCountries={buyerCountries.map((c) => ({ code: c.code, name: c.name }))} />
       </Panel>
       <div id="payouts">
         <Panel title="Payout method" description="Details are encrypted at rest. Only the last digits are ever displayed again.">

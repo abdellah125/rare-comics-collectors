@@ -76,7 +76,7 @@ export async function resolveLines(lines: CartLineInput[], countryCode?: string)
   const products = comicSlugs.length
     ? await db.product.findMany({
         where: { slug: { in: comicSlugs }, deletedAt: null },
-        include: { images: { orderBy: { position: "asc" }, take: 1 }, seller: { select: { id: true, status: true } } },
+        include: { images: { orderBy: { position: "asc" }, take: 1 }, seller: { select: { id: true, status: true, shipsToJson: true } } },
       })
     : [];
   const out: ResolvedLine[] = [];
@@ -100,7 +100,7 @@ export async function resolveLines(lines: CartLineInput[], countryCode?: string)
     if (p.status !== "published" || (p.seller && p.seller.status !== "approved")) problem = "This listing is no longer available.";
     else if (p.stock <= 0) problem = "Sold out.";
     else if (line.qty > p.stock) problem = `Only ${p.stock} available.`;
-    else if (countryCode && !productShipsTo({ restrictedCountries: parseJsonArray(p.restrictedCountriesJson, isString), allowedCountries: parseJsonArray(p.allowedCountriesJson, isString) }, countryCode)) problem = "The seller doesn't ship this item to your country.";
+    else if (countryCode && !productShipsTo({ restrictedCountries: parseJsonArray(p.restrictedCountriesJson, isString), allowedCountries: parseJsonArray(p.allowedCountriesJson, isString) }, countryCode, p.seller ? { shipsTo: parseJsonArray(p.seller.shipsToJson, isString) } : null)) problem = "The seller doesn't ship this item to your country.";
     const qty = Math.min(line.qty, Math.max(p.stock, 0)) || line.qty;
     out.push({
       id: `comic:${p.slug}`,

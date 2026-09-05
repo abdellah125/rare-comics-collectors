@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { statusLabel } from "@/lib/domain";
 import { sellerBalance } from "@/lib/finance/ledger";
 import { formatDateTime } from "@/lib/i18n";
+import { countryLabel, countryNames, isInternational } from "@/lib/geo";
 import { formatMoney } from "@/lib/money";
 import { pageMetadata } from "@/lib/seo";
 
@@ -26,8 +27,19 @@ export default async function SellerOverviewPage() {
     db.returnRequest.count({ where: { orderItem: { sellerId }, status: { in: ["requested", "approved", "shipped_back"] } } }),
     db.dispute.count({ where: { sellerId, status: { notIn: ["resolved", "closed"] } } }),
     db.orderItem.findMany({ where: { sellerId }, orderBy: { createdAt: "desc" }, take: 6, include: { order: { select: { number: true, placedAt: true, status: true } } } }),
-    db.sellerProfile.findUniqueOrThrow({ where: { id: sellerId }, select: { ratingAvg: true, ratingCount: true, salesCount: true, verificationStatus: true, payoutMethod: true } }),
+    db.sellerProfile.findUniqueOrThrow({ where: { id: sellerId }, select: { ratingAvg: true, ratingCount: true, salesCount: true, verificationStatus: true, payoutMethod: true, shipsFromCountry: true, countryCode: true, shipsToJson: true } }),
   ]);
+  const [destinations, names, toShipOrders] = await Promise.all([
+    db.orderItem.findMany({ where: { sellerId, order: { paidAt: { gte: since30 } }, status: { notIn: ["cancelled", "refunded"] } }, select: { qty: true, order: { select: { countryCode: true } } } }),
+    countryNames(),
+    db.orderItem.findMany({ where: { sellerId, status: "paid", kind: "comic" }, select: { order: { select: { countryCode: true } } } }),
+  ]);
+  const shipsFrom = profile.shipsFromCountry ?? profile.countryCode;
+  const byCountry = new Map<string, number>();
+  for (const d of destinations) byCountry.set(d.order.countryCode ?? "??", (byCountry.get(d.order.countryCode ?? "??") ?? 0) + d.qty);
+  const topDestinations = [...byCountry.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const internationalToShip = toShipOrders.filter((i) => isInternational(shipsFrom, i.order.countryCode)).length;
+  const shipsTo = JSON.parse(profile.shipsToJson || "[]") as string[];
 
   return (
     <div className="grid gap-8">
@@ -88,6 +100,41 @@ export default async function SellerOverviewPage() {
           </p>
         </Link>
       </div>
+      <Panel title="Where your books go" description="Destinations in the last 30 days and your international coverage.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            {topDestinations.length === 0 ? (
+              <p className="text-sm text-ink-500">No sales in the last 30 days.</p>
+            ) : (
+              <ul className="grid gap-1.5 text-sm">
+                {topDestinations.map(([code, qty]) => (
+                  <li key={code} className="flex items-center justify-between">
+                    <span className="text-ink-800">{countryLabel(names, code)}</span>
+                    <span className="tabular-nums text-ink-600">{qty} unit{qty === 1 ? "" : "s"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="rounded-lg bg-ink-50 p-4 text-sm text-ink-700">
+            <p>
+              Shipping from <strong>{countryLabel(names, shipsFrom)}</strong> to {shipsTo.length === 0 ? <strong>everywhere the marketplace delivers</strong> : <strong>{shipsTo.length} countries</strong>}.
+            </p>
+            <p className="mt-1">
+              {internationalToShip > 0 ? (
+                <>
+                  <strong>{internationalToShip}</strong> international order{internationalToShip === 1 ? "" : "s"} waiting to ship — remember the customs declaration.
+                </>
+              ) : (
+                "No international orders waiting."
+              )}
+            </p>
+            <Link href="/dashboard/settings" className="mt-2 inline-block text-brand-700 underline-offset-2 hover:underline">
+              Edit ship-to countries
+            </Link>
+          </div>
+        </div>
+      </Panel>
       <Panel title="Recent sales">
         {recentItems.length === 0 ? (
           <EmptyState title="No sales yet" body="Published listings appear in the store immediately; sales show up here." action={<ButtonLink href="/dashboard/listings/new" size="sm">Create a listing</ButtonLink>} />

@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/session";
 import { formatAddress } from "@/lib/commerce/pricing";
 import { formatDateTime } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
+import { countryLabel, countryNames } from "@/lib/geo";
 import { getOrderForUser, orderAddress } from "@/lib/orders/queries";
 import { pageMetadata } from "@/lib/seo";
 import { fullAddress, site } from "@/lib/site";
@@ -16,6 +17,7 @@ export default async function InvoicePage({ params }: PageProps<"/account/orders
   const user = await requireUser({ next: `/account/orders/${number}/invoice` });
   const order = await getOrderForUser(number, user.id);
   if (!order) notFound();
+  const names = await countryNames();
   const shipping = orderAddress(order.shippingAddressJson);
   const billing = orderAddress(order.billingAddressJson);
   const payment = order.payments.find((p) => p.status === "succeeded" || p.status === "partially_refunded" || p.status === "refunded") ?? order.payments[0];
@@ -63,6 +65,7 @@ export default async function InvoicePage({ params }: PageProps<"/account/orders
               <td className="py-2">
                 {i.title}
                 {i.sku && <span className="block text-[12px] text-ink-500">SKU {i.sku}</span>}
+                {i.seller && <span className="block text-[12px] text-ink-500">Sold by {i.seller.displayName} · ships from {countryLabel(names, i.seller.shipsFromCountry ?? i.seller.countryCode)}</span>}
               </td>
               <td className="py-2 text-right tabular-nums">{i.qty}</td>
               <td className="py-2 text-right tabular-nums">{formatMoney(i.unitPrice)}</td>
@@ -78,6 +81,7 @@ export default async function InvoicePage({ params }: PageProps<"/account/orders
         <div className="flex justify-between"><dt className="text-ink-600">Tax</dt><dd className="tabular-nums">{formatMoney(order.taxTotal)}</dd></div>
         <div className="flex justify-between border-t border-ink-200 pt-1 font-semibold"><dt>Total</dt><dd className="tabular-nums">{formatMoney(order.total)}</dd></div>
         {order.currency !== "USD" && <div className="flex justify-between text-ink-600"><dt>Charged</dt><dd className="tabular-nums">{formatMoney(order.presentmentTotal, order.currency)}</dd></div>}
+        {order.currency !== "USD" && <div className="flex justify-between text-[12px] text-ink-500"><dt>Rate</dt><dd className="tabular-nums">1 USD = {order.exchangeRate.toFixed(4)} {order.currency}</dd></div>}
         {payment && payment.refundedAmount > 0 && <div className="flex justify-between text-ink-600"><dt>Refunded</dt><dd className="tabular-nums">− {formatMoney(payment.refundedAmount)}</dd></div>}
       </dl>
       <p className="mt-8 text-[12px] text-ink-500">

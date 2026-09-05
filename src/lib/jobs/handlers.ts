@@ -6,6 +6,7 @@ import { refreshExchangeRates } from "@/lib/currency";
 import { autoCompleteOrders, expireUnpaidOrders, recomputeSellerStats } from "@/lib/orders/lifecycle";
 import { scheduleDuePayouts } from "@/lib/finance/payouts";
 import { getSettings } from "@/lib/settings";
+import { sweepRateLimitBuckets } from "@/lib/rate-limit";
 
 let registered = false;
 
@@ -48,6 +49,7 @@ export function registerJobHandlers() {
     await db.loginChallenge.deleteMany({ where: { expiresAt: { lt: now } } });
     await db.idempotencyKey.deleteMany({ where: { expiresAt: { lt: now } } });
     await db.job.deleteMany({ where: { status: "completed", completedAt: { lt: new Date(now.getTime() - 14 * 86_400_000) } } });
+    await sweepRateLimitBuckets();
     await enqueueJob("cleanup_expired", {}, { runAt: new Date(Date.now() + 12 * 3_600_000), dedupe: true });
   });
 

@@ -28,6 +28,7 @@ export const ListingSchema = z.object({
   categoryId: zOptionalTrimmed(64),
   weightGrams: z.preprocess((v) => (v === "" || v === undefined ? undefined : v), z.coerce.number().int().min(0).max(50_000).optional()),
   restrictedCountries: zOptionalTrimmed(500),
+  allowedCountries: zOptionalTrimmed(500),
   tags: zOptionalTrimmed(300),
   intent: z.enum(["draft", "publish"]).default("draft"),
 });
@@ -56,6 +57,7 @@ export function listingData(d: z.infer<typeof ListingSchema>) {
     categoryId: d.categoryId || null,
     weightGrams: d.weightGrams ?? null,
     restrictedCountriesJson: JSON.stringify((d.restrictedCountries ?? "").split(/[,\s]+/).map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z]{2}$/.test(s))),
+    allowedCountriesJson: JSON.stringify((d.allowedCountries ?? "").split(/[,\s]+/).map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z]{2}$/.test(s))),
     tagsJson: JSON.stringify((d.tags ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 12)),
   };
 }

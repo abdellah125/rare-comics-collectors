@@ -11,6 +11,7 @@ import { formatAddress } from "@/lib/commerce/pricing";
 import { db } from "@/lib/db";
 import { statusLabel } from "@/lib/domain";
 import { formatDateTime } from "@/lib/i18n";
+import { countryLabel, countryNames, isInternational } from "@/lib/geo";
 import { formatMoney } from "@/lib/money";
 import { caseMessages, orderAddress } from "@/lib/orders/queries";
 import { pageMetadata } from "@/lib/seo";
@@ -32,7 +33,10 @@ export default async function SellerOrderPage({ params }: PageProps<"/dashboard/
     },
   });
   if (!order) notFound();
-  const [carriers, seller] = await Promise.all([db.carrier.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }), db.sellerProfile.findUniqueOrThrow({ where: { id: sellerId }, select: { handlingDays: true } })]);
+  const [carriers, seller, names] = await Promise.all([db.carrier.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }), db.sellerProfile.findUniqueOrThrow({ where: { id: sellerId }, select: { handlingDays: true, shipsFromCountry: true, countryCode: true } }), countryNames()]);
+  const shipsFrom = seller.shipsFromCountry ?? seller.countryCode;
+  const crossBorder = isInternational(shipsFrom, order.countryCode);
+  const declaredValue = order.items.reduce((n, i) => n + i.subtotal - i.discountAmount, 0);
   const shipping = orderAddress(order.shippingAddressJson);
   const unshipped = order.items.filter((i) => i.kind === "comic" && !i.shipmentId && ["paid", "processing"].includes(i.status));
   const shipments = [...new Map(order.items.filter((i) => i.shipment).map((i) => [i.shipment!.id, i.shipment!])).values()];
@@ -47,6 +51,16 @@ export default async function SellerOrderPage({ params }: PageProps<"/dashboard/
     <div className="grid gap-8">
       <PageHeader title={`Order ${order.number}`} lead={`Placed ${formatDateTime(order.placedAt, { timeZone: user.timezone })} · ${statusLabel(order.status)} · handling time ${seller.handlingDays} business day${seller.handlingDays === 1 ? "" : "s"}`} actions={<Badge tone={paid ? "brand" : "neutral"}>{statusLabel(order.paymentStatus)}</Badge>} />
       {!paid && <p className="rounded-lg bg-gold-400/15 px-4 py-3 text-sm text-gold-800">Don&apos;t ship yet — payment hasn&apos;t cleared.</p>}
+      {paid && crossBorder && (
+        <div className="rounded-lg border border-ink-200 bg-ink-50 px-4 py-3 text-sm text-ink-800">
+          <p className="font-semibold">International shipment — {countryLabel(names, shipsFrom)} → {countryLabel(names, order.countryCode)}</p>
+          <ul className="mt-1 list-disc pl-5 text-[13px] text-ink-700">
+            <li>Attach a customs declaration (CN22/CN23 or a commercial invoice) describing the books with a declared value of {formatMoney(declaredValue)}.</li>
+            <li>Use a tracked, insured service and enter the tracking number below — untracked international parcels cannot be defended in a dispute.</li>
+            <li>Duties and import taxes are paid by the buyer on delivery unless your listing says otherwise.</li>
+          </ul>
+        </div>
+      )}
       <div className="grid gap-6 lg:grid-cols-3">
         <Panel title="Your items" className="lg:col-span-2">
           <ul className="divide-y divide-ink-100">

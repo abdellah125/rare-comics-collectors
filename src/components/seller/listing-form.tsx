@@ -32,6 +32,7 @@ export type ListingFormValues = {
   categoryId: string | null;
   weightGrams: number | null;
   restrictedCountries: string[];
+  allowedCountries: string[];
   tags: string[];
   status: string;
   images: { id: string; url: string }[];
@@ -153,6 +154,7 @@ export function ListingForm({ initial, categories, maxImages, minPriceLabel }: {
           <TextField label="Quantity" name="stock" type="number" required min={0} max={999} defaultValue={initial?.stock ?? 1} />
           <TextField label="Weight (grams, optional)" name="weightGrams" type="number" min={0} defaultValue={initial?.weightGrams ?? ""} />
           <TextField label="Don't ship to (country codes)" name="restrictedCountries" defaultValue={initial?.restrictedCountries.join(", ") ?? ""} placeholder="e.g. BR, IN" className="sm:col-span-2" hint="Comma-separated ISO codes. Leave empty to ship anywhere the marketplace does." />
+          <TextField label="Only ship to (country codes, optional)" name="allowedCountries" defaultValue={initial?.allowedCountries.join(", ") ?? ""} placeholder="e.g. US, CA, GB" className="sm:col-span-2" hint="Leave empty to use your store-wide ship-to list from Store settings." />
         </div>
       </Section>
 

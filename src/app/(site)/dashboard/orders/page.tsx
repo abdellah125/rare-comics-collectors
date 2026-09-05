@@ -6,6 +6,7 @@ import { requireSeller } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { statusLabel } from "@/lib/domain";
 import { formatDateTime } from "@/lib/i18n";
+import { countryLabel, countryNames, isInternational } from "@/lib/geo";
 import { formatMoney } from "@/lib/money";
 import { pageMetadata } from "@/lib/seo";
 
@@ -29,9 +30,12 @@ export default async function SellerOrdersPage({ searchParams }: PageProps<"/das
     take: 200,
     include: { order: { select: { id: true, number: true, placedAt: true, status: true, countryCode: true, shippingAddressJson: true } }, shipment: { select: { status: true, trackingNumber: true } } },
   });
+  const [seller, names] = await Promise.all([db.sellerProfile.findUniqueOrThrow({ where: { id: user.seller.id }, select: { handlingDays: true, shipsFromCountry: true, countryCode: true } }), countryNames()]);
+  const shipsFrom = seller.shipsFromCountry ?? seller.countryCode;
   const grouped = new Map<string, typeof items>();
   for (const i of items) grouped.set(i.order.number, [...(grouped.get(i.order.number) ?? []), i]);
-  const handlingMs = 2 * 86_400_000;
+  // Handling time is in business days; allow the weekend before flagging an order as late.
+  const handlingMs = (seller.handlingDays + 2) * 86_400_000;
   return (
     <div className="grid gap-6">
       <PageHeader title="Orders" lead="Ship within your handling time and add tracking so buyers get updates automatically." />
@@ -57,10 +61,11 @@ export default async function SellerOrdersPage({ searchParams }: PageProps<"/das
                       {number}
                     </Link>
                     <p className="text-[13px] text-ink-600">
-                      {formatDateTime(order.placedAt, { timeZone: user.timezone })} · ships to {order.countryCode ?? "—"}
+                      {formatDateTime(order.placedAt, { timeZone: user.timezone })} · ships to {countryLabel(names, order.countryCode)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {isInternational(shipsFrom, order.countryCode) && <Badge tone="neutral">International</Badge>}
                     {late && <Badge tone="sale">Past handling time</Badge>}
                     <Badge tone={rows.every((r) => r.status === "delivered") ? "brand" : rows.some((r) => r.status === "paid") ? "gold" : "neutral"}>{statusLabel(rows.some((r) => r.status === "paid") ? "to ship" : rows[0].status)}</Badge>
                   </div>

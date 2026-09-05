@@ -45,7 +45,7 @@ export const SetupSchema = z
 export type SetupInput = z.infer<typeof SetupSchema>;
 
 export async function createInitialAdmin(input: SetupInput, meta: { ip: string | null }): Promise<{ id: string; email: string }> {
-  assertRateLimit(`admin-setup:${meta.ip ?? "unknown"}`, 5, 15 * 60_000);
+  await assertRateLimit(`admin-setup:${meta.ip ?? "unknown"}`, 5, 15 * 60_000);
   if (env.adminSetupKey && input.setupKey !== env.adminSetupKey) throw new SetupError("The setup key is wrong.", 403);
 
   const passwordHash = await hashPassword(input.password);

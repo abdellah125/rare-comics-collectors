@@ -62,6 +62,21 @@ function kickWorker(runAt: Date) {
 }
 
 let draining = false;
+let lastTrafficKick = 0;
+
+/**
+ * Serverless hosts without a per-minute cron (Vercel Hobby allows one run a day)
+ * still get timely housekeeping: any storefront or admin request may schedule a
+ * drain after its response, at most once every 30 seconds per instance. The
+ * queue itself is safe to drain from many instances at once.
+ */
+export function driveJobsOnTraffic(): void {
+  if (process.env.JOBS_INLINE_WORKER !== "false" && !process.env.VERCEL) return;
+  const now = Date.now();
+  if (now - lastTrafficKick < 30_000) return;
+  lastTrafficKick = now;
+  driveJobsAfterResponse();
+}
 
 /**
  * Serverless drain: once the current response is sent, make sure the recurring jobs
@@ -80,7 +95,7 @@ export function driveJobsAfterResponse(): void {
         const { registerJobHandlers, ensureRecurringJobs } = await import("@/lib/jobs/handlers");
         registerJobHandlers();
         await ensureRecurringJobs().catch((err) => console.error("[jobs] could not schedule recurring jobs", err));
-        await processJobs(10).catch((err) => console.error("[jobs] post-response drain failed", err));
+        await processJobs(25).catch((err) => console.error("[jobs] post-response drain failed", err));
       } finally {
         draining = false;
       }

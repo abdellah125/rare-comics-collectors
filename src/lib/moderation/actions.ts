@@ -24,7 +24,7 @@ export async function createReportAction(_prev: ActionState | undefined, formDat
   if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
   if (parsed.data.website) return okState(undefined, "Thanks for the report.");
   const meta = await requestMeta();
-  const limiter = rateLimit(`report:${meta.ip ?? "unknown"}`, 5, 60 * 60_000);
+  const limiter = await rateLimit(`report:${meta.ip ?? "unknown"}`, 5, 60 * 60_000);
   if (!limiter.ok) return failState("Too many reports from this network. Try again later.");
   const user = await getCurrentUser();
   const { targetType, targetId } = parsed.data;

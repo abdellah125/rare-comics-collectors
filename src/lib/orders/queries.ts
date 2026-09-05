@@ -4,7 +4,7 @@ import { parseJsonObject } from "@/lib/json";
 import type { Address } from "@/lib/commerce/pricing";
 
 export const orderDetailInclude = {
-  items: { include: { seller: { select: { id: true, slug: true, displayName: true, handlingDays: true } } } },
+  items: { include: { seller: { select: { id: true, slug: true, displayName: true, handlingDays: true, shipsFromCountry: true, countryCode: true, customsNote: true } } } },
   payments: { orderBy: { createdAt: "desc" as const } },
   refunds: { orderBy: { createdAt: "desc" as const } },
   shipments: { include: { carrier: true, events: { orderBy: { occurredAt: "desc" as const } }, items: { select: { id: true, title: true, qty: true } } }, orderBy: { createdAt: "asc" as const } },

@@ -34,7 +34,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
     return { ok: false, message: message, field };
   }
   const meta = await requestMeta();
-  const limiter = rateLimit(`checkout:${meta.ip ?? "unknown"}`, 12, 10 * 60_000);
+  const limiter = await rateLimit(`checkout:${meta.ip ?? "unknown"}`, 12, 10 * 60_000);
   if (!limiter.ok) return { ok: false, message: "Too many checkout attempts. Please wait a few minutes." };
   const user = await getCurrentUser();
   if (user?.impersonator) return { ok: false, message: "Purchases are disabled during a support session." };
@@ -82,7 +82,7 @@ export async function trackOrderAction(_prev: ActionState<TrackedOrder> | undefi
   const parsed = TrackSchema.safeParse(formToObject(formData));
   if (!parsed.success) return failState("Enter your order number and the email used on the order.");
   const meta = await requestMeta();
-  const limiter = rateLimit(`track:${meta.ip ?? "unknown"}`, 20, 10 * 60_000);
+  const limiter = await rateLimit(`track:${meta.ip ?? "unknown"}`, 20, 10 * 60_000);
   if (!limiter.ok) return failState("Too many lookups. Try again in a few minutes.");
   if (!(await getSettings())["features.guestTracking"] && !(await getCurrentUser())) return failState("Sign in to see the status of your orders.");
   const number = parsed.data.reference.toUpperCase();

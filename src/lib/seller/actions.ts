@@ -107,6 +107,8 @@ const ProfileSchema = z.object({
   returnPolicy: zOptionalTrimmed(2000),
   handlingDays: z.coerce.number().int().min(1).max(14),
   shipsFromCountry: zCountry,
+  shipsTo: z.preprocess((v) => (v === undefined || v === "" ? [] : Array.isArray(v) ? v : [v]), z.array(zCountry).max(250)).optional(),
+  customsNote: zOptionalTrimmed(500),
 });
 
 export async function updateSellerProfileAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
@@ -118,7 +120,12 @@ export async function updateSellerProfileAction(_prev: ActionState | undefined, 
     const logo = formData.get("logo");
     let logoMediaId: string | undefined;
     if (logo instanceof File && logo.size > 0) logoMediaId = (await saveUpload(logo, { purpose: "avatar", ownerId: user.id, visibility: "public" })).id;
-    await db.sellerProfile.update({ where: { id: user.seller.id }, data: { ...parsed.data, bio: parsed.data.bio ?? null, shippingPolicy: parsed.data.shippingPolicy ?? null, returnPolicy: parsed.data.returnPolicy ?? null, ...(logoMediaId ? { logoMediaId } : {}) } });
+    const { shipsTo, customsNote, ...rest } = parsed.data;
+    const shipsToClean = [...new Set((shipsTo ?? []).map((c) => c.toUpperCase()))].filter((c) => c !== "ALL");
+    await db.sellerProfile.update({
+      where: { id: user.seller.id },
+      data: { ...rest, bio: rest.bio ?? null, shippingPolicy: rest.shippingPolicy ?? null, returnPolicy: rest.returnPolicy ?? null, shipsToJson: JSON.stringify(shipsToClean), customsNote: customsNote ?? null, ...(logoMediaId ? { logoMediaId } : {}) },
+    });
     revalidatePath("/dashboard/settings");
     revalidatePath(`/sellers/${user.seller.slug}`);
     return okState(undefined, "Store profile saved.");

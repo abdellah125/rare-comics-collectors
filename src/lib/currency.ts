@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { BASE_CURRENCY, convertFromBase, formatMoney } from "@/lib/money";
 import { getSettings } from "@/lib/settings";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const CURRENCY_COOKIE = "rcc_currency";
 
@@ -27,7 +28,9 @@ export const getPresentmentCurrency = cache(async (): Promise<Currency> => {
   const settings = await getSettings();
   const base = await getBaseCurrency();
   if (!settings["features.multiCurrency"]) return base;
-  const code = (await cookies()).get(CURRENCY_COOKIE)?.value?.toUpperCase();
+  // Cookie choice first (works for guests), then the signed-in user's saved preference.
+  let code = (await cookies()).get(CURRENCY_COOKIE)?.value?.toUpperCase();
+  if (!code) code = (await getCurrentUser())?.currency?.toUpperCase();
   if (!code || code === base.code) return base;
   const list = await getEnabledCurrencies();
   return list.find((c) => c.code === code) ?? base;

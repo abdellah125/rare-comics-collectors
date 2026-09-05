@@ -5,6 +5,7 @@ import { MaintenancePage } from "@/components/maintenance-page";
 import { SiteBanners } from "@/components/site-banners";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSettings } from "@/lib/settings";
+import { driveJobsOnTraffic } from "@/lib/jobs/queue";
 
 /**
  * Storefront layout. Reads marketplace settings at request time so maintenance
@@ -12,6 +13,7 @@ import { getSettings } from "@/lib/settings";
  */
 export default async function SiteLayout({ children }: { children: ReactNode }) {
   await connection();
+  driveJobsOnTraffic();
   const settings = await getSettings();
   if (settings["system.maintenanceMode"]) {
     const user = await getCurrentUser();

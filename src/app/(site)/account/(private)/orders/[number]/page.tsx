@@ -9,6 +9,8 @@ import { requireUser } from "@/lib/auth/session";
 import { formatAddress } from "@/lib/commerce/pricing";
 import { statusLabel, statusTone } from "@/lib/domain";
 import { formatDateTime } from "@/lib/i18n";
+import { DEFAULT_CUSTOMS_NOTE, countryLabel, countryNames, deliveryWindow, isInternational } from "@/lib/geo";
+import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { caseMessages, getOrderForUser, orderAddress } from "@/lib/orders/queries";
 import { pageMetadata } from "@/lib/seo";
@@ -26,8 +28,12 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
   const user = await requireUser({ next: `/account/orders/${number}` });
   const order = await getOrderForUser(number, user.id);
   if (!order) notFound();
-  const settings = await getSettings();
+  const [settings, names, method] = await Promise.all([getSettings(), countryNames(), order.shippingMethodId ? db.shippingMethod.findUnique({ where: { id: order.shippingMethodId }, select: { estimatedDaysMin: true, estimatedDaysMax: true } }) : Promise.resolve(null)]);
   const shipping = orderAddress(order.shippingAddressJson);
+  const crossBorder = order.items.filter((i) => isInternational(i.seller?.shipsFromCountry ?? i.seller?.countryCode, order.countryCode));
+  const handling = Math.max(0, ...order.items.map((i) => i.seller?.handlingDays ?? 1));
+  const paidBase = order.paidAt ?? (order.paymentStatus === "paid" ? order.placedAt : null);
+  const eta = paidBase && method && !["cancelled", "failed", "refunded", "completed", "delivered"].includes(order.status) ? deliveryWindow(paidBase, handling, method.estimatedDaysMin, method.estimatedDaysMax) : null;
   const billing = orderAddress(order.billingAddressJson);
   const payment = order.payments[0];
   const openReturns = order.returns.filter((r) => !["closed", "refunded", "rejected"].includes(r.status));
@@ -90,6 +96,7 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
                         <Link href={`/sellers/${i.seller.slug}`} className="text-brand-700 hover:underline">
                           {i.seller.displayName}
                         </Link>
+                        {(i.seller.shipsFromCountry ?? i.seller.countryCode) && <> · Ships from {countryLabel(names, i.seller.shipsFromCountry ?? i.seller.countryCode)}</>}
                       </>
                     )}
                   </p>
@@ -108,6 +115,7 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
             {order.discountTotal > 0 && <div className="flex justify-between"><dt className="text-ink-600">Discount{order.couponCode ? ` (${order.couponCode})` : ""}</dt><dd className="tabular-nums">− {formatMoney(order.discountTotal)}</dd></div>}
             <div className="flex justify-between"><dt className="text-ink-600">Shipping ({order.shippingMethodName ?? "n/a"})</dt><dd className="tabular-nums">{order.shippingTotal === 0 ? "Free" : formatMoney(order.shippingTotal)}</dd></div>
             <div className="flex justify-between"><dt className="text-ink-600">Tax</dt><dd className="tabular-nums">{formatMoney(order.taxTotal)}</dd></div>
+            {order.currency !== "USD" && <div className="flex justify-between text-[13px] text-ink-500"><dt>Exchange rate at checkout</dt><dd className="tabular-nums">1 USD = {order.exchangeRate.toFixed(4)} {order.currency}</dd></div>}
             <div className="flex justify-between border-t border-ink-200 pt-2 font-semibold"><dt>Total</dt><dd className="tabular-nums">{formatMoney(order.total)}{order.currency !== "USD" && <span className="ml-1 text-ink-500">({formatMoney(order.presentmentTotal, order.currency)})</span>}</dd></div>
           </dl>
         </Panel>
@@ -116,7 +124,25 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
           <Panel title="Shipping to">
             <p className="whitespace-pre-line text-sm text-ink-800">{formatAddress(shipping).join("\n")}</p>
             {order.phone && <p className="mt-2 text-[13px] text-ink-600">{order.phone}</p>}
+            {eta && (
+              <p className="mt-3 rounded-lg bg-ink-50 px-3 py-2 text-[13px] text-ink-700">
+                Estimated delivery {formatDateTime(eta.from, { dateOnly: true, timeZone: user.timezone })} – {formatDateTime(eta.to, { dateOnly: true, timeZone: user.timezone })}
+                <span className="block text-[12px] text-ink-500">{order.shippingMethodName ?? "Shipping"} · {handling} handling + {method?.estimatedDaysMin}–{method?.estimatedDaysMax} transit days</span>
+              </p>
+            )}
           </Panel>
+          {crossBorder.length > 0 && (
+            <Panel title="International delivery" tone="muted">
+              <p className="text-[13px] leading-relaxed text-ink-700">{crossBorder.find((i) => i.seller?.customsNote)?.seller?.customsNote ?? DEFAULT_CUSTOMS_NOTE}</p>
+              <ul className="mt-2 grid gap-1 text-[13px] text-ink-600">
+                {crossBorder.map((i) => (
+                  <li key={i.id}>
+                    {i.title}: from {countryLabel(names, i.seller?.shipsFromCountry ?? i.seller?.countryCode)} to {countryLabel(names, order.countryCode)}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
           <Panel title="Payment">
             <DescriptionList
               items={[
