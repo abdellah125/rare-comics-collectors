@@ -19,6 +19,8 @@ import { formatDateTime } from "@/lib/i18n";
 import { parseJsonArray, isString } from "@/lib/json";
 import { formatMoney } from "@/lib/money";
 import { caseMessages, getOrderById, orderAddress } from "@/lib/orders/queries";
+import { bankTransferDetails } from "@/lib/payments/bank-details";
+import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Order" };
 export const dynamic = "force-dynamic";
@@ -38,6 +40,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
     ...order.disputes.map(async (d) => ({ kind: "dispute" as const, id: d.id, title: `Dispute — ${statusLabel(d.reason)}`, status: d.status, messages: await caseMessages("dispute", d.id, { includeInternal: true }) })),
     ...order.returns.map(async (r) => ({ kind: "return" as const, id: r.id, title: `Return — ${statusLabel(r.reason)} (qty ${r.qty})`, status: r.status, messages: await caseMessages("return", r.id, { includeInternal: true }) })),
   ]);
+  const wire = order.payments.some((p) => p.provider === "bank_transfer") ? bankTransferDetails(await getSettings(), order.number) : null;
   const manage = can(admin, "orders.manage");
   const canRefund = can(admin, "orders.refund");
   const finance = can(admin, "finance.manage");
@@ -169,6 +172,22 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                       {pm.refundedAmount > 0 ? ` · refunded ${formatMoney(pm.refundedAmount)}` : ""}
                       {pm.failureMessage ? ` · ${pm.failureMessage}` : ""}
                     </p>
+                    {pm.provider === "bank_transfer" && pm.status !== "succeeded" && wire && (
+                      <div className="mt-2 rounded-lg bg-ink-50 px-3 py-2 text-[12px] text-ink-700">
+                        <p className="font-semibold text-ink-900">Wire details given to the buyer</p>
+                        {wire.lines.length <= 1 ? (
+                          <p className="mt-1 text-rose-700">No bank details are configured — buyers only see the payment reference. Add them under Finance › Payment providers › Bank wire.</p>
+                        ) : (
+                          <ul className="mt-1 grid gap-0.5">
+                            {wire.lines.map((l) => (
+                              <li key={l.label}>
+                                {l.label}: <span className="font-mono">{l.value}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
                     {finance && pm.provider === "bank_transfer" && pm.status !== "succeeded" && order.status !== "cancelled" && (
                       <div className="mt-2">
                         <ConfirmButton label="Mark payment received" message="Confirms the bank transfer arrived. The order becomes paid and sellers are notified." action={markPaidManuallyAction.bind(null, order.id)} withReason reasonLabel="Bank reference" variant="primary" size="sm" />

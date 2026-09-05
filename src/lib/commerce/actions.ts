@@ -12,6 +12,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { requestMeta } from "@/lib/request-meta";
 import { failState, fieldErrors, formToObject, type ActionState } from "@/lib/validation";
 import { statusLabel } from "@/lib/domain";
+import { bankTransferDetails, type BankTransferLine } from "@/lib/payments/bank-details";
 
 export async function quoteAction(input: unknown): Promise<Quote | { error: string }> {
   const parsed = QuoteSchema.safeParse(input);
@@ -76,6 +77,8 @@ export type TrackedOrder = {
   items: { title: string; qty: number; status: string }[];
   shipments: { carrierName: string | null; trackingNumber: string | null; trackingUrl: string | null; status: string; shippedAt: string | null; deliveredAt: string | null }[];
   events: { type: string; message: string; at: string }[];
+  /** Wire details while a bank-transfer order is awaiting payment. */
+  bankTransfer: { lines: BankTransferLine[]; note: string; reserveHours: number } | null;
 };
 
 export async function trackOrderAction(_prev: ActionState<TrackedOrder> | undefined, formData: FormData): Promise<ActionState<TrackedOrder>> {
@@ -92,6 +95,7 @@ export async function trackOrderAction(_prev: ActionState<TrackedOrder> | undefi
       items: { select: { title: true, qty: true, status: true } },
       shipments: { include: { carrier: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
       events: { orderBy: { createdAt: "asc" }, where: { type: { notIn: ["note"] } }, select: { type: true, message: true, createdAt: true } },
+      payments: { orderBy: { createdAt: "desc" }, take: 1, select: { provider: true } },
     },
   });
   if (!order) {
@@ -117,6 +121,10 @@ export async function trackOrderAction(_prev: ActionState<TrackedOrder> | undefi
         deliveredAt: s.deliveredAt?.toISOString() ?? null,
       })),
       events: order.events.filter((e) => !e.type.startsWith("chargeback")).map((e) => ({ type: e.type, message: e.message, at: e.createdAt.toISOString() })),
+      bankTransfer:
+        order.status === "pending_payment" && order.payments[0]?.provider === "bank_transfer"
+          ? (({ lines, note, reserveHours }) => ({ lines, note, reserveHours }))(bankTransferDetails(await getSettings(), order.number))
+          : null,
     },
   };
 }

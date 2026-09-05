@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { FormError } from "@/components/auth-forms";
+import { BankDetails } from "@/components/bank-details";
 import { TextField } from "@/components/form-fields";
 import { CheckIcon, TruckIcon } from "@/components/icons";
 import { Badge, buttonSizes, buttonStyles } from "@/components/ui";
@@ -66,6 +67,15 @@ export function TrackOrderForm({ initialRef = "" }: { initialRef?: string }) {
               <Badge tone={terminal ? "sale" : "brand"}>{order.statusLabel}</Badge>
             </div>
 
+            {order.bankTransfer && (
+              <div className="mt-6 rounded-xl border border-gold-400/50 bg-gold-400/10 p-5">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold-800">Awaiting your bank transfer</p>
+                <p className="mt-1 text-[13px] text-ink-700">Wire the order total using these details. The reservation is held for {order.bankTransfer.reserveHours} hours from the time the order was placed.</p>
+                <div className="mt-3">
+                  <BankDetails lines={order.bankTransfer.lines} note={order.bankTransfer.note} compact />
+                </div>
+              </div>
+            )}
             {terminal ? (
               <p className="mt-6 text-sm text-ink-700">This order is {statusLabel(order.status).toLowerCase()}. If you have questions, contact support with the order number.</p>
             ) : (

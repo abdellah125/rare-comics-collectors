@@ -113,6 +113,14 @@ after its response (at most every 30 s per instance), so reservations expire, or
 and payouts get scheduled within minutes of normal use. The admin panel (`Jobs & system`) can
 retry, cancel and run jobs manually.
 
+## Bank wire details
+
+Finance › Payment providers › Bank wire / ACH holds the beneficiary, bank, account type, account and
+routing numbers, SWIFT and IBAN. They render at checkout as soon as the buyer picks the wire option,
+on the confirmation page and the buyer's order page with the order number as payment reference, on
+the guest order-tracking page, in the awaiting-payment email, and on the admin order page. The
+`BANK_*` variables in `.env.example` supply defaults until values are saved in the panel.
+
 ## Rate limiting
 
 Login, 2FA, registration, password reset, checkout, order tracking, tickets, reports and appeals
@@ -138,7 +146,8 @@ run a sandbox transaction before launch.
 2. Storage › Create Database › **Neon** (or Prisma Postgres) and connect it to the project;
    this sets `DATABASE_URL` (and the unpooled URL the migration step prefers).
 3. Storage › Create › **Blob** and connect it; this sets `BLOB_READ_WRITE_TOKEN`.
-4. Deploy, open `https://<project>.vercel.app/admin/setup`, create the first administrator,
+4. Deploy, open `https://<your-domain>/admin/setup` (or the `*.vercel.app` alias before a domain is
+   attached), create the first administrator,
    sign in and enrol 2FA. Nothing else is required: signing and encryption keys are generated
    into the database on first boot, the site URL falls back to the Vercel host, and queued
    jobs run after each request.
@@ -147,6 +156,24 @@ run a sandbox transaction before launch.
    any admin enrols 2FA, because changing the encryption key later invalidates encrypted data),
    `CRON_SECRET` so the daily cron in `vercel.json` is accepted, `NEXT_PUBLIC_SITE_URL` for a
    custom domain, SMTP and payment keys when you have them.
+
+## Custom domain
+
+Everything that needs the public origin (canonical tags, Open Graph, JSON-LD, sitemap, robots,
+email links, PayPal return URLs) reads `NEXT_PUBLIC_SITE_URL`, falling back to Vercel's
+`VERCEL_PROJECT_PRODUCTION_URL`. Cookies carry no domain attribute, so sessions work on whichever
+host serves the app. Moving to a domain such as `rarecomicscollectors.com`:
+
+1. Vercel › Settings › Domains: add the apex and `www`, make the apex the primary domain and
+   set `www` to redirect to it (Vercel issues the 308 at the edge; the app never redirects
+   between `www` and the apex itself, so there is no loop).
+2. Set `NEXT_PUBLIC_SITE_URL=https://rarecomicscollectors.com` in Vercel and redeploy. From that
+   build on, requests to the `*.vercel.app` alias are redirected to the domain by
+   `next.config.ts` (webhooks and `/api/jobs/run` excepted).
+3. Point the Stripe and PayPal webhooks at the domain: `/api/webhooks/stripe` and
+   `/api/webhooks/paypal`. Editing the existing endpoint keeps its signing secret / webhook id.
+4. Update the business website in the Stripe and PayPal account profiles; register the domain
+   under Stripe › Payment method domains if you want Apple Pay / Google Pay in the card form.
 
 ## Deployment checklist (any host)
 

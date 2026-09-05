@@ -75,13 +75,15 @@ export const settingDefaults = {
   "payments.paypal.enabled": true,
   "payments.bank_transfer.enabled": true,
   "payments.bank_transfer.minAmount": 500_000,
-  "payments.bank_transfer.beneficiary": "",
-  "payments.bank_transfer.bankName": "",
-  "payments.bank_transfer.accountType": "",
-  "payments.bank_transfer.accountNumber": "",
-  "payments.bank_transfer.routingNumber": "",
-  "payments.bank_transfer.swift": "",
-  "payments.bank_transfer.iban": "",
+  // Bank wire details: entered under Finance › Payment providers; BANK_* environment
+  // variables act as defaults until something is saved there.
+  "payments.bank_transfer.beneficiary": process.env.BANK_BENEFICIARY ?? "",
+  "payments.bank_transfer.bankName": process.env.BANK_NAME ?? "",
+  "payments.bank_transfer.accountType": process.env.BANK_ACCOUNT_TYPE ?? "",
+  "payments.bank_transfer.accountNumber": process.env.BANK_ACCOUNT_NUMBER ?? "",
+  "payments.bank_transfer.routingNumber": process.env.BANK_ROUTING_NUMBER ?? "",
+  "payments.bank_transfer.swift": process.env.BANK_SWIFT ?? "",
+  "payments.bank_transfer.iban": process.env.BANK_IBAN ?? "",
   "payments.bank_transfer.instructions":
     "Put your order number in the payment reference. Books ship once the funds clear, usually 1–2 business days for domestic wires and 3–5 for international. Your bank's wire fees are not deducted from the order total.",
   "payments.stripe.currencies": ["USD", "EUR", "GBP", "CAD", "AUD", "JPY"] as string[],
