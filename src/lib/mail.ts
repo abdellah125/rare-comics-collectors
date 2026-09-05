@@ -2,6 +2,7 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { getSettings } from "@/lib/settings";
 import { enqueueJob } from "@/lib/jobs/queue";
 
 /**
@@ -21,11 +22,10 @@ export function renderTemplate(text: string, vars: MailVars): string {
   });
 }
 
-const baseVars = (): MailVars => ({
-  siteName: "Rare Comics Collectors",
-  siteUrl: env.siteUrl,
-  supportEmail: "support@rarecomicscollectors.com",
-});
+async function baseVars(): Promise<MailVars> {
+  const settings = await getSettings();
+  return { siteName: settings["marketplace.name"], siteUrl: env.siteUrl, supportEmail: settings["marketplace.supportEmail"] };
+}
 
 export async function queueTemplateEmail(
   templateKey: string,
@@ -39,7 +39,7 @@ export async function queueTemplateEmail(
     return null;
   }
   if (!template.isEnabled) return null;
-  const merged = { ...baseVars(), ...vars };
+  const merged = { ...(await baseVars()), ...vars };
   const subject = renderTemplate(template.subject, merged);
   const body = renderTemplate(template.bodyText, merged);
   return queueRawEmail({ to, subject, body, templateKey, userId: opts.userId ?? null, meta: opts.meta });

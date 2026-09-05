@@ -1,16 +1,20 @@
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
 import { site } from "@/lib/site";
+import { getSettings } from "@/lib/settings";
 
 /**
  * Dynamic Open Graph card: /api/og?title=…&subtitle=…&badge=…
  * Satori supports flexbox only — no CSS grid.
  */
-export function GET(request: NextRequest) {
+export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const title = (searchParams.get("title") ?? site.name).slice(0, 110);
-  const subtitle = (searchParams.get("subtitle") ?? site.tagline).slice(0, 140);
-  const badge = (searchParams.get("badge") ?? site.name).slice(0, 40);
+  const settings = await getSettings().catch(() => null);
+  const name = settings?.["marketplace.name"] ?? site.name;
+  const tagline = settings?.["marketplace.tagline"] ?? site.tagline;
+  const title = (searchParams.get("title") ?? name).slice(0, 110);
+  const subtitle = (searchParams.get("subtitle") ?? tagline).slice(0, 140);
+  const badge = (searchParams.get("badge") ?? name).slice(0, 40);
 
   return new ImageResponse(
     (

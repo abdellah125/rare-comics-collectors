@@ -16,15 +16,15 @@ export default async function ReportPage({ searchParams }: PageProps<"/report">)
   if (!type || !id) notFound();
   let label = "";
   if (type === "listing") {
-    const p = await db.product.findUnique({ where: { id }, select: { title: true, issue: true } });
+    const p = await db.product.findFirst({ where: { id, status: "published", deletedAt: null }, select: { title: true, issue: true } });
     if (!p) notFound();
     label = `${p.title} ${p.issue}`;
   } else if (type === "seller") {
-    const s = await db.sellerProfile.findUnique({ where: { id }, select: { displayName: true } });
+    const s = await db.sellerProfile.findFirst({ where: { id, status: "approved" }, select: { displayName: true } });
     if (!s) notFound();
     label = s.displayName;
   } else if (type === "review") {
-    const r = await db.review.findUnique({ where: { id }, select: { title: true, body: true } });
+    const r = await db.review.findFirst({ where: { id, status: "published" }, select: { title: true, body: true } });
     if (!r) notFound();
     label = r.title ?? r.body.slice(0, 60);
   } else {

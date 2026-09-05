@@ -1,13 +1,13 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { env } from "@/lib/env";
-import { signValue } from "@/lib/crypto";
+import { getSettings } from "@/lib/settings";
 import { ensureInstanceSecrets } from "@/lib/secrets";
 import { getCurrentUser } from "@/lib/auth/session";
 import { PlaceOrderSchema, QuoteSchema, placeOrder, quoteCheckout, type PlaceOrderResult, type Quote } from "@/lib/commerce/checkout";
+import { hasRecentOrderCookie, rememberRecentOrder } from "@/lib/commerce/recent-order";
+import { cancelOrder } from "@/lib/orders/lifecycle";
 import { rateLimit } from "@/lib/rate-limit";
 import { requestMeta } from "@/lib/request-meta";
 import { failState, fieldErrors, formToObject, type ActionState } from "@/lib/validation";
@@ -25,19 +25,8 @@ export async function quoteAction(input: unknown): Promise<Quote | { error: stri
   }
 }
 
-/** Marks an order as "just placed in this browser" so the confirmation page can show it to a guest. */
-export async function rememberRecentOrder(orderNumber: string) {
-  await ensureInstanceSecrets();
-  (await cookies()).set(`rcc_o_${orderNumber}`, signValue(orderNumber, 48 * 3600), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: env.isProd,
-    path: "/",
-    maxAge: 48 * 3600,
-  });
-}
-
 export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult> {
+  await ensureInstanceSecrets();
   const parsed = PlaceOrderSchema.safeParse(input);
   if (!parsed.success) {
     const errs = fieldErrors(parsed.error);
@@ -52,6 +41,24 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
   const result = await placeOrder(parsed.data, { userId: user?.id ?? null, userRestrictions: user?.restrictions ?? [], ip: meta.ip, userAgent: meta.userAgent });
   if (result.ok) await rememberRecentOrder(result.orderNumber);
   return result;
+}
+
+/**
+ * The buyer backed out of a card or redirect payment: release the reservation
+ * now instead of holding the stock until the reservation window expires.
+ * Only the order's owner (session or the signed recent-order cookie) can do it.
+ */
+export async function abandonPendingOrderAction(orderNumber: unknown): Promise<{ ok: boolean }> {
+  await ensureInstanceSecrets();
+  const number = String(orderNumber ?? "").toUpperCase().slice(0, 40);
+  if (!number) return { ok: false };
+  const order = await db.order.findUnique({ where: { number }, select: { id: true, status: true, userId: true } });
+  if (!order || order.status !== "pending_payment") return { ok: false };
+  const user = await getCurrentUser();
+  const owner = (user && order.userId === user.id) || (await hasRecentOrderCookie(number));
+  if (!owner) return { ok: false };
+  await cancelOrder(order.id, "Payment abandoned by the buyer", { id: user?.id ?? null, type: user ? "buyer" : "system" }, { notify: false });
+  return { ok: true };
 }
 
 /* ------------------------------------------------------------ tracking */
@@ -77,6 +84,7 @@ export async function trackOrderAction(_prev: ActionState<TrackedOrder> | undefi
   const meta = await requestMeta();
   const limiter = rateLimit(`track:${meta.ip ?? "unknown"}`, 20, 10 * 60_000);
   if (!limiter.ok) return failState("Too many lookups. Try again in a few minutes.");
+  if (!(await getSettings())["features.guestTracking"] && !(await getCurrentUser())) return failState("Sign in to see the status of your orders.");
   const number = parsed.data.reference.toUpperCase();
   const order = await db.order.findFirst({
     where: { number, email: parsed.data.email },

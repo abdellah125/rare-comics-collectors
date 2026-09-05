@@ -2,7 +2,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
-import { notifyUser } from "@/lib/notifications";
+import { notifyAdmins, notifyUser } from "@/lib/notifications";
 import { formatMoney } from "@/lib/money";
 import { recordSaleForItem } from "@/lib/finance/ledger";
 import { queueTemplateEmail } from "@/lib/mail";
@@ -37,18 +37,37 @@ export async function releaseOrderStock(tx: Tx, orderId: string, reason: "releas
  */
 export async function markOrderPaid(orderId: string, payment: { id: string; provider: string }, actor: ActorRef = SYSTEM_ACTOR): Promise<boolean> {
   const result = await db.$transaction(async (tx) => {
+    const before = await tx.order.findUnique({ where: { id: orderId }, select: { status: true } });
+    if (!before) return null;
+    // Money arriving after the order was cancelled (late webhook, late wire) must not resell
+    // stock that was already released: record the payment, keep the order cancelled, alert finance.
+    const late = before.status === "cancelled" || before.status === "failed";
+    // Conditional update = the claim. A concurrent webhook + return-page call can both reach
+    // here; only the one whose update changes a row continues, so the ledger is credited once.
+    const claimed = await tx.order.updateMany({
+      where: { id: orderId, paymentStatus: { not: "paid" } },
+      data: { paymentStatus: "paid", paidAt: new Date(), ...(late ? {} : { status: "paid" }) },
+    });
+    if (claimed.count === 0) return null;
     const order = await tx.order.findUnique({ where: { id: orderId }, include: { items: true } });
-    if (!order || order.paymentStatus === "paid") return null;
-    await tx.order.update({ where: { id: orderId }, data: { status: "paid", paymentStatus: "paid", paidAt: new Date() } });
+    if (!order) return null;
+    if (late) {
+      await addOrderEvent(tx, orderId, "payment.late", `Payment received via ${payment.provider} after the order was ${before.status} — refund required`, actor, { paymentId: payment.id });
+      return { ...order, late: true as const };
+    }
     await tx.orderItem.updateMany({ where: { orderId }, data: { status: "paid" } });
     for (const item of order.items) await recordSaleForItem(tx, item, order.number);
     for (const item of order.items) {
       if (item.productId) await tx.product.update({ where: { id: item.productId }, data: { soldCount: { increment: item.qty } } });
     }
     await addOrderEvent(tx, orderId, "payment.succeeded", `Payment received via ${payment.provider}`, actor, { paymentId: payment.id });
-    return order;
+    return { ...order, late: false as const };
   });
   if (!result) return false;
+  if (result.late) {
+    await notifyAdmins("orders.refund", { type: "payment.late", title: `Payment received for ${result.status} order ${result.number}`, body: "The stock was already released. Refund the buyer from the order page.", href: `/admin/orders/${result.id}` });
+    return true;
+  }
 
   const settings = await getSettings();
   const itemsList = result.items.map((i) => `• ${i.title} × ${i.qty} — ${formatMoney(i.subtotal)}`).join("\n");
@@ -86,26 +105,39 @@ export async function markOrderPaid(orderId: string, payment: { id: string; prov
 
 export async function markOrderPaymentFailed(orderId: string, reason: string, actor: ActorRef = SYSTEM_ACTOR) {
   await db.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({ where: { id: orderId }, select: { paymentStatus: true, status: true } });
+    const order = await tx.order.findUnique({ where: { id: orderId }, select: { paymentStatus: true, status: true, couponId: true } });
     if (!order || order.paymentStatus === "paid") return;
+    // Already terminal (a second failure webhook, or cancelled meanwhile): nothing left to release.
+    if (order.status === "failed" || order.status === "cancelled") return;
+    await releaseOrderStock(tx, orderId, "release", actor.id);
+    await releaseCoupon(tx, orderId, order.couponId);
     await tx.order.update({ where: { id: orderId }, data: { paymentStatus: "failed", status: "failed" } });
+    await tx.orderItem.updateMany({ where: { orderId }, data: { status: "cancelled" } });
     await addOrderEvent(tx, orderId, "payment.failed", `Payment failed: ${reason}`, actor);
   });
 }
 
+/** An unpaid order that dies must not keep consuming the coupon's usage budget. */
+async function releaseCoupon(tx: Tx, orderId: string, couponId: string | null) {
+  if (!couponId) return;
+  const removed = await tx.couponRedemption.deleteMany({ where: { orderId } });
+  if (removed.count > 0) await tx.coupon.updateMany({ where: { id: couponId, usesCount: { gt: 0 } }, data: { usesCount: { decrement: removed.count } } });
+}
+
 export async function cancelOrder(orderId: string, reason: string, actor: ActorRef, opts: { notify?: boolean } = {}) {
   const order = await db.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({ where: { id: orderId }, select: { id: true, number: true, status: true, userId: true, email: true, paymentStatus: true } });
+    const order = await tx.order.findUnique({ where: { id: orderId }, select: { id: true, number: true, status: true, userId: true, email: true, paymentStatus: true, couponId: true } });
     if (!order) throw new Error("Order not found");
-    if (["cancelled", "refunded", "completed"].includes(order.status)) return order;
+    if (["cancelled", "refunded", "completed", "failed"].includes(order.status)) return order;
     if (["shipped", "partially_shipped", "delivered"].includes(order.status)) throw new Error("Shipped orders must be handled through returns or refunds");
     await releaseOrderStock(tx, orderId, "release", actor.id);
+    if (order.paymentStatus !== "paid") await releaseCoupon(tx, orderId, order.couponId);
     await tx.order.update({ where: { id: orderId }, data: { status: "cancelled", cancelledAt: new Date(), cancelReason: reason } });
     await tx.orderItem.updateMany({ where: { orderId }, data: { status: "cancelled" } });
     await addOrderEvent(tx, orderId, "order.cancelled", `Order cancelled: ${reason}`, actor);
     return order;
   });
-  if (opts.notify !== false && order.status !== "cancelled") {
+  if (opts.notify !== false && !["cancelled", "refunded", "completed", "failed"].includes(order.status)) {
     if (order.userId) {
       await notifyUser(order.userId, {
         type: "order.cancelled",
@@ -120,14 +152,28 @@ export async function cancelOrder(orderId: string, reason: string, actor: ActorR
   }
 }
 
-/** Job: cancel unpaid orders past the configured window and release their stock. */
+/**
+ * Job: cancel unpaid orders and release their stock. Offline payments (bank
+ * transfer) get commerce.autoCancelUnpaidHours; card / wallet payments the buyer
+ * never completed only hold the stock for commerce.reservationMinutes.
+ */
 export async function expireUnpaidOrders(): Promise<number> {
   const settings = await getSettings();
-  const cutoff = new Date(Date.now() - settings["commerce.autoCancelUnpaidHours"] * 3_600_000);
-  const stale = await db.order.findMany({ where: { status: "pending_payment", placedAt: { lt: cutoff } }, select: { id: true } });
+  const offlineCutoff = new Date(Date.now() - settings["commerce.autoCancelUnpaidHours"] * 3_600_000);
+  const onlineCutoff = new Date(Date.now() - Math.max(5, settings["commerce.reservationMinutes"]) * 60_000);
+  const stale = await db.order.findMany({
+    where: {
+      status: "pending_payment",
+      OR: [
+        { placedAt: { lt: offlineCutoff } },
+        { placedAt: { lt: onlineCutoff }, payments: { none: { provider: "bank_transfer" } } },
+      ],
+    },
+    select: { id: true, placedAt: true },
+  });
   for (const o of stale) {
     try {
-      await cancelOrder(o.id, "Payment was not received in time", { id: null, type: "job" });
+      await cancelOrder(o.id, o.placedAt < offlineCutoff ? "Payment was not received in time" : "Payment was not completed and the reservation expired", { id: null, type: "job" });
     } catch (err) {
       console.error(`[jobs] could not expire order ${o.id}`, err);
     }

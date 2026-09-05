@@ -23,6 +23,7 @@ Generate secrets with `node -e "console.log(require('crypto').randomBytes(32).to
 | `npm run lint`, `npm run typecheck` | ESLint, `tsc --noEmit` |
 | `npm test` | Vitest unit tests (`tests/unit`) |
 | `npm run test:e2e` | Playwright end-to-end suite (`tests/e2e`; seeds its own accounts, starts the dev server) |
+| `npm run test:integration` | Data-integrity checks against the local database: concurrent payments, refunds, payouts, reservations (`tests/integration`) |
 | `npm run db:local` | Local Postgres on port 5433 (`.postgres/` holds the data) |
 | `npm run db:migrate` / `db:migrate:dev` / `db:deploy` / `db:studio` / `db:reset` | Prisma migrations and tooling (`db:deploy` = migrate + seed, what the build runs) |
 | `npm run db:seed` | Idempotent seed (`SEED_DEMO=true` also creates demo buyer/seller accounts and orders) |
@@ -68,7 +69,7 @@ admins and roles, audit and security log, jobs and webhooks.
 | `src/components/admin` | Admin design system (shell, tables, filters, forms, bulk actions, confirm dialogs) |
 | `src/components/charts` | Dependency-free SVG charts used by the dashboard and reports |
 | `prisma/` | Schema, migrations, seed |
-| `tests/unit`, `tests/e2e` | Vitest and Playwright suites |
+| `tests/unit`, `tests/integration`, `tests/e2e` | Vitest unit tests, database integrity checks, Playwright suites |
 
 Key rules baked into the code:
 

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { notifyUser } from "@/lib/notifications";
 import { queueTemplateEmail } from "@/lib/mail";
+import { getSettings } from "@/lib/settings";
 import { addOrderEvent, syncOrderStatus, type ActorRef } from "@/lib/orders/lifecycle";
 
 export class FulfillmentError extends Error {}
@@ -33,6 +34,7 @@ export async function createShipment(input: {
   if (order.paymentStatus !== "paid" && order.paymentStatus !== "partially_refunded") throw new FulfillmentError("The order isn't paid yet");
   const items = order.items.filter((i) => input.itemIds.includes(i.id));
   if (items.length === 0) throw new FulfillmentError("Choose at least one item");
+  if (input.trackingUrl && !/^https:\/\/[^\s]+$/i.test(input.trackingUrl)) throw new FulfillmentError("Tracking links must start with https://");
   for (const i of items) {
     if (i.kind !== "comic") throw new FulfillmentError("Service bookings don't ship");
     if (input.actor.type === "seller" && i.sellerId !== input.sellerId) throw new FulfillmentError("You can only ship your own items");
@@ -64,7 +66,10 @@ export async function createShipment(input: {
   });
 
   const vars = { orderNumber: order.number, carrier: carrier?.name ?? input.carrierName ?? "our carrier", trackingNumber: input.trackingNumber ?? "n/a", trackingUrl: trackingUrl ?? "" };
-  if (order.userId) {
+  const settings = await getSettings();
+  if (!settings["notifications.shippingUpdates"]) {
+    // Notifications switched off marketplace-wide: still audit, never email.
+  } else if (order.userId) {
     await notifyUser(order.userId, { type: "order.shipped", title: `Order ${order.number} shipped`, body: input.trackingNumber ? `Tracking ${input.trackingNumber}` : undefined, href: `/account/orders/${order.number}`, email: { templateKey: "order_shipped", vars } });
   } else {
     await queueTemplateEmail("order_shipped", order.email, { name: "there", ...vars });
@@ -86,8 +91,10 @@ export async function updateShipmentStatus(shipmentId: string, status: "in_trans
     await syncOrderStatus(tx, shipment.orderId);
   });
   if (status === "delivered") {
+    const settings = await getSettings();
+    if (!settings["notifications.shippingUpdates"]) return;
     if (shipment.order.userId) {
-      await notifyUser(shipment.order.userId, { type: "order.delivered", title: `Order ${shipment.order.number} delivered`, body: "Your 14-day inspection window starts today.", href: `/account/orders/${shipment.order.number}`, email: { templateKey: "order_delivered", vars: { orderNumber: shipment.order.number } } });
+      await notifyUser(shipment.order.userId, { type: "order.delivered", title: `Order ${shipment.order.number} delivered`, body: `Your ${settings["commerce.returnWindowDays"]}-day inspection window starts today.`, href: `/account/orders/${shipment.order.number}`, email: { templateKey: "order_delivered", vars: { orderNumber: shipment.order.number } } });
     } else {
       await queueTemplateEmail("order_delivered", shipment.order.email, { name: "there", orderNumber: shipment.order.number });
     }

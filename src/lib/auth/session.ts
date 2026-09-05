@@ -185,7 +185,7 @@ export async function revokeAllSessions(userId: string, exceptSessionId?: string
 export async function requireUser(opts: { next?: string } = {}): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect(`/account/login${opts.next ? `?next=${encodeURIComponent(opts.next)}` : ""}`);
-  if (user.status === "suspended") redirect("/account/suspended");
+  if (user.status === "suspended") redirect("/appeal");
   return user;
 }
 

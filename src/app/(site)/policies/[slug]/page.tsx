@@ -8,9 +8,8 @@ import { formattedPolicyDate, getPolicy, policies } from "@/lib/policies";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 
-export function generateStaticParams() {
-  return policies.map((p) => ({ slug: p.slug }));
-}
+// Rendered per request: the shipping policy shows the live rate table.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-import { formatPrice, formatPriceExact } from "@/lib/format";
 import { policyPages, type PolicySlug } from "@/lib/nav";
-import { EXPRESS_SHIPPING, FLAT_SHIPPING, FREE_SHIPPING_THRESHOLD } from "@/lib/pricing";
 import { fullAddress, site } from "@/lib/site";
+import { ShippingRatesTable } from "@/components/shipping-rates-table";
 
 export type PolicySection = { id: string; heading: string; body: ReactNode };
 
@@ -81,36 +80,7 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
         heading: "Domestic shipping (United States)",
         body: (
           <>
-            <div className="table-wrap" tabIndex={0} role="region" aria-label="Domestic shipping rates">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Service</th>
-                    <th>Transit</th>
-                    <th>Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Insured standard</td>
-                    <td>2 – 5 business days</td>
-                    <td>
-                      {formatPriceExact(FLAT_SHIPPING)} flat, free on orders over {formatPrice(FREE_SHIPPING_THRESHOLD)}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Insured express</td>
-                    <td>1 – 2 business days</td>
-                    <td>{formatPriceExact(EXPRESS_SHIPPING)} flat</td>
-                  </tr>
-                  <tr>
-                    <td>Overnight insured</td>
-                    <td>Next business day</td>
-                    <td>Quoted on request</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <ShippingRatesTable countryCode="US" />
             <p>
               All domestic shipments are insured to full purchase value and require an adult signature on delivery. We
               cannot mark a parcel &ldquo;no signature required&rdquo; — this is an insurance condition, not a

@@ -87,6 +87,9 @@ export async function setAdminRoleAction(userId: string, roleId: string | null):
 
 export async function revokeAdminSessionsAction(userId: string): Promise<ActionState> {
   return runAdmin("admins.manage", async (admin) => {
+    const target = await db.user.findUnique({ where: { id: userId }, select: { role: { select: { permissionsJson: true } } } });
+    if (!target) return failState("User not found.");
+    if (userId !== admin.id && target.role && elevated(rolePerms(target.role.permissionsJson)) && !isSuper(admin)) return failState("Only a super admin can sign this account out.");
     await revokeAllSessions(userId, userId === admin.id ? admin.session.id : undefined);
     await audit({ actor: actorOf(admin), action: "admin.sessions_revoked", targetType: "user", targetId: userId, summary: "All sessions revoked" });
     revalidatePath("/admin/admins");

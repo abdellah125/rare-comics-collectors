@@ -23,11 +23,11 @@ export function DashboardNav({ storeName, storeSlug, badges }: { storeName: stri
       <p className="truncate font-display text-lg font-semibold text-ink-950">{storeName}</p>
       <p className="mb-4 text-xs font-bold uppercase tracking-[0.12em] text-ink-500">Seller dashboard</p>
       <nav aria-label="Seller dashboard">
-        <ul className="grid gap-0.5">
+        <ul className="-mx-5 flex gap-1 overflow-x-auto px-5 pb-2 sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
           {ITEMS.map((item) => {
             const count = item.badge ? badges[item.badge] : 0;
             return (
-              <li key={item.href}>
+              <li key={item.href} className="shrink-0 whitespace-nowrap lg:whitespace-normal">
                 <Link
                   href={item.href}
                   aria-current={active(item.href, item.exact) ? "page" : undefined}
@@ -39,17 +39,17 @@ export function DashboardNav({ storeName, storeSlug, badges }: { storeName: stri
               </li>
             );
           })}
-          <li className="mt-3 border-t border-ink-200 pt-3">
+          <li className="shrink-0 whitespace-nowrap lg:mt-3 lg:border-t lg:border-ink-200 lg:pt-3">
             <Link href="/dashboard/listings/new" className="block rounded-lg bg-ink-950 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-ink-800">
               + New listing
             </Link>
           </li>
-          <li>
+          <li className="shrink-0 whitespace-nowrap">
             <Link href={`/sellers/${storeSlug}`} className="block rounded-lg px-3 py-2 text-sm text-ink-600 hover:bg-ink-100">
               View storefront ↗
             </Link>
           </li>
-          <li>
+          <li className="shrink-0 whitespace-nowrap">
             <Link href="/account" className="block rounded-lg px-3 py-2 text-sm text-ink-600 hover:bg-ink-100">
               My account
             </Link>

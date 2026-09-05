@@ -1,47 +1,25 @@
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
+import { getSettings } from "@/lib/settings";
 
-/**
- * Raster app icons: /api/icon?size=180|192|512[&maskable=1]
- * iOS ignores SVG touch icons and Android's install prompt wants 192/512 PNGs,
- * so the manifest and <link rel="apple-touch-icon"> point here.
- */
-const SIZES = new Set([180, 192, 512]);
+export const dynamic = "force-dynamic";
 
-export function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl;
-  const requested = Number(searchParams.get("size") ?? 512);
-  const size = SIZES.has(requested) ? requested : 512;
-  const maskable = searchParams.get("maskable") === "1";
-  // Maskable icons are cropped to a safe zone by the OS, so keep the mark smaller and square.
-  const radius = maskable ? 0 : Math.round(size * 0.16);
-  const fontSize = Math.round(size * (maskable ? 0.26 : 0.33));
-
+/** Rasterised app icon (/api/icon?size=180) for platforms that ignore SVG icons. */
+export async function GET(request: NextRequest) {
+  const settings = await getSettings();
+  const size = Math.min(1024, Math.max(16, Number.parseInt(request.nextUrl.searchParams.get("size") ?? "180", 10) || 180));
+  const initials = settings["marketplace.name"]
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#e11d48",
-          borderRadius: radius,
-          color: "#ffffff",
-          fontFamily: "sans-serif",
-          fontWeight: 900,
-          fontSize,
-          letterSpacing: -size * 0.01,
-        }}
-      >
-        RCC
+      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: settings["marketplace.primaryColor"], color: "#fff", fontSize: Math.round(size * 0.42), fontWeight: 900, letterSpacing: "-0.04em", fontFamily: "sans-serif" }}>
+        {initials}
       </div>
     ),
-    {
-      width: size,
-      height: size,
-      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
-    },
+    { width: size, height: size, headers: { "cache-control": "public, max-age=86400" } },
   );
 }

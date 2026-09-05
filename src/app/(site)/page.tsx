@@ -10,6 +10,8 @@ import { countPublished, homeProducts } from "@/lib/catalog/products";
 import { services } from "@/lib/services";
 import { formatPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
+import { getSettings } from "@/lib/settings";
+import { formatMoney } from "@/lib/money";
 import { fullAddress, mapDirectionsLink, mapEmbedLink, site } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
@@ -26,18 +28,18 @@ export const metadata: Metadata = pageMetadata({
   ],
 });
 
-const trustPoints = [
+const trustPointsFor = (freeShippingThreshold: number, returnWindowDays: number) => [
   {
     title: "Authenticity guaranteed",
     body: "Every book is restoration-checked and cert-verified before it is listed. Undisclosed restoration is refunded in full, forever.",
   },
   {
     title: "Insured, tracked shipping",
-    body: "Double-boxed, signature-required and insured to full value on every order. Free over $250 within the US.",
+    body: `Double-boxed, signature-required and insured to full value on every order.${freeShippingThreshold > 0 ? ` Free over ${formatMoney(freeShippingThreshold, "USD", "en-US", { compact: true })} within the US.` : ""}`,
   },
   {
-    title: "14-day inspection window",
-    body: "Buy with confidence. Return any book within 14 days in its original holder for a full refund.",
+    title: `${returnWindowDays}-day inspection window`,
+    body: `Buy with confidence. Return any book within ${returnWindowDays} days in its original holder for a full refund.`,
   },
   {
     title: "Real market pricing",
@@ -74,7 +76,10 @@ const reviews = [
 ];
 
 export default async function HomePage() {
-  const [{ hero, grid }, inventoryCount] = await Promise.all([homeProducts(), countPublished()]);
+  const [{ hero, grid }, inventoryCount, settings] = await Promise.all([homeProducts(), countPublished(), getSettings()]);
+  const trustPoints = trustPointsFor(settings["commerce.freeShippingThreshold"], settings["commerce.returnWindowDays"]);
+  const headline = settings["marketplace.homepageHeadline"].trim();
+  const subheadline = settings["marketplace.homepageSubheadline"].trim();
 
   const itemListJsonLd = {
     "@context": "https://schema.org",
@@ -152,14 +157,18 @@ export default async function HomePage() {
             </span>
 
             <h1 className="mt-6 font-display text-[clamp(2.4rem,5.4vw,4rem)] font-semibold leading-[1.04] tracking-tight">
-              Buy graded comics.
-              <br />
-              <span className="text-brand-400">Grade yours.</span> Know what it&apos;s worth.
+              {headline || (
+                <>
+                  Buy graded comics.
+                  <br />
+                  <span className="text-brand-400">Grade yours.</span> Know what it&apos;s worth.
+                </>
+              )}
             </h1>
 
             <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-300">
-              A vetted inventory of CGC and CBCS key issues, plus the grading, pressing, appraisal and
-              consignment services that turn a shelf of long boxes into a documented, insurable collection.
+              {subheadline ||
+                "A vetted inventory of CGC and CBCS key issues, plus the grading, pressing, appraisal and consignment services that turn a shelf of long boxes into a documented, insurable collection."}
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">

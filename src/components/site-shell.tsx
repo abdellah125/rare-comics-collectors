@@ -9,6 +9,7 @@ import { JsonLd } from "@/components/json-ld";
 import { getPresentmentCurrency, getEnabledCurrencies } from "@/lib/currency";
 import { organizationJsonLd } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
+import { formatMoney } from "@/lib/money";
 
 /**
  * Storefront chrome: providers, header, main landmark, footer and the cart
@@ -17,6 +18,8 @@ import { getSettings } from "@/lib/settings";
 export async function SiteShell({ children, banner }: { children: ReactNode; banner?: ReactNode }) {
   const [currency, currencies, settings] = await Promise.all([getPresentmentCurrency(), getEnabledCurrencies(), getSettings()]);
   const brand = { name: settings["marketplace.name"], logoUrl: settings["marketplace.logoMediaId"] ? `/api/media/${settings["marketplace.logoMediaId"]}` : null };
+  const threshold = settings["commerce.freeShippingThreshold"];
+  const shippingNotice = threshold > 0 ? `Free insured shipping on ${settings["marketplace.defaultCountry"]} orders over ${formatMoney(threshold, "USD", "en-US", { compact: true })}` : "Insured shipping on every order";
   return (
     <>
       <JsonLd id="org-schema" data={organizationJsonLd()} />
@@ -30,7 +33,7 @@ export async function SiteShell({ children, banner }: { children: ReactNode; ban
         <AuthProvider>
           <CartProvider>
             {banner}
-            <Header brand={brand} />
+            <Header brand={brand} shippingNotice={shippingNotice} />
             <main id="main" className="flex-1">
               {children}
             </main>

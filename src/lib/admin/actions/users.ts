@@ -8,6 +8,7 @@ import { audit, securityEvent } from "@/lib/audit";
 import { revokeAllSessions } from "@/lib/auth/session";
 import { hashToken, randomToken } from "@/lib/crypto";
 import { actorOf, domainError, runAdmin } from "@/lib/admin/guard";
+import { isElevated, isSuperAdmin, mayActOnAdmin, rolePermissions } from "@/lib/admin/elevation";
 import { USER_RESTRICTIONS, USER_STATUSES } from "@/lib/domain";
 import { queueTemplateEmail } from "@/lib/mail";
 import { notifyUser } from "@/lib/notifications";
@@ -30,9 +31,12 @@ export async function updateUserAction(_prev: ActionState | undefined, formData:
     const parsed = ProfileSchema.safeParse(formToObject(formData));
     if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
     const d = parsed.data;
-    const before = await db.user.findUnique({ where: { id: d.id }, select: { name: true, email: true, phone: true, countryCode: true, emailVerifiedAt: true, roleId: true } });
+    const before = await db.user.findUnique({ where: { id: d.id }, select: { name: true, email: true, phone: true, countryCode: true, emailVerifiedAt: true, roleId: true, role: { select: { permissionsJson: true } } } });
     if (!before) return failState("User not found.");
-    if (before.roleId && before.roleId !== null && d.id !== admin.id && !admin.permissions.includes("*") && !admin.permissions.includes("admins.manage")) return failState("Only admins with the admins.manage permission can edit other admin accounts.");
+    if (before.role && d.id !== admin.id) {
+      if (!admin.permissions.includes("*") && !admin.permissions.includes("admins.manage")) return failState("Only admins with the admins.manage permission can edit other admin accounts.");
+      if (!mayActOnAdmin(admin, before.role.permissionsJson)) return failState("Only a super admin can edit this account.");
+    }
     const clash = await db.user.findFirst({ where: { email: d.email, NOT: { id: d.id } }, select: { id: true } });
     if (clash) return failState("That email belongs to another account.", { email: "In use" });
     await db.user.update({
@@ -61,6 +65,7 @@ export async function setUserStatusAction(id: string, status: string, reason?: s
     const user = await db.user.findUnique({ where: { id }, include: { role: true } });
     if (!user) return failState("User not found.");
     if (user.role && !admin.permissions.includes("*") && !admin.permissions.includes("admins.manage")) return failState("Only admins with admins.manage can change another admin's status.");
+    if (user.role && !mayActOnAdmin(admin, user.role.permissionsJson)) return failState("Only a super admin can change this account.");
     if ((status === "suspended" || status === "banned") && !reason?.trim()) return failState("A reason is required.");
     await db.user.update({ where: { id }, data: { status, statusReason: reason?.trim() || null } });
     if (status === "suspended" || status === "banned") {
@@ -94,8 +99,9 @@ export async function setUserRestrictionsAction(_prev: ActionState | undefined, 
 
 export async function sendPasswordResetAction(id: string): Promise<ActionState> {
   return runAdmin("users.manage", async (admin) => {
-    const user = await db.user.findUnique({ where: { id }, select: { email: true, name: true } });
+    const user = await db.user.findUnique({ where: { id }, select: { email: true, name: true, role: { select: { permissionsJson: true } } } });
     if (!user) return failState("User not found.");
+    if (user.role && !mayActOnAdmin(admin, user.role.permissionsJson)) return failState("Only a super admin can reset this account's password.");
     const token = randomToken(32);
     await db.passwordResetToken.create({ data: { userId: id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 30 * 60_000) } });
     await queueTemplateEmail("password_reset", user.email, { name: user.name, resetUrl: `${env.siteUrl}/account/reset/${token}` }, { userId: id });
@@ -106,6 +112,9 @@ export async function sendPasswordResetAction(id: string): Promise<ActionState> 
 
 export async function revokeUserSessionsAction(id: string): Promise<ActionState> {
   return runAdmin("users.manage", async (admin) => {
+    const target = await db.user.findUnique({ where: { id }, select: { role: { select: { permissionsJson: true } } } });
+    if (!target) return failState("User not found.");
+    if (target.role && !mayActOnAdmin(admin, target.role.permissionsJson)) return failState("Only a super admin can sign this account out.");
     await revokeAllSessions(id);
     await securityEvent("session_revoked", id, { by: admin.email, all: true });
     await audit({ actor: actorOf(admin), action: "user.sessions_revoked", targetType: "user", targetId: id, summary: "All sessions revoked by admin" });
@@ -116,9 +125,10 @@ export async function revokeUserSessionsAction(id: string): Promise<ActionState>
 
 export async function disableUserTwoFactorAction(id: string, reason?: string): Promise<ActionState> {
   return runAdmin("users.manage", async (admin) => {
-    const user = await db.user.findUnique({ where: { id }, select: { email: true, roleId: true } });
+    const user = await db.user.findUnique({ where: { id }, select: { email: true, roleId: true, role: { select: { permissionsJson: true } } } });
     if (!user) return failState("User not found.");
     if (user.roleId && !admin.permissions.includes("*") && !admin.permissions.includes("admins.manage")) return failState("Only admins.manage can reset another admin's 2FA.");
+    if (user.role && !mayActOnAdmin(admin, user.role.permissionsJson)) return failState("Only a super admin can reset this account's 2FA.");
     await db.user.update({ where: { id }, data: { twoFactorEnabled: false, twoFactorSecretEnc: null, recoveryCodesJson: null } });
     await revokeAllSessions(id);
     await securityEvent("twofa_disabled", id, { by: admin.email, reason });
@@ -135,9 +145,11 @@ export async function setUserRoleAction(id: string, roleId: string | null): Prom
     if (!user) return failState("User not found.");
     const role = roleId ? await db.role.findUnique({ where: { id: roleId } }) : null;
     if (roleId && !role) return failState("Role not found.");
-    if (user.role?.slug === "super_admin" && role?.slug !== "super_admin") {
-      const supers = await db.user.count({ where: { role: { slug: "super_admin" }, status: "active", deletedAt: null } });
-      if (supers <= 1) return failState("There must always be at least one active Super Admin.");
+    if (user.role && !mayActOnAdmin(admin, user.role.permissionsJson)) return failState("Only a super admin can change this account's role.");
+    if (role && isElevated(rolePermissions(role.permissionsJson)) && !isSuperAdmin(admin)) return failState("Only a super admin can grant a role that manages admins.");
+    if (user.role && rolePermissions(user.role.permissionsJson).includes("*") && !(role && rolePermissions(role.permissionsJson).includes("*"))) {
+      const supers = await db.user.count({ where: { role: { permissionsJson: { contains: '"*"' } }, status: "active", deletedAt: null, NOT: { id } } });
+      if (supers === 0) return failState("There must always be at least one active Super Admin.");
     }
     await db.user.update({ where: { id }, data: { roleId: role?.id ?? null } });
     await revokeAllSessions(id);

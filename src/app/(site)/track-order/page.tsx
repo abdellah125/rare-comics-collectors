@@ -4,6 +4,9 @@ import { TrackOrderForm } from "@/components/track-order-form";
 import { Breadcrumbs, Container, type Crumb } from "@/components/ui";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
 import { pageMetadata } from "@/lib/seo";
+import { getCurrentUser } from "@/lib/auth/session";
+import { getSettings } from "@/lib/settings";
+import Link from "next/link";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
@@ -21,6 +24,8 @@ const crumbs: Crumb[] = [
 export default async function TrackOrderPage({ searchParams }: PageProps<"/track-order">) {
   const sp = await searchParams;
   const initialRef = typeof sp.ref === "string" ? sp.ref : "";
+  const [settings, user] = await Promise.all([getSettings(), getCurrentUser()]);
+  const guestTracking = settings["features.guestTracking"] || Boolean(user);
   return (
     <>
       <JsonLd id="track-breadcrumbs" data={breadcrumbJsonLd(crumbs)} />
@@ -42,7 +47,17 @@ export default async function TrackOrderPage({ searchParams }: PageProps<"/track
       </section>
 
       <Container className="py-14 lg:py-16">
-        <TrackOrderForm initialRef={initialRef} />
+        {guestTracking ? (
+          <TrackOrderForm initialRef={initialRef} />
+        ) : (
+          <div className="rounded-xl border border-ink-200 bg-white p-6 sm:p-7">
+            <h2 className="font-display text-xl font-semibold text-ink-950">Sign in to track your orders</h2>
+            <p className="mt-2 text-[14px] leading-relaxed text-ink-600">Order tracking is available from your account. Sign in and open Orders to see every shipment and its status.</p>
+            <Link href={`/account/login?next=${encodeURIComponent("/account/orders")}`} className="mt-5 inline-block text-sm font-semibold text-brand-700 underline-offset-4 hover:underline">
+              Sign in to your account
+            </Link>
+          </div>
+        )}
       </Container>
     </>
   );

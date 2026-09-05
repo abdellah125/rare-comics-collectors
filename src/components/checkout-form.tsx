@@ -10,7 +10,7 @@ import { SelectField, TextField } from "@/components/form-fields";
 import { CartIcon, CheckIcon, ShieldIcon, TruckIcon } from "@/components/icons";
 import { StripePayment } from "@/components/stripe-payment";
 import { buttonSizes, buttonStyles } from "@/components/ui";
-import { placeOrderAction, quoteAction } from "@/lib/commerce/actions";
+import { abandonPendingOrderAction, placeOrderAction, quoteAction } from "@/lib/commerce/actions";
 import type { Quote } from "@/lib/commerce/checkout";
 import type { Address } from "@/lib/commerce/pricing";
 import type { CountryOption } from "@/lib/commerce/countries";
@@ -25,6 +25,8 @@ export type CheckoutFormProps = {
   user: { email: string; name: string; phone: string | null; addresses: SavedAddress[] } | null;
   guestCheckout: boolean;
   couponsEnabled: boolean;
+  /** How long a card / redirect payment keeps the stock reserved (commerce.reservationMinutes). */
+  reservationMinutes: number;
 };
 
 const emptyAddress = (countryCode: string): Address => ({ firstName: "", lastName: "", company: undefined, line1: "", line2: undefined, city: "", region: undefined, postalCode: undefined, countryCode, phone: undefined });
@@ -33,7 +35,7 @@ function newKey() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function CheckoutForm({ countries, regionOptions, defaultCountry, user, guestCheckout, couponsEnabled }: CheckoutFormProps) {
+export function CheckoutForm({ countries, regionOptions, defaultCountry, user, guestCheckout, couponsEnabled, reservationMinutes }: CheckoutFormProps) {
   const { lines, hydrated, clear } = useCart();
   const { formatExact, currency } = usePrice();
   const router = useRouter();
@@ -58,6 +60,8 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
   const [error, setError] = useState<string | null>(null);
   const [stripe, setStripe] = useState<{ clientSecret: string; publishableKey: string; orderNumber: string; amountLabel: string } | null>(null);
   const idemKey = useRef(newKey());
+  // Serial number of the latest quote request so a slow, older response can't overwrite a newer one.
+  const quoteSeq = useRef(0);
 
   const cartLines = useMemo(() => lines.map((l) => ({ kind: l.kind, slug: l.slug, qty: l.qty })), [lines]);
   const country = countries.find((c) => c.code === shipping.countryCode);
@@ -67,8 +71,15 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
   useEffect(() => {
     if (!hydrated || cartLines.length === 0) return;
     const t = window.setTimeout(async () => {
+      const seq = ++quoteSeq.current;
       setQuoting(true);
-      const res = await quoteAction({ lines: cartLines, countryCode: shipping.countryCode, region: shipping.region ?? undefined, shippingMethodId: shippingMethodId || undefined, couponCode });
+      let res: Awaited<ReturnType<typeof quoteAction>>;
+      try {
+        res = await quoteAction({ lines: cartLines, countryCode: shipping.countryCode, region: shipping.region ?? undefined, shippingMethodId: shippingMethodId || undefined, couponCode });
+      } catch {
+        res = { error: "We couldn't reach the store to price your cart. Check your connection and try again." };
+      }
+      if (seq !== quoteSeq.current) return;
       setQuoting(false);
       if ("error" in res) {
         setQuoteError(res.error);
@@ -92,19 +103,29 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
     if (!quote || submitting) return;
     setSubmitting(true);
     setError(null);
-    const result = await placeOrderAction({
-      lines: cartLines,
-      email,
-      phone: phone || undefined,
-      shippingAddress: shipping,
-      billingSameAsShipping: billingSame,
-      billingAddress: billingSame ? undefined : billing,
-      shippingMethodId: shippingMethodId || undefined,
-      providerId,
-      couponCode,
-      customerNote: note || undefined,
-      idempotencyKey: idemKey.current,
-    });
+    let result: Awaited<ReturnType<typeof placeOrderAction>>;
+    try {
+      result = await placeOrderAction({
+        lines: cartLines,
+        email,
+        phone: phone || undefined,
+        shippingAddress: shipping,
+        billingSameAsShipping: billingSame,
+        billingAddress: billingSame ? undefined : billing,
+        shippingMethodId: shippingMethodId || undefined,
+        providerId,
+        couponCode,
+        customerNote: note || undefined,
+        idempotencyKey: idemKey.current,
+      });
+    } catch {
+      // Network dropped or the server failed mid-request. Keep the same idempotency key so a
+      // retry returns the order that may already exist instead of creating a second one.
+      setError("We couldn't place your order. Check your connection and try again — you won't be charged twice.");
+      setSubmitting(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (!result.ok) {
       setError(result.message);
       idemKey.current = newKey();
@@ -119,7 +140,7 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
       return;
     }
     if (p.kind === "redirect") {
-      clear();
+      // The cart is kept until the provider confirms; the confirmation page empties it.
       window.location.assign(p.redirectUrl);
       return;
     }
@@ -172,7 +193,7 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
     return (
       <div className="mx-auto max-w-xl">
         <p className="mb-4 text-sm text-ink-600">
-          Order <span className="font-mono font-semibold text-ink-950">{stripe.orderNumber}</span> is reserved for 30 minutes while you pay.
+          Order <span className="font-mono font-semibold text-ink-950">{stripe.orderNumber}</span> is reserved for {reservationMinutes} minutes while you pay.
         </p>
         <StripePayment
           clientSecret={stripe.clientSecret}
@@ -180,6 +201,8 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
           returnUrl={`${window.location.origin}/checkout/return?order=${stripe.orderNumber}&provider=stripe`}
           amountLabel={stripe.amountLabel}
           onCancel={() => {
+            // Release the reservation right away; the next attempt places a fresh order.
+            void abandonPendingOrderAction(stripe.orderNumber).catch(() => {});
             setStripe(null);
             idemKey.current = newKey();
           }}

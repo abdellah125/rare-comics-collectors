@@ -89,6 +89,10 @@ export async function sellerRefundAction(_prev: ActionState | undefined, formDat
     if (!parsed.success) return failState("Check the form.", fieldErrors(parsed.error));
     const item = await db.orderItem.findFirst({ where: { id: parsed.data.orderItemId, orderId: parsed.data.orderId, sellerId: user.seller.id } });
     if (!item) throw new AuthError("Item not found", 403);
+    if (parsed.data.returnRequestId) {
+      const rr = await db.returnRequest.findFirst({ where: { id: parsed.data.returnRequestId, orderItemId: item.id }, select: { id: true } });
+      if (!rr) throw new AuthError("That return request doesn't belong to this item", 403);
+    }
     const perUnit = Math.round((item.subtotal - item.discountAmount) / item.qty);
     const amount = perUnit * parsed.data.qty;
     const result = await issueRefund({

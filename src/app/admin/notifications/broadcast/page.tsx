@@ -3,7 +3,8 @@ import Link from "next/link";
 import { ActionForm } from "@/components/admin/action-form";
 import { AdminPageHeader, Card, Field, Kv, StatusBadge, Table, Td, Th, adminButton, adminInput, adminSelect, adminTextarea } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/auth/session";
-import { audienceCount, broadcastAction } from "@/lib/admin/actions/comms";
+import { broadcastAction } from "@/lib/admin/actions/comms";
+import { audienceCount } from "@/lib/admin/audience";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/i18n";
 

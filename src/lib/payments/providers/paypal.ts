@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { getSettings } from "@/lib/settings";
 import { minorUnitDigits } from "@/lib/money";
 import { requestJson } from "@/lib/payments/http";
 import type { PaymentProvider } from "@/lib/payments/types";
@@ -67,7 +68,7 @@ export const paypalProvider: PaymentProvider = {
           },
         ],
         application_context: {
-          brand_name: "Rare Comics Collectors",
+          brand_name: (await getSettings())["marketplace.name"].slice(0, 127),
           user_action: "PAY_NOW",
           shipping_preference: "NO_SHIPPING",
           return_url: input.returnUrl,

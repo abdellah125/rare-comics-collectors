@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ClearCart } from "@/components/clear-cart";
 import { CheckIcon, ClockIcon } from "@/components/icons";
 import { Container, buttonSizes, buttonStyles } from "@/components/ui";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { verifySignedValue } from "@/lib/crypto";
+import { hasRecentOrderCookie } from "@/lib/commerce/recent-order";
 import { formatMoney } from "@/lib/money";
 import { pageMetadata } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
@@ -26,8 +25,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps<"
   });
   if (!order) notFound();
   const user = await getCurrentUser();
-  const cookieValue = (await cookies()).get(`rcc_o_${number}`)?.value ?? "";
-  const allowed = (user && order.userId === user.id) || verifySignedValue(cookieValue) === number;
+  const allowed = (user && order.userId === user.id) || (await hasRecentOrderCookie(number));
   if (!allowed) redirect(`/track-order?ref=${encodeURIComponent(number)}`);
 
   const payment = order.payments[0];
@@ -35,7 +33,8 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps<"
   const paid = order.paymentStatus === "paid";
   const awaiting = order.status === "pending_payment";
   const failed = ["failed", "cancelled"].includes(order.status);
-  const message = typeof sp.message === "string" ? sp.message : null;
+  // The failure reason comes from the payment record, never from the URL.
+  const message = payment?.failureMessage?.trim() ? `The payment provider said: ${payment.failureMessage.trim()}` : null;
   const bank = payment?.provider === "bank_transfer";
 
   let title = "Payment processing";

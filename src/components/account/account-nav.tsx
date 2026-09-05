@@ -25,9 +25,9 @@ export function AccountNav({ isSeller, sellerStatus, isAdmin, name }: { isSeller
       <p className="truncate font-display text-lg font-semibold text-ink-950">{name}</p>
       <p className="mb-4 text-xs font-bold uppercase tracking-[0.12em] text-ink-500">My account</p>
       <nav aria-label="Account">
-        <ul className="grid gap-0.5">
+        <ul className="-mx-5 flex gap-1 overflow-x-auto px-5 pb-2 sm:-mx-8 sm:px-8 lg:mx-0 lg:grid lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
           {ITEMS.map((item) => (
-            <li key={item.href}>
+            <li key={item.href} className="shrink-0 whitespace-nowrap lg:whitespace-normal">
               <Link
                 href={item.href}
                 aria-current={active(item.href, item.exact) ? "page" : undefined}
@@ -37,7 +37,7 @@ export function AccountNav({ isSeller, sellerStatus, isAdmin, name }: { isSeller
               </Link>
             </li>
           ))}
-          <li className="mt-3 border-t border-ink-200 pt-3">
+          <li className="shrink-0 whitespace-nowrap lg:mt-3 lg:border-t lg:border-ink-200 lg:pt-3">
             {isSeller ? (
               <Link href="/dashboard" className="block rounded-lg px-3 py-2 text-sm font-semibold text-ink-900 hover:bg-ink-100">
                 Seller dashboard{sellerStatus && sellerStatus !== "approved" ? ` (${sellerStatus})` : ""}
@@ -49,7 +49,7 @@ export function AccountNav({ isSeller, sellerStatus, isAdmin, name }: { isSeller
             )}
           </li>
           {isAdmin && (
-            <li>
+            <li className="shrink-0 whitespace-nowrap">
               <Link href="/admin" className="block rounded-lg px-3 py-2 text-sm font-semibold text-ink-900 hover:bg-ink-100">
                 Admin panel
               </Link>

@@ -125,7 +125,7 @@ export async function processJobs(limit = 25): Promise<{ processed: number; fail
         payload = {};
       }
       await handler(payload, { jobId: job.id, attempt });
-      await db.job.update({ where: { id: job.id }, data: { status: "done", completedAt: new Date(), lockedAt: null, lastError: null } });
+      await db.job.update({ where: { id: job.id }, data: { status: "completed", completedAt: new Date(), lockedAt: null, lastError: null } });
       processed += 1;
     } catch (err) {
       failed += 1;

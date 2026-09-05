@@ -17,7 +17,7 @@ export function AdminShell({ user, unread, children }: { user: AdminShellUser; u
       <AdminSidebar groups={groups} roleName={user.roleName} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminTopbar user={user} unread={unread} groups={groups} />
-        <main id="admin-main" className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <main id="admin-main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-[1400px]">{children}</div>
         </main>
       </div>

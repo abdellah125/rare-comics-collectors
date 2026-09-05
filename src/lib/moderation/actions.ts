@@ -43,6 +43,6 @@ export async function createReportAction(_prev: ActionState | undefined, formDat
     data: { targetType, targetId, reporterId: user?.id ?? null, reporterEmail: user?.email ?? parsed.data.email ?? null, reason: parsed.data.reason, details: parsed.data.details ?? null },
   });
   if (targetType === "review") await db.review.update({ where: { id: targetId }, data: { reportCount: { increment: 1 } } });
-  await notifyAdmins("moderation.manage", { type: "report.created", title: `New ${targetType} report: ${parsed.data.reason}`, body: parsed.data.details?.slice(0, 120), href: `/admin/moderation/reports/${report.id}` });
+  await notifyAdmins("moderation.manage", { type: "report.created", title: `New ${targetType} report: ${parsed.data.reason}`, body: parsed.data.details?.slice(0, 120), href: `/admin/moderation/${report.id}` });
   return okState(undefined, "Thanks — our moderation team will review this shortly.");
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { platformRevenue } from "@/lib/finance/ledger";
 import { env } from "@/lib/env";
 import { bucketize, type DateRange } from "@/lib/admin/query";
 import { getSettings } from "@/lib/settings";
@@ -8,13 +9,14 @@ import { providerStatuses } from "@/lib/payments/registry";
 const PAID = ["paid", "partially_refunded", "refunded"];
 
 async function salesTotals(from: Date, to: Date) {
-  const [orders, refunds, commissions, houseSales, payouts, shipping] = await Promise.all([
+  const [orders, refunds, commissions, houseSales, payouts, shipping, rev] = await Promise.all([
     db.order.aggregate({ _sum: { total: true }, _count: { _all: true }, where: { paidAt: { gte: from, lte: to }, paymentStatus: { in: PAID } } }),
     db.refund.aggregate({ _sum: { amount: true }, _count: { _all: true }, where: { status: "succeeded", createdAt: { gte: from, lte: to } } }),
     db.ledgerEntry.aggregate({ _sum: { amount: true }, where: { type: { in: ["commission", "commission_reversal"] }, createdAt: { gte: from, lte: to } } }),
     db.orderItem.aggregate({ _sum: { subtotal: true, discountAmount: true }, where: { sellerId: null, order: { paidAt: { gte: from, lte: to }, paymentStatus: { in: PAID } } } }),
     db.payout.aggregate({ _sum: { amount: true }, _count: { _all: true }, where: { status: "paid", paidAt: { gte: from, lte: to } } }),
     db.order.aggregate({ _sum: { shippingTotal: true, taxTotal: true }, where: { paidAt: { gte: from, lte: to }, paymentStatus: { in: PAID } } }),
+    platformRevenue(from, to),
   ]);
   const gmv = orders._sum.total ?? 0;
   const fees = -(commissions._sum.amount ?? 0);
@@ -27,7 +29,9 @@ async function salesTotals(from: Date, to: Date) {
     refundCount: refunds._count._all,
     fees,
     houseSales: house,
-    revenue: fees + house - (refunds._sum.amount ?? 0),
+    // Seller-item refunds only cost the platform its commission (already reversed in the ledger);
+    // subtract just the house share of refunds so revenue cannot go negative on marketplace sales.
+    revenue: fees + house - rev.refunds,
     payouts: payouts._sum.amount ?? 0,
     payoutCount: payouts._count._all,
     shipping: shipping._sum.shippingTotal ?? 0,

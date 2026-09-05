@@ -16,7 +16,7 @@ const STAGES: { key: string; name: string; detail: string; reached: (o: TrackedO
   { key: "placed", name: "Order received", detail: "Order placed and inventory reserved.", reached: () => true },
   { key: "paid", name: "Payment confirmed", detail: "Payment cleared; books are pulled and photographed.", reached: (o) => !["pending_payment", "failed", "cancelled"].includes(o.status) },
   { key: "shipped", name: "Shipped", detail: "Double-boxed, insured to full value, signature required.", reached: (o) => ["shipped", "partially_shipped", "delivered", "completed"].includes(o.status) || o.shipments.some((s) => s.shippedAt) },
-  { key: "delivered", name: "Delivered", detail: "Your 14-day inspection window starts on delivery.", reached: (o) => ["delivered", "completed"].includes(o.status) },
+  { key: "delivered", name: "Delivered", detail: "Your inspection window starts on delivery.", reached: (o) => ["delivered", "completed"].includes(o.status) },
 ];
 
 export function TrackOrderForm({ initialRef = "" }: { initialRef?: string }) {

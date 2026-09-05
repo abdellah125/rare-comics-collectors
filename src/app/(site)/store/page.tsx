@@ -7,7 +7,7 @@ import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
 import { listPublishedProducts, storeFacets } from "@/lib/catalog/products";
 import type { Era } from "@/lib/products";
 import { formatPrice, schemaPrice } from "@/lib/format";
-import { FREE_SHIPPING_THRESHOLD } from "@/lib/pricing";
+import { getSettings } from "@/lib/settings";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 
@@ -36,7 +36,9 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
   // structured data) are read on the server so the first page of results is in
   // the HTML rather than rendered client-side after hydration.
   const sp = await searchParams;
-  const [summaries, facets] = await Promise.all([listPublishedProducts(), storeFacets()]);
+  const [summaries, facets, settings] = await Promise.all([listPublishedProducts(), storeFacets(), getSettings()]);
+  const freeShippingThreshold = settings["commerce.freeShippingThreshold"];
+  const returnWindowDays = settings["commerce.returnWindowDays"];
   const { eras, publishers, graders, lowestPrice } = facets;
   const inventoryCount = summaries.length;
   const initialQuery = typeof sp.q === "string" ? sp.q : "";
@@ -101,9 +103,9 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
                 <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">{eras.length}</dd>
               </div>
               <div>
-                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Free shipping</dt>
+                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{freeShippingThreshold > 0 ? "Free shipping" : "Shipping"}</dt>
                 <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">
-                  {formatPrice(FREE_SHIPPING_THRESHOLD)}+
+                  {freeShippingThreshold > 0 ? `${formatPrice(freeShippingThreshold)}+` : "Insured"}
                 </dd>
               </div>
             </dl>
@@ -170,9 +172,9 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
             </p>
             <h3>Buying with confidence</h3>
             <p>
-              Orders ship double-boxed, signature-required and insured to full value, free within the US above $250.
-              You have fourteen days from delivery to inspect any book and return it in its original holder for a full
-              refund. Undisclosed restoration is refundable in full with no time limit under our{" "}
+              Orders ship double-boxed, signature-required and insured to full value
+              {freeShippingThreshold > 0 ? `, free within the US above ${formatPrice(freeShippingThreshold)}` : ""}. You have {returnWindowDays} days from
+              delivery to inspect any book and return it in its original holder for a full refund. Undisclosed restoration is refundable in full with no time limit under our{" "}
               <Link href="/policies/authenticity-guarantee">authenticity guarantee</Link>.
             </p>
           </div>

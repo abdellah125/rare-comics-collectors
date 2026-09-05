@@ -10,7 +10,7 @@ import { revokeAllSessions } from "@/lib/auth/session";
 import { USER_RESTRICTIONS, VIOLATION_ACTIONS, VIOLATION_SEVERITIES, VIOLATION_TYPES } from "@/lib/domain";
 import { queueRawEmail } from "@/lib/mail";
 import { notifyUser } from "@/lib/notifications";
-import { failState, fieldErrors, formToObject, okState, zDateOptional, zEmail, zId, zOptionalTrimmed, zTrimmed, type ActionState } from "@/lib/validation";
+import { failState, fieldErrors, formToObject, okState, zDateOptional, zEmail, zOptionalTrimmed, zTrimmed, type ActionState } from "@/lib/validation";
 
 /* ----------------------------------------------------------- reports */
 
@@ -133,6 +133,3 @@ export async function decideAppealAction(id: string, decision: "accepted" | "rej
   });
 }
 
-export async function reportIdOk(id: string) {
-  return zId.parse(id);
-}

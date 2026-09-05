@@ -21,7 +21,8 @@
     "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:integration": "tsx --conditions=react-server tests/integration/lifecycle.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

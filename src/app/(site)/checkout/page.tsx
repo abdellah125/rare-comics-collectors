@@ -71,6 +71,7 @@ export default async function CheckoutPage({ searchParams }: PageProps<"/checkou
           }
           guestCheckout={settings["commerce.guestCheckout"]}
           couponsEnabled={settings["features.coupons"]}
+          reservationMinutes={settings["commerce.reservationMinutes"]}
         />
       </div>
     </Container>

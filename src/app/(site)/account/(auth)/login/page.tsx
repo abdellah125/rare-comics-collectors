@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { safeLocalPath } from "@/lib/auth/safe-next";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth-forms";
 import { Breadcrumbs, Container, type Crumb } from "@/components/ui";
@@ -20,7 +21,7 @@ const crumbs: Crumb[] = [
 
 export default async function LoginPage({ searchParams }: PageProps<"/account/login">) {
   const sp = await searchParams;
-  const next = typeof sp.next === "string" && sp.next.startsWith("/") ? sp.next : undefined;
+  const next = safeLocalPath(sp.next, "") || undefined;
   const user = await getCurrentUser();
   if (user) redirect(next ?? "/account");
   const notice = sp.reset === "1" ? "Your password was changed. Sign in with the new one." : sp.registered === "1" ? "Account created — sign in to continue." : null;

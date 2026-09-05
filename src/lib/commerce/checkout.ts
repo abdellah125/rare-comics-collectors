@@ -240,7 +240,12 @@ export async function placeOrder(
     if (existing.status === "done" && existing.responseJson) return JSON.parse(existing.responseJson) as PlaceOrderResult;
     return { ok: false, message: "This order is already being processed. Please wait a moment." };
   }
-  await db.idempotencyKey.create({ data: { key, scope: "checkout", userId: ctx.userId, expiresAt: new Date(Date.now() + 24 * 3_600_000) } });
+  try {
+    await db.idempotencyKey.create({ data: { key, scope: "checkout", userId: ctx.userId, expiresAt: new Date(Date.now() + 24 * 3_600_000) } });
+  } catch {
+    // Two identical submissions raced; the other one owns the key.
+    return { ok: false, message: "This order is already being processed. Please wait a moment." };
+  }
 
   const done = async (result: PlaceOrderResult) => {
     await db.idempotencyKey.update({ where: { key }, data: { status: "done", responseJson: JSON.stringify(result) } }).catch(() => {});
@@ -393,7 +398,7 @@ export async function placeOrder(
         email: input.email,
         description: `${settings["marketplace.name"]} order ${order.number}`,
         returnUrl: `${env.siteUrl}/checkout/return?order=${order.number}&provider=${provider.id}`,
-        cancelUrl: `${env.siteUrl}/checkout?cancelled=${order.number}`,
+        cancelUrl: `${env.siteUrl}/checkout/return?order=${order.number}&provider=${provider.id}&cancelled=1`,
         metadata: { simulate: input.simulate ?? "" },
         idempotencyKey: `pay_${input.idempotencyKey}`,
       });

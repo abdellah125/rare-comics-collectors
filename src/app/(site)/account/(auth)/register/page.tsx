@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { safeLocalPath } from "@/lib/auth/safe-next";
 import { redirect } from "next/navigation";
 import { RegisterForm } from "@/components/auth-forms";
 import { Breadcrumbs, Container, type Crumb } from "@/components/ui";
@@ -21,7 +22,7 @@ const crumbs: Crumb[] = [
 
 export default async function RegisterPage({ searchParams }: PageProps<"/account/register">) {
   const sp = await searchParams;
-  const next = typeof sp.next === "string" && sp.next.startsWith("/") ? sp.next : undefined;
+  const next = safeLocalPath(sp.next, "") || undefined;
   if (await getCurrentUser()) redirect(next ?? "/account");
   return (
     <Container className="py-12 lg:py-16">

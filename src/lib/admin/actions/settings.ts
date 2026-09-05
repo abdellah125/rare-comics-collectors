@@ -8,7 +8,7 @@ import { actorOf, runAdmin } from "@/lib/admin/guard";
 import { settingGroup } from "@/lib/admin/settings-spec";
 import { saveUpload } from "@/lib/media";
 import { getSettings, saveSettings, type Settings } from "@/lib/settings";
-import { failState, fieldErrors, formToObject, okState, zBool, zOptionalTrimmed, zTrimmed, type ActionState } from "@/lib/validation";
+import { failState, fieldErrors, formToObject, okState, zBool, zTrimmed, type ActionState } from "@/lib/validation";
 
 /** Validates and saves one settings group from the declarative spec. */
 export async function saveSettingsGroupAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
@@ -190,6 +190,3 @@ export async function deleteTranslationAction(id: string): Promise<ActionState> 
   });
 }
 
-export async function settingsKeyGuard(v: string) {
-  return zOptionalTrimmed(10).parse(v);
-}

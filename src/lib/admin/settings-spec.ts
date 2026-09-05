@@ -59,10 +59,8 @@ export const SETTING_GROUPS: SettingGroup[] = [
     description: "Buyer-side rules and feature flags. Turning a feature off hides it everywhere and blocks the related actions server-side.",
     fields: [
       { key: "buyers.allowReviews", label: "Allow product reviews", kind: "bool" },
-      { key: "buyers.reviewRequiresPurchase", label: "Only verified purchasers can review", kind: "bool" },
       { key: "features.reviews", label: "Feature: reviews", kind: "bool" },
       { key: "features.coupons", label: "Feature: coupons at checkout", kind: "bool" },
-      { key: "features.wishlist", label: "Feature: wishlist", kind: "bool" },
       { key: "features.multiCurrency", label: "Feature: currency switcher", kind: "bool" },
       { key: "features.guestTracking", label: "Feature: guest order tracking", kind: "bool" },
       { key: "features.sellerStorefronts", label: "Feature: public seller storefronts", kind: "bool" },

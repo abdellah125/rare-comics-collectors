@@ -63,10 +63,14 @@ export async function shippingOptionsFor(countryCode: string, subtotal: number):
   });
   const settings = await getSettings();
   const globalFree = settings["commerce.freeShippingThreshold"];
-  return methods
-    .filter((m) => (m.minSubtotal === null || subtotal >= m.minSubtotal) && (m.maxSubtotal === null || subtotal <= m.maxSubtotal))
+  const eligible = methods.filter((m) => (m.minSubtotal === null || subtotal >= m.minSubtotal) && (m.maxSubtotal === null || subtotal <= m.maxSubtotal));
+  // A method is free above its own threshold (freeOverSubtotal). The marketplace-wide
+  // threshold (Settings › Commerce) is a promotion on top: once the basket reaches it, the
+  // cheapest paid method becomes free even if that method's own threshold is higher.
+  const cheapestPaid = eligible.filter((m) => m.price > 0).sort((a, b) => a.price - b.price)[0] ?? null;
+  return eligible
     .map((m) => {
-      const free = (m.freeOverSubtotal !== null && subtotal >= m.freeOverSubtotal) || (m.freeOverSubtotal === null && globalFree > 0 && m.price > 0 && m.position === 0 && subtotal >= globalFree && false);
+      const free = (m.freeOverSubtotal !== null && subtotal >= m.freeOverSubtotal) || (globalFree > 0 && subtotal >= globalFree && cheapestPaid?.id === m.id);
       return {
         id: m.id,
         name: m.name,

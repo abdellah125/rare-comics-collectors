@@ -25,13 +25,14 @@ export async function generateMetadata({ params }: PageProps<"/store/[slug]">): 
   const { slug } = await params;
   const product = await getPublishedProduct(slug);
   if (!product) return pageMetadata({ title: "Comic not found", description: "This listing is no longer available.", path: `/store/${slug}`, noIndex: true });
+  const settings = await getSettings();
 
   const gradeLabel = product.grader === "Raw" ? `Raw ${product.grade}` : `${product.grader} ${product.grade}`;
   const title = `${product.title} ${product.issue} — ${gradeLabel} (${product.year}) for Sale`;
   return {
     ...pageMetadata({
       title,
-      description: `${product.title} ${product.issue}, ${product.publisher} ${product.year}. ${gradeLabel}${product.keyIssue ? ` — ${product.keyIssue}` : ""}. ${formatMoney(product.price, "USD", "en-US", { compact: true })}, insured shipping and a 14-day return window from ${site.name}.`,
+      description: `${product.title} ${product.issue}, ${product.publisher} ${product.year}. ${gradeLabel}${product.keyIssue ? ` — ${product.keyIssue}` : ""}. ${formatMoney(product.price, "USD", "en-US", { compact: true })}, insured shipping and a ${settings["commerce.returnWindowDays"]}-day return window from ${site.name}.`,
       path: `/store/${product.slug}`,
       type: "article",
       keywords: [`${product.title} ${product.issue}`, `${product.title} ${product.issue} ${product.grader} ${product.grade}`, `${product.publisher} ${product.era}`, "graded comic for sale"],
@@ -44,10 +45,10 @@ export async function generateMetadata({ params }: PageProps<"/store/[slug]">): 
   };
 }
 
-const assurances = [
+const assurancesFor = (returnWindowDays: number) => [
   { icon: ShieldIcon, title: "Authenticity guaranteed", body: "Cert-verified against the grader's census. Undisclosed restoration refunded in full, forever." },
   { icon: TruckIcon, title: "Insured & tracked", body: "Double-boxed, signature required, insured to full value." },
-  { icon: SearchIcon, title: "14-day inspection", body: "Return in the original holder within 14 days of delivery for a full refund." },
+  { icon: SearchIcon, title: `${returnWindowDays}-day inspection`, body: `Return in the original holder within ${returnWindowDays} days of delivery for a full refund.` },
 ];
 
 export default async function ProductPage({ params }: PageProps<"/store/[slug]">) {
@@ -260,7 +261,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
             </ul>
 
             <div className="mt-8 grid gap-px overflow-hidden rounded-xl bg-ink-200 sm:grid-cols-3">
-              {assurances.map((a) => (
+              {assurancesFor(settings["commerce.returnWindowDays"]).map((a) => (
                 <div key={a.title} className="bg-white p-4">
                   <a.icon className="h-5 w-5 text-brand-600" />
                   <p className="mt-2 text-[13px] font-semibold text-ink-950">{a.title}</p>

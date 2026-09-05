@@ -10,7 +10,8 @@ export type { ProductSummary };
 const summaryInclude = { images: { orderBy: { position: "asc" as const }, take: 1, select: { url: true, alt: true } } };
 type ProductRow = Prisma.ProductGetPayload<{ include: typeof summaryInclude }>;
 
-export const publishedWhere: Prisma.ProductWhereInput = { status: "published", deletedAt: null };
+/** Buyable = published, not deleted, and (for marketplace listings) from an approved seller. */
+export const publishedWhere: Prisma.ProductWhereInput = { status: "published", deletedAt: null, OR: [{ sellerId: null }, { seller: { status: "approved" } }] };
 
 export function toSummary(p: ProductRow): ProductSummary {
   const s: ProductSummary = {
@@ -114,7 +115,7 @@ export function detailToSummary(d: ProductDetail): ProductSummary {
 /** Everything currently buyable, for the store grid. */
 export const listPublishedProducts = cache(async (): Promise<ProductSummary[]> => {
   const rows = await db.product.findMany({
-    where: { ...publishedWhere, OR: [{ sellerId: null }, { seller: { status: "approved" } }] },
+    where: publishedWhere,
     include: summaryInclude,
     orderBy: [{ featured: "desc" }, { publishedAt: "desc" }],
   });
@@ -136,7 +137,7 @@ export async function getProductDetailById(id: string): Promise<ProductDetail | 
 
 export async function relatedProducts(product: ProductDetail, limit = 4): Promise<ProductSummary[]> {
   const rows = await db.product.findMany({
-    where: { ...publishedWhere, slug: { not: product.slug }, OR: [{ title: product.title, publisher: product.publisher }, { era: product.era }] },
+    where: { AND: [publishedWhere, { slug: { not: product.slug }, OR: [{ title: product.title, publisher: product.publisher }, { era: product.era }] }] },
     include: summaryInclude,
     take: limit * 3,
   });

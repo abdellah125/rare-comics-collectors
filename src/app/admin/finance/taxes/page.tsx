@@ -6,7 +6,6 @@ import { AdminPageHeader, Card, Field, Table, Td, Th, Tone, adminInput, adminSel
 import { requireAdmin } from "@/lib/auth/session";
 import { deleteTaxRuleAction, saveTaxRuleAction } from "@/lib/admin/actions/finance";
 import { db } from "@/lib/db";
-import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Taxes" };
 export const dynamic = "force-dynamic";
@@ -14,11 +13,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminTaxesPage({ searchParams }: PageProps<"/admin/finance/taxes">) {
   await requireAdmin("finance.manage");
   const sp = await searchParams;
-  const [rules, countries, settings] = await Promise.all([db.taxRule.findMany({ orderBy: [{ countryCode: "asc" }, { region: "asc" }, { priority: "desc" }], include: { country: { select: { name: true } } } }), db.country.findMany({ where: { isEnabled: true }, orderBy: { name: "asc" }, select: { code: true, name: true } }), getSettings()]);
+  const [rules, countries] = await Promise.all([db.taxRule.findMany({ orderBy: [{ countryCode: "asc" }, { region: "asc" }, { priority: "desc" }], include: { country: { select: { name: true } } } }), db.country.findMany({ where: { isEnabled: true }, orderBy: { name: "asc" }, select: { code: true, name: true } })]);
   const edit = typeof sp.edit === "string" ? rules.find((r) => r.id === sp.edit) : undefined;
   return (
     <>
-      <AdminPageHeader crumbs={[{ label: "Finance", href: "/admin/finance" }, { label: "Taxes" }]} title="Tax / VAT / GST rules" lead={`Tax mode: ${settings["commerce.taxMode"] === "inclusive" ? "prices include tax" : "tax is added at checkout"} (change in Finance › rules). The highest-priority rule for the buyer's country and region applies; a region-specific rule beats a country-wide one.`} />
+      <AdminPageHeader crumbs={[{ label: "Finance", href: "/admin/finance" }, { label: "Taxes" }]} title="Tax / VAT / GST rules" lead={`Each rule decides whether tax is added at checkout or already included in prices. The highest-priority rule for the buyer's country and region applies; a region-specific rule beats a country-wide one.`} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Table>

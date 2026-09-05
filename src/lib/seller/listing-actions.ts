@@ -8,6 +8,7 @@ import { assertSeller, AuthError } from "@/lib/auth/session";
 import { deleteMedia, saveUpload, UploadError } from "@/lib/media";
 import { notifyAdmins } from "@/lib/notifications";
 import { getSettings } from "@/lib/settings";
+import { listingRefErrors } from "@/lib/catalog/listing-refs";
 import { ListingSchema, listingData } from "@/lib/catalog/listing-schema";
 import { failState, fieldErrors, formToObject, okState, slugify, type ActionState } from "@/lib/validation";
 
@@ -52,6 +53,8 @@ export async function createListingAction(_prev: ActionState<{ id: string }> | u
     if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
     const d = parsed.data;
     intent = d.intent;
+    const refErrors = await listingRefErrors({ categoryId: d.categoryId });
+    if (Object.keys(refErrors).length > 0) return failState("Check the highlighted fields.", refErrors);
     if (d.price < settings["listings.minPrice"] || d.price > settings["listings.maxPrice"]) return failState("Price is outside the allowed range.", { price: "Out of range" });
     const active = await db.product.count({ where: { sellerId: seller.id, status: { in: ["published", "pending"] }, deletedAt: null } });
     const limit = seller.maxActiveListings ?? settings["sellers.maxActiveListings"];
@@ -90,6 +93,8 @@ export async function updateListingAction(_prev: ActionState | undefined, formDa
     if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
     const d = parsed.data;
     if (d.price < settings["listings.minPrice"] || d.price > settings["listings.maxPrice"]) return failState("Price is outside the allowed range.", { price: "Out of range" });
+    const refErrors = await listingRefErrors({ categoryId: d.categoryId });
+    if (Object.keys(refErrors).length > 0) return failState("Check the highlighted fields.", refErrors);
 
     const removeIds = formData.getAll("removeImage").map(String);
     for (const imgId of removeIds) {

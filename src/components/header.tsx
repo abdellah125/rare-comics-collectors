@@ -11,7 +11,7 @@ import { buttonSizes, buttonStyles } from "@/components/ui";
 import { primaryNav } from "@/lib/nav";
 import { mapLink, site, fullAddress } from "@/lib/site";
 
-export function Header({ brand }: { brand?: Brand }) {
+export function Header({ brand, shippingNotice }: { brand?: Brand; shippingNotice?: string }) {
   const pathname = usePathname();
   const { count, openCart, hydrated } = useCart();
   const { user, logout } = useAuth();
@@ -71,7 +71,7 @@ export function Header({ brand }: { brand?: Brand }) {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-2 text-[12px]">
           <p className="flex items-center gap-2">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-400" aria-hidden />
-            Free insured shipping on US orders over $250 · Every book authenticity-guaranteed
+            {shippingNotice ?? "Insured shipping on every order"} · Every book authenticity-guaranteed
           </p>
           <div className="flex items-center gap-5">
             <a href={mapLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-white">

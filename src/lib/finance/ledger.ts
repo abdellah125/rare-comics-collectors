@@ -82,6 +82,9 @@ export async function createPayoutForSeller(
   opts: { createdById?: string | null; scheduledFor?: Date | null; note?: string | null; status?: "pending" | "scheduled" | "processing" },
 ): Promise<{ id: string; amount: number } | null> {
   return db.$transaction(async (tx) => {
+    // One payout per seller at a time: the scheduler and an admin clicking "pay now" must not
+    // both sweep the same ledger entries.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${sellerId}))`;
     const seller = await tx.sellerProfile.findUnique({ where: { id: sellerId }, select: { payoutMethod: true, payoutDetailsMasked: true, minPayout: true } });
     if (!seller) throw new Error("Seller not found");
     const entries = await tx.ledgerEntry.findMany({ where: { sellerId, payoutId: null, availableAt: { lte: new Date() } }, select: { id: true, amount: true, createdAt: true } });
@@ -101,7 +104,8 @@ export async function createPayoutForSeller(
         periodEnd: new Date(),
       },
     });
-    await tx.ledgerEntry.updateMany({ where: { id: { in: entries.map((e) => e.id) } }, data: { payoutId: payout.id } });
+    const swept = await tx.ledgerEntry.updateMany({ where: { id: { in: entries.map((e) => e.id) }, payoutId: null }, data: { payoutId: payout.id } });
+    if (swept.count !== entries.length) throw new Error("Ledger entries changed while creating the payout; try again");
     await tx.ledgerEntry.create({
       data: { sellerId, type: "payout", amount: -amount, payoutId: payout.id, description: `Payout ${payout.id.slice(-8).toUpperCase()}`, createdById: opts.createdById ?? null },
     });
@@ -129,9 +133,17 @@ export async function platformRevenue(from: Date, to: Date) {
       _sum: { subtotal: true, discountAmount: true },
       where: { sellerId: null, order: { paidAt: { gte: from, lte: to }, paymentStatus: { in: ["paid", "partially_refunded"] } } },
     }),
-    db.refund.aggregate({ _sum: { amount: true }, where: { status: "succeeded", createdAt: { gte: from, lte: to } } }),
+    db.refund.findMany({ where: { status: "succeeded", createdAt: { gte: from, lte: to } }, select: { amount: true, order: { select: { items: { select: { sellerId: true, subtotal: true, discountAmount: true } } } } } }),
   ]);
   const commissionNet = -(commission._sum.amount ?? 0) - (reversals._sum.amount ?? 0);
   const houseSales = (platformSales._sum.subtotal ?? 0) - (platformSales._sum.discountAmount ?? 0);
-  return { commissionNet, houseSales, refunds: refunds._sum.amount ?? 0 };
+  // A refund on a marketplace seller's item costs the platform only its commission, and that is
+  // already booked through commission_reversal. Only the house share of each refund is revenue lost.
+  let houseRefunds = 0;
+  for (const r of refunds) {
+    const gross = r.order.items.reduce((n, i) => n + i.subtotal - i.discountAmount, 0);
+    const house = r.order.items.filter((i) => !i.sellerId).reduce((n, i) => n + i.subtotal - i.discountAmount, 0);
+    houseRefunds += gross > 0 ? Math.round((r.amount * house) / gross) : 0;
+  }
+  return { commissionNet, houseSales, refunds: houseRefunds };
 }

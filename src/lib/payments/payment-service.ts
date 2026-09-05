@@ -63,9 +63,7 @@ export async function issueRefund(input: RefundRequest): Promise<{ refundId: str
   if (!order) throw new RefundError("Order not found");
   const payment = order.payments[0];
   if (!payment) throw new RefundError("This order has no successful payment to refund");
-  const remaining = payment.amount - payment.refundedAmount;
   if (input.amount <= 0) throw new RefundError("Refund amount must be greater than zero");
-  if (input.amount > remaining) throw new RefundError(`Only ${formatMoney(remaining)} is left to refund on this payment`);
   for (const it of input.items ?? []) {
     const item = order.items.find((i) => i.id === it.orderItemId);
     if (!item) throw new RefundError("Refund item does not belong to this order");
@@ -74,22 +72,31 @@ export async function issueRefund(input: RefundRequest): Promise<{ refundId: str
   const provider = getProvider(payment.provider);
   if (!provider) throw new RefundError("Payment provider is not available");
 
-  const refund = await db.refund.create({
-    data: {
-      paymentId: payment.id,
-      orderId: order.id,
-      amount: input.amount,
-      currency: payment.currency,
-      reason: input.reason,
-      note: input.note ?? null,
-      status: "pending",
-      itemsJson: JSON.stringify(input.items ?? []),
-      restock: Boolean(input.restock),
-      createdById: input.actor.id,
-      returnRequestId: input.returnRequestId ?? null,
-      disputeId: input.disputeId ?? null,
-      idempotencyKey: input.idempotencyKey,
-    },
+  // Lock the payment row while checking the remaining balance so two refunds started at the
+  // same moment (two admins, admin + seller) can never add up to more than was paid.
+  const refund = await db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM "Payment" WHERE id = ${payment.id} FOR UPDATE`;
+    const fresh = await tx.payment.findUniqueOrThrow({ where: { id: payment.id }, select: { amount: true, refundedAmount: true } });
+    const pending = await tx.refund.aggregate({ _sum: { amount: true }, where: { paymentId: payment.id, status: "pending" } });
+    const remaining = fresh.amount - fresh.refundedAmount - (pending._sum.amount ?? 0);
+    if (input.amount > remaining) throw new RefundError(`Only ${formatMoney(Math.max(0, remaining))} is left to refund on this payment`);
+    return tx.refund.create({
+      data: {
+        paymentId: payment.id,
+        orderId: order.id,
+        amount: input.amount,
+        currency: payment.currency,
+        reason: input.reason,
+        note: input.note ?? null,
+        status: "pending",
+        itemsJson: JSON.stringify(input.items ?? []),
+        restock: Boolean(input.restock),
+        createdById: input.actor.id,
+        returnRequestId: input.returnRequestId ?? null,
+        disputeId: input.disputeId ?? null,
+        idempotencyKey: input.idempotencyKey,
+      },
+    });
   });
 
   const presentmentAmount = payment.amount > 0 ? Math.round((input.amount * payment.presentmentAmount) / payment.amount) : input.amount;
@@ -136,8 +143,8 @@ export async function finalizeRefund(refundId: string, status: "succeeded" | "pe
     await tx.refund.update({ where: { id: refundId }, data: { status, providerRef } });
     if (status !== "succeeded") return;
     const items = JSON.parse(refund.itemsJson) as { orderItemId: string; qty: number }[];
-    await tx.payment.update({ where: { id: refund.paymentId }, data: { refundedAmount: { increment: refund.amount } } });
-    const fullyRefunded = refund.payment.refundedAmount + refund.amount >= refund.payment.amount;
+    const updated = await tx.payment.update({ where: { id: refund.paymentId }, data: { refundedAmount: { increment: refund.amount } }, select: { amount: true, refundedAmount: true } });
+    const fullyRefunded = updated.refundedAmount >= updated.amount;
     await tx.payment.update({ where: { id: refund.paymentId }, data: { status: fullyRefunded ? "refunded" : "partially_refunded" } });
 
     // Distribute the refund over the listed items (or proportionally over all items).

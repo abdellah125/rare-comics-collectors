@@ -4,8 +4,10 @@ export const site = {
   tagline: "Acquire legends. Grade yours. Know what it's worth.",
   description:
     "Rare Comics Collectors specialises in Golden Age and Silver Age comic books — authenticated, graded and documented. We offer CGC & CBCS grading submission, pressing, restoration detection and appraisal for serious collectors.",
-  // Set NEXT_PUBLIC_SITE_URL in production (e.g. https://rarecomicscollectors.com)
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://rarecomicscollectors.com",
+  // Set NEXT_PUBLIC_SITE_URL in production (e.g. https://rarecomicscollectors.com). On Vercel the
+  // project's production host is used when it is not set, so canonicals and the sitemap match
+  // the domain that actually serves the site.
+  url: (process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "") || "https://rarecomicscollectors.com").replace(/\/$/, ""),
   locale: "en_US",
   currency: "USD",
   twitter: "@rarecomicscol",

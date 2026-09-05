@@ -15,7 +15,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
   const settings = await getSettings();
   if (settings["system.maintenanceMode"]) {
     const user = await getCurrentUser();
-    if (!user?.isAdmin) return <MaintenancePage message={settings["system.maintenanceMessage"]} />;
+    if (!user?.isAdmin) return <MaintenancePage message={settings["system.maintenanceMessage"]} supportEmail={settings["marketplace.supportEmail"]} />;
   }
   return <SiteShell banner={<SiteBanners />}>{children}</SiteShell>;
 }

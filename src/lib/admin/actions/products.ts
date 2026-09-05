@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { actorOf, runAdmin } from "@/lib/admin/guard";
 import { csvRecords } from "@/lib/admin/csv";
+import { listingRefErrors } from "@/lib/catalog/listing-refs";
 import { ListingSchema, listingData } from "@/lib/catalog/listing-schema";
 import { ERAS, GRADERS } from "@/lib/domain";
 import { deleteMedia, saveUpload } from "@/lib/media";
@@ -73,6 +74,8 @@ export async function createProductAdminAction(_prev: ActionState | undefined, f
     const parsed = AdminSchema.safeParse(formToObject(formData));
     if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
     const d = parsed.data;
+    const refErrors = await listingRefErrors({ categoryId: d.categoryId, brandId: d.brandId, sellerId: d.sellerId });
+    if (Object.keys(refErrors).length > 0) return failState("Check the highlighted fields.", refErrors);
     const status = d.status ?? (d.intent === "publish" ? "published" : "draft");
     const product = await db.product.create({
       data: { ...listingData(d), ...extras(d), slug: await uniqueSlug(`${d.title} ${d.issue} ${d.grader} ${d.grade}`), sku: await uniqueSku(), sellerId: d.sellerId || null, status, publishedAt: status === "published" ? new Date() : null },
@@ -93,6 +96,8 @@ export async function updateProductAdminAction(_prev: ActionState | undefined, f
     if (!parsed.success) return failState("Check the highlighted fields.", fieldErrors(parsed.error));
     const d = parsed.data;
     if (!d.id) return failState("Missing id.");
+    const refErrors = await listingRefErrors({ categoryId: d.categoryId, brandId: d.brandId, sellerId: d.sellerId });
+    if (Object.keys(refErrors).length > 0) return failState("Check the highlighted fields.", refErrors);
     const product = await db.product.findUnique({ where: { id: d.id }, include: { images: true } });
     if (!product) return failState("Listing not found.");
     for (const imgId of formData.getAll("removeImage").map(String)) {

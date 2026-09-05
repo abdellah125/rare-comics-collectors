@@ -1,7 +1,8 @@
 import { Logo } from "@/components/logo";
 import { site } from "@/lib/site";
 
-export function MaintenancePage({ message }: { message: string }) {
+export function MaintenancePage({ message, supportEmail }: { message: string; supportEmail?: string }) {
+  const email = supportEmail || site.email;
   return (
     <main className="flex flex-1 items-center justify-center bg-ink-950 px-6 py-24 text-white">
       <div className="max-w-lg text-center">
@@ -13,8 +14,8 @@ export function MaintenancePage({ message }: { message: string }) {
         <p className="mt-4 text-[15px] leading-relaxed text-ink-300">{message}</p>
         <p className="mt-8 text-sm text-ink-400">
           Urgent? Email{" "}
-          <a href={`mailto:${site.email}`} className="text-white underline underline-offset-4">
-            {site.email}
+          <a href={`mailto:${email}`} className="text-white underline underline-offset-4">
+            {email}
           </a>{" "}
           or call {site.phoneDisplay}.
         </p>

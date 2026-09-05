@@ -25,13 +25,11 @@ export const settingDefaults = {
 
   // Commerce rules
   "commerce.commissionBps": 1000,
-  "commerce.buyerFeeBps": 0,
   "commerce.guestCheckout": true,
   "commerce.autoCancelUnpaidHours": 48,
   "commerce.autoCompleteDays": 14,
   "commerce.returnWindowDays": 14,
   "commerce.freeShippingThreshold": 25000,
-  "commerce.taxMode": "exclusive" as "exclusive" | "inclusive",
   "commerce.maxOrderItems": 25,
   "commerce.maxOrderValue": 0,
   "commerce.reservationMinutes": 30,
@@ -54,12 +52,10 @@ export const settingDefaults = {
 
   // Buyers
   "buyers.allowReviews": true,
-  "buyers.reviewRequiresPurchase": true,
 
   // Feature flags
   "features.reviews": true,
   "features.coupons": true,
-  "features.wishlist": true,
   "features.multiCurrency": true,
   "features.guestTracking": true,
   "features.sellerStorefronts": true,

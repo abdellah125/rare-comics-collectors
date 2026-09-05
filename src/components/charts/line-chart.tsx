@@ -10,6 +10,14 @@ export type LineSeries = { name: string; points: number[] };
  * surface ring, hairline grid, crosshair + tooltip on hover, legend for ≥ 2
  * series, direct end labels, and a table view for accessibility.
  */
+/** Which x labels to print: every Nth, plus the last one — dropping a neighbour that would collide with it. */
+function showTick(i: number, n: number): boolean {
+  const last = n - 1;
+  if (n <= 12 || i === last) return true;
+  const step = Math.ceil(n / 8);
+  return i % step === 0 && last - i >= Math.max(1, Math.floor(step / 2));
+}
+
 export function LineChart({ labels, series, format = "number", height = 240, title }: { labels: string[]; series: LineSeries[]; format?: ChartFormat; height?: number; title: string }) {
   const formatValue = chartFormatter(format);
   const id = useId();
@@ -96,7 +104,7 @@ export function LineChart({ labels, series, format = "number", height = 240, tit
               </text>
             </g>
           ))}
-          {labels.map((l, i) => (labels.length <= 12 || i % Math.ceil(labels.length / 8) === 0 || i === labels.length - 1) && (
+          {labels.map((l, i) => showTick(i, labels.length) && (
             <text key={l} x={x(i)} y={height - 8} textAnchor="middle" fontSize={11} fill={CHART_INK.muted}>
               {l}
             </text>

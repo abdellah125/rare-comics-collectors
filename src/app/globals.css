@@ -181,3 +181,10 @@ body {
 .animate-fade-up {
   animation: vc-fade-up 0.45s ease-out both;
 }
+
+@layer base {
+  /* Grid items default to min-width:auto, so a wide table inside a card can push the whole page wider than the viewport on phones. */
+  .grid > * {
+    min-width: 0;
+  }
+}

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { audienceCount } from "@/lib/admin/audience";
 import { audit } from "@/lib/audit";
 import { actorOf, runAdmin } from "@/lib/admin/guard";
 import { ANNOUNCEMENT_AUDIENCES } from "@/lib/domain";
@@ -84,9 +85,6 @@ export async function deleteAnnouncementAction(id: string): Promise<ActionState>
 
 /* ---------------------------------------------------------- broadcast */
 
-export async function audienceCount(audience: string): Promise<number> {
-  return db.user.count({ where: { status: "active", deletedAt: null, ...(audience === "sellers" ? { isSeller: true } : audience === "buyers" ? { isSeller: false, roleId: null } : audience === "admins" ? { roleId: { not: null } } : audience === "marketing" ? { marketingOptIn: true } : {}) } });
-}
 
 const BroadcastSchema = z.object({ audience: z.enum(["all", "buyers", "sellers", "admins", "marketing"]), subject: zTrimmed(160).min(3), message: zTrimmed(10_000).min(10), confirmCount: z.coerce.number().int().min(0), acknowledge: z.string().optional() });
 

@@ -11,7 +11,7 @@ import { markPayoutPaid, scheduleDuePayouts } from "@/lib/finance/payouts";
 import { formatMoney } from "@/lib/money";
 import { PROVIDER_IDS } from "@/lib/payments/registry";
 import { getSettings, saveSettings, type Settings } from "@/lib/settings";
-import { failState, fieldErrors, formToObject, okState, zBool, zId, zOptionalTrimmed, zTrimmed, type ActionState } from "@/lib/validation";
+import { failState, fieldErrors, formToObject, okState, zBool, zOptionalTrimmed, zTrimmed, type ActionState } from "@/lib/validation";
 
 /* ----------------------------------------------------------- payouts */
 
@@ -20,6 +20,15 @@ export async function payoutActionRun(id: string, action: "paid" | "processing" 
     const payout = await db.payout.findUnique({ where: { id }, include: { seller: { select: { displayName: true } } } });
     if (!payout) return failState("Payout not found.");
     if (payout.status === "paid") return failState("Already paid.");
+    // Legal transitions only: a cancelled payout has returned its entries to the pool, so it
+    // can never be marked paid; "failed" only makes sense once a transfer was attempted.
+    const allowed: Record<typeof action, string[]> = {
+      paid: ["pending", "scheduled", "processing"],
+      processing: ["pending", "scheduled", "failed"],
+      failed: ["processing", "scheduled", "pending"],
+      cancel: ["pending", "scheduled", "processing", "failed"],
+    };
+    if (!allowed[action].includes(payout.status)) return failState(`A ${payout.status} payout can't be marked ${action === "cancel" ? "cancelled" : action}.`);
     if (action === "paid") {
       if (!reference?.trim()) return failState("Enter the bank/PayPal reference.");
       await markPayoutPaid(id, reference.trim(), { id: admin.id, email: admin.email });
@@ -163,7 +172,7 @@ export async function deleteTaxRuleAction(id: string): Promise<ActionState> {
 
 /* -------------------------------------------------------- fee settings */
 
-const FeesSchema = z.object({ commissionBps: z.coerce.number().int().min(0).max(10_000), buyerFeeBps: z.coerce.number().int().min(0).max(10_000), payoutSchedule: z.enum(["manual", "weekly", "biweekly", "monthly"]), minAmount: z.coerce.number().int().min(0), holdDays: z.coerce.number().int().min(0).max(90), taxMode: z.enum(["exclusive", "inclusive"]) });
+const FeesSchema = z.object({ commissionBps: z.coerce.number().int().min(0).max(10_000), payoutSchedule: z.enum(["manual", "weekly", "biweekly", "monthly"]), minAmount: z.coerce.number().int().min(0), holdDays: z.coerce.number().int().min(0).max(90) });
 
 export async function saveFeesAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
   return runAdmin("finance.manage", async (admin) => {
@@ -171,14 +180,10 @@ export async function saveFeesAction(_prev: ActionState | undefined, formData: F
     if (!parsed.success) return failState("Check the form.", fieldErrors(parsed.error));
     const d = parsed.data;
     const before = await getSettings();
-    await saveSettings({ "commerce.commissionBps": d.commissionBps, "commerce.buyerFeeBps": d.buyerFeeBps, "payouts.schedule": d.payoutSchedule, "payouts.minAmount": d.minAmount, "payouts.holdDays": d.holdDays, "commerce.taxMode": d.taxMode }, admin.id);
+    await saveSettings({ "commerce.commissionBps": d.commissionBps, "payouts.schedule": d.payoutSchedule, "payouts.minAmount": d.minAmount, "payouts.holdDays": d.holdDays }, admin.id);
     await audit({ actor: actorOf(admin), action: "settings.fees", summary: "Commission / payout settings updated", before: { commission: before["commerce.commissionBps"], schedule: before["payouts.schedule"], min: before["payouts.minAmount"], hold: before["payouts.holdDays"] }, after: d });
     revalidatePath("/admin/finance");
     return okState(undefined, "Fees and payout rules saved.");
   });
 }
 
-export async function assertPayoutId(id: string) {
-  z.string().parse(id);
-  return zId.parse(id);
-}

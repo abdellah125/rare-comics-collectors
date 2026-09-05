@@ -47,7 +47,7 @@ export function registerJobHandlers() {
     await db.passwordResetToken.deleteMany({ where: { expiresAt: { lt: now } } });
     await db.loginChallenge.deleteMany({ where: { expiresAt: { lt: now } } });
     await db.idempotencyKey.deleteMany({ where: { expiresAt: { lt: now } } });
-    await db.job.deleteMany({ where: { status: "done", completedAt: { lt: new Date(now.getTime() - 14 * 86_400_000) } } });
+    await db.job.deleteMany({ where: { status: "completed", completedAt: { lt: new Date(now.getTime() - 14 * 86_400_000) } } });
     await enqueueJob("cleanup_expired", {}, { runAt: new Date(Date.now() + 12 * 3_600_000), dedupe: true });
   });
 

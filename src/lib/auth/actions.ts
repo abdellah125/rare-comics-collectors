@@ -10,6 +10,7 @@ import { audit, securityEvent } from "@/lib/audit";
 import { burnPasswordCheck, hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createSession, destroyCurrentSession, getCurrentUser, revokeAllSessions } from "@/lib/auth/session";
 import { ensureInstanceSecrets } from "@/lib/secrets";
+import { safeLocalPath } from "@/lib/auth/safe-next";
 import { hashRecoveryCode, verifyTotp } from "@/lib/auth/totp";
 import { parseJsonArray, isString } from "@/lib/json";
 import { queueTemplateEmail } from "@/lib/mail";
@@ -20,11 +21,6 @@ import { failState, fieldErrors, formToObject, okState, zEmail, zPassword, zTrim
 
 const CHALLENGE_COOKIE = "rcc_login_challenge";
 
-/** Only ever redirect to a local path to prevent open redirects. */
-export async function safeNext(next: unknown, fallback: string): Promise<string> {
-  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return fallback;
-  return next;
-}
 
 const LoginSchema = z.object({
   email: zEmail,
@@ -59,7 +55,7 @@ export async function loginAction(_prev: ActionState | undefined, formData: Form
   const { email, password } = parsed.data;
   const remember = parsed.data.remember === "on";
   const asAdmin = parsed.data.mode === "admin";
-  const next = await safeNext(parsed.data.next, asAdmin ? "/admin" : "/account");
+  const next = safeLocalPath(parsed.data.next, asAdmin ? "/admin" : "/account");
   const meta = await requestMeta();
   const settings = await getSettings();
 
@@ -160,7 +156,7 @@ export async function verifyTwoFactorAction(_prev: ActionState | undefined, form
   await db.loginChallenge.delete({ where: { id: challenge.id } });
   store.delete(CHALLENGE_COOKIE);
   await finishLogin(user, challenge.remember, asAdmin);
-  redirect(await safeNext(parsed.data.next, asAdmin ? "/admin" : "/account"));
+  redirect(safeLocalPath(parsed.data.next, asAdmin ? "/admin" : "/account"));
 }
 
 export async function logoutAction(): Promise<void> {
@@ -205,7 +201,7 @@ export async function registerAction(_prev: ActionState | undefined, formData: F
   await queueTemplateEmail("welcome", email, { name: firstName }, { userId: user.id });
   await createSession(user.id, { remember: true });
   await securityEvent("login_success", user.id, { via: "register" });
-  redirect(await safeNext(parsed.data.next, "/account"));
+  redirect(safeLocalPath(parsed.data.next, "/account"));
 }
 
 const ResetRequestSchema = z.object({ email: zEmail });

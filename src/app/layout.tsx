@@ -3,12 +3,14 @@ import { Inter, Fraunces, Orbitron } from "next/font/google";
 import "./globals.css";
 
 import { site } from "@/lib/site";
+import { brandStyle } from "@/lib/brand-color";
+import { getSettings } from "@/lib/settings";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const display = Fraunces({ variable: "--font-display", subsets: ["latin"], display: "swap", weight: ["600", "700"] });
 const orbitron = Orbitron({ variable: "--font-orbitron", subsets: ["latin"], display: "swap", weight: ["700", "900"] });
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
     default: `${site.name} — Graded Comics for Sale, CGC & CBCS Grading Services`,
@@ -57,12 +59,28 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
 };
 
+/** Marketplace name and favicon come from Settings › General so a rebrand needs no deploy. */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSettings().catch(() => null);
+  if (!settings) return baseMetadata;
+  const name = settings["marketplace.name"] || site.name;
+  const favicon = settings["marketplace.faviconMediaId"] ? `/api/media/${settings["marketplace.faviconMediaId"]}` : "/icon.svg";
+  return {
+    ...baseMetadata,
+    title: { default: `${name} — Graded Comics for Sale, CGC & CBCS Grading Services`, template: `%s | ${name}` },
+    applicationName: name,
+    openGraph: { ...baseMetadata.openGraph, siteName: name },
+    icons: { icon: [{ url: favicon }], apple: [{ url: "/api/icon?size=180", sizes: "180x180", type: "image/png" }] },
+  };
+}
+
 export const viewport: Viewport = { themeColor: "#0d1017", width: "device-width", initialScale: 1, colorScheme: "light" };
 
 /** Root layout: document shell only. Storefront chrome lives in (site)/layout, the admin has its own. */
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const settings = await getSettings();
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable} ${orbitron.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${display.variable} ${orbitron.variable} h-full antialiased`} style={brandStyle(settings["marketplace.primaryColor"]) as React.CSSProperties | undefined}>
       <body className="flex min-h-full flex-col bg-white">{children}</body>
     </html>
   );

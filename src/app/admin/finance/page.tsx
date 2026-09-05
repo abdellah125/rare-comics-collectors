@@ -61,7 +61,7 @@ export default async function AdminFinancePage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="Commission earned (90d)" value={formatMoney(rev.commissionNet)} trend={feeSeries.map((v) => v / 100)} />
         <StatTile label="House sales (90d)" value={formatMoney(rev.houseSales)} trend={houseSeries.map((v) => v / 100)} />
-        <StatTile label="Refunds (90d)" value={formatMoney(rev.refunds)} upIsGood={false} sub={refundsPending ? `${refundsPending} pending manual refund${refundsPending === 1 ? "" : "s"}` : undefined} href="/admin/payments?tab=refunds" />
+        <StatTile label="House refunds (90d)" value={formatMoney(rev.refunds)} upIsGood={false} sub={refundsPending ? `${refundsPending} pending manual refund${refundsPending === 1 ? "" : "s"}` : undefined} href="/admin/payments?tab=refunds" />
         <StatTile label="Paid out (90d)" value={formatMoney(payoutsPaid._sum.amount ?? 0)} href="/admin/finance/payouts" />
       </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -112,9 +112,6 @@ export default async function AdminFinancePage() {
                 <Field label="Commission (bps)" hint="1000 = 10%">
                   <input name="commissionBps" type="number" min={0} max={10000} defaultValue={settings["commerce.commissionBps"]} className={adminInput} />
                 </Field>
-                <Field label="Buyer service fee (bps)" hint="0 = none">
-                  <input name="buyerFeeBps" type="number" min={0} max={10000} defaultValue={settings["commerce.buyerFeeBps"]} className={adminInput} />
-                </Field>
                 <Field label="Payout schedule">
                   <select name="payoutSchedule" defaultValue={settings["payouts.schedule"]} className={adminSelect}>
                     <option value="manual">Manual</option>
@@ -128,12 +125,6 @@ export default async function AdminFinancePage() {
                 </Field>
                 <Field label="Holding period (days)" hint="Sales clear after this many days.">
                   <input name="holdDays" type="number" min={0} max={90} defaultValue={settings["payouts.holdDays"]} className={adminInput} />
-                </Field>
-                <Field label="Tax mode">
-                  <select name="taxMode" defaultValue={settings["commerce.taxMode"]} className={adminSelect}>
-                    <option value="exclusive">Added at checkout</option>
-                    <option value="inclusive">Included in prices</option>
-                  </select>
                 </Field>
               </div>
             </ActionForm>
