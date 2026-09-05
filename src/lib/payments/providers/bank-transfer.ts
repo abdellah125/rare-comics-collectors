@@ -1,6 +1,7 @@
 import "server-only";
 import type { PaymentProvider } from "@/lib/payments/types";
 import { getSettings } from "@/lib/settings";
+import { bankTransferDetails } from "@/lib/payments/bank-details";
 
 /**
  * Offline payment: the order is reserved and the buyer wires the money.
@@ -18,7 +19,7 @@ export const bankTransferProvider: PaymentProvider = {
     return {
       kind: "instructions",
       providerRef: `wire_${input.orderNumber}`,
-      instructions: settings["payments.bank_transfer.instructions"],
+      instructions: bankTransferDetails(settings, input.orderNumber).text,
     };
   },
   async refund() {

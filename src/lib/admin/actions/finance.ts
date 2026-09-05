@@ -8,6 +8,7 @@ import { actorOf, runAdmin } from "@/lib/admin/guard";
 import { refreshExchangeRates } from "@/lib/currency";
 import { cancelPayout } from "@/lib/finance/ledger";
 import { markPayoutPaid, scheduleDuePayouts } from "@/lib/finance/payouts";
+import { maskSecret } from "@/lib/crypto";
 import { formatMoney } from "@/lib/money";
 import { PROVIDER_IDS } from "@/lib/payments/registry";
 import { getSettings, saveSettings, type Settings } from "@/lib/settings";
@@ -59,7 +60,20 @@ export async function runPayoutSchedulerAction(): Promise<ActionState> {
 
 /* --------------------------------------------------------- providers */
 
-const ProviderSchema = z.object({ provider: z.enum(PROVIDER_IDS), enabled: zBool.optional(), currencies: zOptionalTrimmed(200), minAmount: z.preprocess((v) => (v === "" || v === undefined ? undefined : v), z.coerce.number().int().min(0).optional()), instructions: zOptionalTrimmed(2000) });
+const ProviderSchema = z.object({
+  provider: z.enum(PROVIDER_IDS),
+  enabled: zBool.optional(),
+  currencies: zOptionalTrimmed(200),
+  minAmount: z.preprocess((v) => (v === "" || v === undefined ? undefined : v), z.coerce.number().int().min(0).optional()),
+  instructions: zOptionalTrimmed(2000),
+  beneficiary: zOptionalTrimmed(120),
+  bankName: zOptionalTrimmed(120),
+  accountType: zOptionalTrimmed(40),
+  accountNumber: zOptionalTrimmed(64),
+  routingNumber: zOptionalTrimmed(64),
+  swift: zOptionalTrimmed(20),
+  iban: zOptionalTrimmed(48),
+});
 
 export async function updateProviderAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
   return runAdmin("finance.manage", async (admin) => {
@@ -74,10 +88,24 @@ export async function updateProviderAction(_prev: ActionState | undefined, formD
     }
     if (d.provider === "bank_transfer") {
       if (d.minAmount !== undefined) patch["payments.bank_transfer.minAmount"] = d.minAmount;
-      if (d.instructions) patch["payments.bank_transfer.instructions"] = d.instructions;
+      const routing = (d.routingNumber ?? "").replace(/\s+/g, "");
+      if (routing && !/^\d{9}$/.test(routing)) return failState("US routing numbers are 9 digits.", { routingNumber: "9 digits" });
+      const swift = (d.swift ?? "").replace(/\s+/g, "").toUpperCase();
+      if (swift && !/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(swift)) return failState("SWIFT/BIC codes are 8 or 11 characters.", { swift: "Invalid" });
+      const iban = (d.iban ?? "").replace(/\s+/g, "").toUpperCase();
+      if (iban && !/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return failState("That IBAN doesn't look right.", { iban: "Invalid" });
+      patch["payments.bank_transfer.instructions"] = d.instructions ?? "";
+      patch["payments.bank_transfer.beneficiary"] = d.beneficiary ?? "";
+      patch["payments.bank_transfer.bankName"] = d.bankName ?? "";
+      patch["payments.bank_transfer.accountType"] = d.accountType ?? "";
+      patch["payments.bank_transfer.accountNumber"] = (d.accountNumber ?? "").replace(/\s+/g, "");
+      patch["payments.bank_transfer.routingNumber"] = routing;
+      patch["payments.bank_transfer.swift"] = swift;
+      patch["payments.bank_transfer.iban"] = iban;
     }
     await saveSettings(patch, admin.id);
-    await audit({ actor: actorOf(admin), action: "payments.provider", targetType: "setting", targetId: d.provider, summary: `${d.provider} ${d.enabled ? "enabled" : "disabled"}`, after: patch });
+    const logged = { ...patch, "payments.bank_transfer.accountNumber": typeof patch["payments.bank_transfer.accountNumber"] === "string" ? maskSecret(String(patch["payments.bank_transfer.accountNumber"])) : undefined, "payments.bank_transfer.iban": typeof patch["payments.bank_transfer.iban"] === "string" ? maskSecret(String(patch["payments.bank_transfer.iban"])) : undefined };
+    await audit({ actor: actorOf(admin), action: "payments.provider", targetType: "setting", targetId: d.provider, summary: `${d.provider} ${d.enabled ? "enabled" : "disabled"}`, after: logged });
     revalidatePath("/admin/finance/payments");
     return okState(undefined, "Provider settings saved.");
   });

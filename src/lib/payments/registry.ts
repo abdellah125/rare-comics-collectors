@@ -44,6 +44,7 @@ export async function providerStatuses(): Promise<ProviderStatus[]> {
     let note: string | null = null;
     if (id === "stripe" && !p.isConfigured()) note = "Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in the environment.";
     if (id === "paypal" && !p.isConfigured()) note = "Set PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET and PAYPAL_WEBHOOK_ID in the environment.";
+    if (id === "paypal" && p.isConfigured()) note = env.paypal.live ? "Live PayPal environment (PAYPAL_ENV=live)." : "PayPal sandbox — credentials must come from a Sandbox app; set PAYPAL_ENV=live for real payments.";
     if (id === "test") note = env.isProd ? "Sandbox gateway — keep disabled in production." : "Sandbox gateway for local testing; never charges.";
     return {
       id,

@@ -37,8 +37,31 @@ export default async function AdminPaymentProvidersPage() {
                   <Field label="Minimum order (cents)">
                     <input name="minAmount" type="number" min={0} defaultValue={settings["payments.bank_transfer.minAmount"]} className={adminInput} />
                   </Field>
-                  <Field label="Instructions shown to the buyer">
-                    <textarea name="instructions" rows={4} defaultValue={settings["payments.bank_transfer.instructions"]} className={adminTextarea} />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Beneficiary (account name)">
+                      <input name="beneficiary" defaultValue={settings["payments.bank_transfer.beneficiary"]} placeholder="Rare Comics Collectors, LLC" className={adminInput} />
+                    </Field>
+                    <Field label="Bank name">
+                      <input name="bankName" defaultValue={settings["payments.bank_transfer.bankName"]} placeholder="JPMorgan Chase Bank, N.A." className={adminInput} />
+                    </Field>
+                    <Field label="Account type">
+                      <input name="accountType" defaultValue={settings["payments.bank_transfer.accountType"]} placeholder="Checking" className={adminInput} />
+                    </Field>
+                    <Field label="Account number">
+                      <input name="accountNumber" defaultValue={settings["payments.bank_transfer.accountNumber"]} className={adminInput} />
+                    </Field>
+                    <Field label="Routing number (ABA, 9 digits)">
+                      <input name="routingNumber" defaultValue={settings["payments.bank_transfer.routingNumber"]} inputMode="numeric" className={adminInput} />
+                    </Field>
+                    <Field label="SWIFT / BIC">
+                      <input name="swift" defaultValue={settings["payments.bank_transfer.swift"]} className={adminInput} />
+                    </Field>
+                    <Field label="IBAN (optional)" className="sm:col-span-2">
+                      <input name="iban" defaultValue={settings["payments.bank_transfer.iban"]} className={adminInput} />
+                    </Field>
+                  </div>
+                  <Field label="Additional instructions shown to the buyer" hint="Shown under the details at checkout, on the order page and in the awaiting-payment email.">
+                    <textarea name="instructions" rows={3} defaultValue={settings["payments.bank_transfer.instructions"]} className={adminTextarea} />
                   </Field>
                 </>
               )}

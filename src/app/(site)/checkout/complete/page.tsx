@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { BankDetails } from "@/components/bank-details";
 import { ClearCart } from "@/components/clear-cart";
 import { CheckIcon, ClockIcon } from "@/components/icons";
 import { Container, buttonSizes, buttonStyles } from "@/components/ui";
@@ -8,6 +9,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { hasRecentOrderCookie } from "@/lib/commerce/recent-order";
 import { formatMoney } from "@/lib/money";
+import { bankTransferDetails } from "@/lib/payments/bank-details";
 import { pageMetadata } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
 import { site } from "@/lib/site";
@@ -45,7 +47,7 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps<"
   let body: string;
   if (failed) body = message ?? "Your card wasn’t charged and the items have been returned to stock. You can try again from your cart.";
   else if (paid) body = `Thank you. A confirmation is on its way to ${order.email}. Books are pulled, photographed and double-boxed within one business day.`;
-  else if (bank) body = settings["payments.bank_transfer.instructions"];
+  else if (bank) body = `Your books are reserved for ${settings["commerce.autoCancelUnpaidHours"]} hours. Wire the order total using the details below — they are also in your confirmation email.`;
   else body = "We’re waiting for the payment provider to confirm. This page updates once it clears — you’ll also get an email.";
 
   const paymentLabel = !payment
@@ -67,6 +69,14 @@ export default async function CheckoutCompletePage({ searchParams }: PageProps<"
         </span>
         <h1 className="mt-6 font-display text-2xl font-semibold text-ink-950 sm:text-3xl">{title}</h1>
         <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-ink-700">{body}</p>
+        {bank && awaiting && (
+          <div className="mx-auto mt-6 max-w-md rounded-xl border border-gold-400/50 bg-gold-400/10 p-5 text-left">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold-800">Wire details</p>
+            <div className="mt-2">
+              <BankDetails {...(({ lines, note }) => ({ lines, note }))(bankTransferDetails(settings, order.number))} compact />
+            </div>
+          </div>
+        )}
 
         <dl className="mx-auto mt-7 grid max-w-sm gap-3 rounded-xl border border-ink-200 bg-ink-50 p-5 text-left text-sm">
           <div className="flex justify-between gap-4">

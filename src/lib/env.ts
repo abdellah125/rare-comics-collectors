@@ -108,7 +108,7 @@ export const env = {
       return str("PAYPAL_WEBHOOK_ID");
     },
     get live() {
-      return str("PAYPAL_ENV", "sandbox") === "live";
+      return ["live", "production"].includes(str("PAYPAL_ENV", "sandbox").trim().toLowerCase());
     },
     get configured() {
       return Boolean(str("PAYPAL_CLIENT_ID") && str("PAYPAL_CLIENT_SECRET"));

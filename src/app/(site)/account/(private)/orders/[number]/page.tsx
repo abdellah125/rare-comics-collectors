@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrderActionsPanel } from "@/components/account/order-actions-panel";
 import { CaseThread } from "@/components/account/case-thread";
+import { BankDetails } from "@/components/bank-details";
 import { DescriptionList, PageHeader, Panel } from "@/components/account/ui";
 import { Badge, ButtonLink } from "@/components/ui";
 import { requireUser } from "@/lib/auth/session";
@@ -12,6 +13,7 @@ import { formatDateTime } from "@/lib/i18n";
 import { DEFAULT_CUSTOMS_NOTE, countryLabel, countryNames, deliveryWindow, isInternational } from "@/lib/geo";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
+import { bankTransferDetails } from "@/lib/payments/bank-details";
 import { caseMessages, getOrderForUser, orderAddress } from "@/lib/orders/queries";
 import { pageMetadata } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
@@ -63,9 +65,9 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
       />
 
       {order.status === "pending_payment" && payment?.provider === "bank_transfer" && (
-        <Panel tone="muted" title="Awaiting your bank transfer">
-          <p className="whitespace-pre-line text-sm text-ink-700">{settings["payments.bank_transfer.instructions"]}</p>
-          <p className="mt-3 text-[13px] text-ink-600">Reservation expires {settings["commerce.autoCancelUnpaidHours"]} hours after the order was placed.</p>
+        <Panel tone="muted" title="Awaiting your bank transfer" description="Wire the order total using these details. The reservation is released if the funds don't arrive in time.">
+          <BankDetails {...(({ lines, note }) => ({ lines, note }))(bankTransferDetails(settings, order.number))} compact />
+          <p className="mt-3 text-[13px] text-ink-600">Reservation expires {settings["commerce.autoCancelUnpaidHours"]} hours after the order was placed ({formatDateTime(new Date(order.placedAt.getTime() + settings["commerce.autoCancelUnpaidHours"] * 3_600_000), { timeZone: user.timezone })}).</p>
         </Panel>
       )}
 

@@ -8,6 +8,7 @@ import { CartThumb } from "@/components/cart-thumb";
 import { usePrice } from "@/components/currency-provider";
 import { SelectField, TextField } from "@/components/form-fields";
 import { CartIcon, CheckIcon, ShieldIcon, TruckIcon } from "@/components/icons";
+import { BankDetails } from "@/components/bank-details";
 import { StripePayment } from "@/components/stripe-payment";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 import { abandonPendingOrderAction, placeOrderAction, quoteAction } from "@/lib/commerce/actions";
@@ -319,12 +320,21 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
                     <span className="mt-0.5 block text-[13px] text-ink-600">
                       {p.id === "stripe" && "Visa, Mastercard, Amex and more. You'll enter card details on the next step."}
                       {p.id === "paypal" && "You'll be redirected to PayPal to approve the payment."}
-                      {p.id === "bank_transfer" && "Order is reserved for 48 hours. Instructions are emailed after you place it."}
+                      {p.id === "bank_transfer" && `Your books are reserved for ${quote?.bankTransfer?.reserveHours ?? 48} hours while the wire arrives. Details below and in your confirmation email.`}
                       {p.id === "test" && "Sandbox: no money moves."}
                     </span>
                   </span>
                 </label>
               ))}
+            </div>
+          )}
+          {providerId === "bank_transfer" && quote?.bankTransfer && (
+            <div className="mt-4 rounded-lg border border-ink-200 bg-ink-50 p-4">
+              <p className="text-sm font-semibold text-ink-950">Wire details</p>
+              <div className="mt-2">
+                <BankDetails lines={quote.bankTransfer.lines} note={quote.bankTransfer.note} compact />
+              </div>
+              <p className="mt-2 text-[13px] text-ink-600">Your order number is the payment reference — it appears on the next page and in your email.</p>
             </div>
           )}
         </fieldset>

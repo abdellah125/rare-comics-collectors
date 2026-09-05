@@ -12,6 +12,7 @@ import { services } from "@/lib/services";
 import { AddressSchema, productShipsTo, shippingOptionsFor, taxFor, validateAddressForCountry, type Address, type ShippingOption } from "@/lib/commerce/pricing";
 import { allocateDiscount, evaluateCoupon, type CouponLine } from "@/lib/commerce/coupons";
 import { availableProviders, getProvider, type ProviderStatus } from "@/lib/payments/registry";
+import { bankTransferDetails, type BankTransferLine } from "@/lib/payments/bank-details";
 import { applyPaymentSuccess } from "@/lib/payments/payment-service";
 import { addOrderEvent, cancelOrder } from "@/lib/orders/lifecycle";
 import type { PaymentIntentResult } from "@/lib/payments/types";
@@ -67,6 +68,8 @@ export type Quote = {
   presentmentTotal: number;
   hasPhysical: boolean;
   providers: ProviderStatus[];
+  /** Wire details when bank transfer is one of the offered methods. */
+  bankTransfer: { lines: BankTransferLine[]; note: string; reserveHours: number } | null;
   warnings: string[];
 };
 
@@ -156,6 +159,7 @@ export async function quoteCheckout(input: z.infer<typeof QuoteSchema>): Promise
   const total = Math.max(0, subtotal - discount) + shippingTotal + (tax.inclusive ? 0 : tax.amount);
   const presentmentTotal = currency.isBase ? total : convertFromBase(total, currency);
   const providers = await availableProviders({ currency: currency.code, countryCode, amountMinor: presentmentTotal });
+  const bank = providers.some((p) => p.id === "bank_transfer") ? bankTransferDetails(settings) : null;
 
   return {
     lines,
@@ -172,6 +176,7 @@ export async function quoteCheckout(input: z.infer<typeof QuoteSchema>): Promise
     presentmentTotal,
     hasPhysical,
     providers,
+    bankTransfer: bank ? { lines: bank.lines, note: bank.note, reserveHours: bank.reserveHours } : null,
     warnings,
   };
 }
