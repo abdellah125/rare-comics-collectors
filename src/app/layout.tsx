@@ -5,6 +5,7 @@ import "./globals.css";
 import { site } from "@/lib/site";
 import { brandStyle } from "@/lib/brand-color";
 import { getSettings } from "@/lib/settings";
+import { env } from "@/lib/env";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const display = Fraunces({ variable: "--font-display", subsets: ["latin"], display: "swap", weight: ["600", "700"] });
@@ -62,11 +63,17 @@ const baseMetadata: Metadata = {
 /** Marketplace name and favicon come from Settings › General so a rebrand needs no deploy. */
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings().catch(() => null);
-  if (!settings) return baseMetadata;
+  // Ownership tokens for Google Search Console and Bing Webmaster Tools (HTML-tag method).
+  const verification: Metadata["verification"] = {
+    ...(env.seo.googleSiteVerification ? { google: env.seo.googleSiteVerification } : {}),
+    ...(env.seo.bingSiteVerification ? { other: { "msvalidate.01": env.seo.bingSiteVerification } } : {}),
+  };
+  if (!settings) return { ...baseMetadata, verification };
   const name = settings["marketplace.name"] || site.name;
   const favicon = settings["marketplace.faviconMediaId"] ? `/api/media/${settings["marketplace.faviconMediaId"]}` : "/icon.svg";
   return {
     ...baseMetadata,
+    verification,
     title: { default: `${name} — Graded Comics for Sale, CGC & CBCS Grading Services`, template: `%s | ${name}` },
     applicationName: name,
     openGraph: { ...baseMetadata.openGraph, siteName: name },

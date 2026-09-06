@@ -3,7 +3,6 @@ import { Logo } from "@/components/logo";
 import { MailIcon, PhoneIcon, PinIcon, ClockIcon } from "@/components/icons";
 import { policyPages } from "@/lib/nav";
 import { services } from "@/lib/services";
-import { eras } from "@/lib/products";
 import { fullAddress, mapDirectionsLink, mapLink, site } from "@/lib/site";
 import { CurrencySelect } from "@/components/currency-select";
 
@@ -18,9 +17,12 @@ const social = [
 export function Footer({
   currencies = [],
   currentCurrency = "USD",
+  shopLinks = [],
 }: {
   currencies?: { code: string; name: string; symbol: string }[];
   currentCurrency?: string;
+  /** Collection landing pages (indexable), rendered under "Shop". */
+  shopLinks?: { name: string; href: string }[];
 }) {
   const year = new Date().getFullYear();
 
@@ -94,16 +96,18 @@ export function Footer({
                     All comics
                   </Link>
                 </li>
-                {eras.map((era) => (
-                  <li key={era}>
-                    <Link
-                      href={`/store?era=${encodeURIComponent(era)}`}
-                      className="text-ink-400 hover:text-white"
-                    >
-                      {era}
+                {shopLinks.map((l) => (
+                  <li key={l.href}>
+                    <Link href={l.href} className="text-ink-400 hover:text-white">
+                      {l.name}
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <Link href="/publishers" className="text-ink-400 hover:text-white">
+                    By publisher
+                  </Link>
+                </li>
                 <li>
                   <Link href="/cart" className="text-ink-400 hover:text-white">
                     Cart

@@ -114,6 +114,26 @@ export const env = {
       return Boolean(str("PAYPAL_CLIENT_ID") && str("PAYPAL_CLIENT_SECRET"));
     },
   },
+  seo: {
+    /** Google Search Console "HTML tag" method: the content="…" value only. */
+    get googleSiteVerification() {
+      return str("GOOGLE_SITE_VERIFICATION");
+    },
+    /** Bing Webmaster Tools "Meta tag" method: the msvalidate.01 content value. */
+    get bingSiteVerification() {
+      return str("BING_SITE_VERIFICATION");
+    },
+  },
+  indexNow: {
+    /** Optional override for the built-in public key (8–128 chars of a-z, A-Z, 0-9, -). */
+    get key() {
+      return str("INDEXNOW_KEY");
+    },
+    /** Pings leave only the production deployment unless forced on. */
+    get enabled() {
+      return bool("INDEXNOW_ENABLED", str("VERCEL_ENV") === "production");
+    },
+  },
   get exchangeRateApiUrl() {
     return str("EXCHANGE_RATE_API_URL", "https://api.frankfurter.app/latest");
   },

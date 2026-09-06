@@ -25,6 +25,18 @@ export function breadcrumbJsonLd(items: Crumb[]) {
   };
 }
 
+/**
+ * ItemList for a "summary page" (store, collection, publisher): each entry links to a page
+ * that carries the full Product/Offer markup, so product data is never duplicated here.
+ */
+export function itemListJsonLd(items: { url: string; name?: string }[]) {
+  return {
+    "@type": "ItemList",
+    numberOfItems: items.length,
+    itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, url: it.url, ...(it.name ? { name: it.name } : {}) })),
+  };
+}
+
 export function faqJsonLd(faqs: { q: string; a: string }[]) {
   return {
     "@context": "https://schema.org",

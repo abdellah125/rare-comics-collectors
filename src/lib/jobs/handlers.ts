@@ -80,6 +80,23 @@ export function registerJobHandlers() {
     }
   });
 
+  // Search engines that speak IndexNow (Bing, Yandex, Seznam, Naver) hear about changed pages immediately.
+  registerJobHandler("indexnow_ping", async (payload) => {
+    const { submitIndexNow } = await import("@/lib/indexnow");
+    const paths = Array.isArray(payload.paths) ? payload.paths.filter((p): p is string => typeof p === "string") : [];
+    const result = await submitIndexNow(paths);
+    if (!result.ok) throw new Error(`IndexNow responded ${result.status}`);
+  });
+
+  // Weekly: the first run submits every sitemap URL, later runs only what changed since the previous one.
+  registerJobHandler("indexnow_sync", async (payload) => {
+    const { submitIndexNow, sitemapPaths } = await import("@/lib/indexnow");
+    const since = typeof payload.since === "string" ? new Date(payload.since) : null;
+    const result = await submitIndexNow(await sitemapPaths(since));
+    await enqueueJob("indexnow_sync", { since: new Date().toISOString() }, { runAt: new Date(Date.now() + 7 * 24 * 3_600_000), dedupe: true });
+    if (!result.ok) throw new Error(`IndexNow responded ${result.status}`);
+  });
+
   registerJobHandler("retry_webhook", async (payload) => {
     const id = typeof payload.webhookEventId === "string" ? payload.webhookEventId : null;
     if (!id) return;
@@ -97,4 +114,5 @@ export async function ensureRecurringJobs() {
   await enqueueJob("schedule_payouts", {}, { dedupe: true });
   await enqueueJob("cleanup_expired", {}, { dedupe: true });
   await enqueueJob("fetch_exchange_rates", {}, { dedupe: true });
+  await enqueueJob("indexnow_sync", {}, { dedupe: true });
 }

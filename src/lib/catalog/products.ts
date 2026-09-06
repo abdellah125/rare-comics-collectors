@@ -7,7 +7,7 @@ import type { ProductSummary } from "@/lib/products";
 
 export type { ProductSummary };
 
-const summaryInclude = { images: { orderBy: { position: "asc" as const }, take: 1, select: { url: true, alt: true } } };
+export const summaryInclude = { images: { orderBy: { position: "asc" as const }, take: 1, select: { url: true, alt: true } } };
 type ProductRow = Prisma.ProductGetPayload<{ include: typeof summaryInclude }>;
 
 /** Buyable = published, not deleted, and (for marketplace listings) from an approved seller. */

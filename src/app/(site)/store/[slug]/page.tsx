@@ -10,6 +10,7 @@ import { Badge, Breadcrumbs, Container, Stars, ButtonLink, type Crumb } from "@/
 import { CheckIcon, ShieldIcon, TruckIcon, SearchIcon } from "@/components/icons";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
 import { detailToSummary, getPublishedProduct, recordProductView, relatedProducts } from "@/lib/catalog/products";
+import { getCollection, publisherHref } from "@/lib/catalog/collections";
 import { shippingOptionsFor } from "@/lib/commerce/pricing";
 import { priceFormatter } from "@/lib/currency";
 import { db } from "@/lib/db";
@@ -45,6 +46,9 @@ export async function generateMetadata({ params }: PageProps<"/store/[slug]">): 
   };
 }
 
+/** Google wants a priceValidUntil date; a rolling one-year horizon never goes stale between edits. */
+const rollingPriceValidUntil = () => new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
+
 const assurancesFor = (returnWindowDays: number) => [
   { icon: ShieldIcon, title: "Authenticity guaranteed", body: "Cert-verified against the grader's census. Undisclosed restoration refunded in full, forever." },
   { icon: TruckIcon, title: "Insured & tracked", body: "Double-boxed, signature required, insured to full value." },
@@ -57,7 +61,12 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
   if (!product) notFound();
   after(() => recordProductView(product.id));
 
-  const [related, settings, { format, formatExact }] = await Promise.all([relatedProducts(product), getSettings(), priceFormatterPair()]);
+  const [related, settings, { format, formatExact }, collection] = await Promise.all([
+    relatedProducts(product),
+    getSettings(),
+    priceFormatterPair(),
+    product.categorySlug ? getCollection(product.categorySlug) : Promise.resolve(null),
+  ]);
   const shippingOptions = await shippingOptionsFor(settings["marketplace.defaultCountry"], product.price);
   const cheapestShipping = shippingOptions.find((o) => o.price >= 0) ?? null;
   const reviews = await db.review.findMany({
@@ -70,10 +79,12 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
   const onSale = product.compareAt !== undefined && product.compareAt > product.price;
   const gradeLabel = product.grader === "Raw" ? `Raw · ${product.grade}` : `${product.grader} ${product.grade}`;
   const summary = detailToSummary(product);
+  const priceValidUntil = rollingPriceValidUntil();
 
   const crumbs: Crumb[] = [
     { name: "Home", href: "/" },
     { name: "Store", href: "/store" },
+    ...(collection && collection.count > 0 ? [{ name: collection.shortName, href: `/collections/${collection.slug}` }] : []),
     { name: `${product.title} ${product.issue}`, href: `/store/${product.slug}` },
   ];
 
@@ -107,7 +118,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
       "@id": `${site.url}/store/${product.slug}#offer`,
       price: schemaPrice(product.price),
       priceCurrency: site.currency,
-      priceValidUntil: "2027-12-31",
+      priceValidUntil,
       availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       itemCondition: "https://schema.org/UsedCondition",
       url: `${site.url}/store/${product.slug}`,
@@ -167,8 +178,16 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
 
           <div className="lg:col-span-7">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="neutral">{product.era}</Badge>
-              <Badge tone="neutral">{product.publisher}</Badge>
+              {collection && collection.count > 0 ? (
+                <Link href={`/collections/${collection.slug}`} className="rounded-full hover:opacity-80">
+                  <Badge tone="neutral">{product.era}</Badge>
+                </Link>
+              ) : (
+                <Badge tone="neutral">{product.era}</Badge>
+              )}
+              <Link href={publisherHref(product.publisher)} className="rounded-full hover:opacity-80">
+                <Badge tone="neutral">{product.publisher}</Badge>
+              </Link>
               {product.keyIssue && <Badge tone="gold">Key issue</Badge>}
               {onSale && <Badge tone="sale">Sale</Badge>}
               {product.label.startsWith("Signature") && <Badge tone="brand">Signature Series</Badge>}

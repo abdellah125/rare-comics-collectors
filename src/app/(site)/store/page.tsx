@@ -3,10 +3,12 @@ import Link from "next/link";
 
 import { StoreBrowser } from "@/components/store-browser";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
-import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
+import { CollectionCards, PublisherChips } from "@/components/catalog-links";
+import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
+import { listCollections, listPublishers } from "@/lib/catalog/collections";
 import { listPublishedProducts, storeFacets } from "@/lib/catalog/products";
 import type { Era } from "@/lib/products";
-import { formatPrice, schemaPrice } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import { getSettings } from "@/lib/settings";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
@@ -36,7 +38,7 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
   // structured data) are read on the server so the first page of results is in
   // the HTML rather than rendered client-side after hydration.
   const sp = await searchParams;
-  const [summaries, facets, settings] = await Promise.all([listPublishedProducts(), storeFacets(), getSettings()]);
+  const [summaries, facets, settings, collections, publisherPages] = await Promise.all([listPublishedProducts(), storeFacets(), getSettings(), listCollections(), listPublishers()]);
   const freeShippingThreshold = settings["commerce.freeShippingThreshold"];
   const returnWindowDays = settings["commerce.returnWindowDays"];
   const { eras, publishers, graders, lowestPrice } = facets;
@@ -54,28 +56,8 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
       "CGC and CBCS graded comic books for sale, plus honestly graded raw books with full defect disclosure.",
     url: `${site.url}/store`,
     isPartOf: { "@id": `${site.url}/#website` },
-    mainEntity: {
-      "@type": "OfferCatalog",
-      name: `${site.name} comic inventory`,
-      numberOfItems: inventoryCount,
-      itemListElement: summaries.map((p, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        item: {
-          "@type": "Product",
-          name: `${p.title} ${p.issue}`,
-          url: `${site.url}/store/${p.slug}`,
-          brand: { "@type": "Brand", name: p.publisher },
-          offers: {
-            "@type": "Offer",
-            price: schemaPrice(p.price),
-            priceCurrency: site.currency,
-            availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-            url: `${site.url}/store/${p.slug}`,
-          },
-        },
-      })),
-    },
+    // Summary-page pattern: each entry links to the product page that carries the full Product/Offer markup.
+    mainEntity: itemListJsonLd(summaries.map((p) => ({ url: `${site.url}/store/${p.slug}` }))),
   };
 
   return (
@@ -125,6 +107,15 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
           initialEra={initialEra}
         />
       </Container>
+
+      <section className="border-t border-ink-200">
+        <Container className="py-12">
+          <CollectionCards collections={collections} />
+          <div className="mt-10">
+            <PublisherChips publishers={publisherPages} />
+          </div>
+        </Container>
+      </section>
 
       {/* SEO copy — real, useful context for the category page */}
       <section className="border-t border-ink-200 bg-ink-50">

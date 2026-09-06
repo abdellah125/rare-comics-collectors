@@ -20,7 +20,9 @@ export type JobType =
   | "cleanup_expired"
   | "broadcast_email"
   | "retry_webhook"
-  | "recompute_seller_stats";
+  | "recompute_seller_stats"
+  | "indexnow_ping"
+  | "indexnow_sync";
 
 export type JobHandler = (payload: Record<string, unknown>, ctx: { jobId: string; attempt: number }) => Promise<void>;
 

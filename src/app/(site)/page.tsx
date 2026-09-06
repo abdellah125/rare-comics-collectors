@@ -5,7 +5,9 @@ import { CoverArt } from "@/components/cover-art";
 import { ProductCard } from "@/components/product-card";
 import { Badge, ButtonLink, Eyebrow, Section, SectionHeading, Stars } from "@/components/ui";
 import { serviceIcons, CheckIcon, PinIcon, ShieldIcon } from "@/components/icons";
+import { CollectionCards, PublisherChips } from "@/components/catalog-links";
 import { JsonLd } from "@/components/json-ld";
+import { listCollections, listPublishers } from "@/lib/catalog/collections";
 import { countPublished, homeProducts } from "@/lib/catalog/products";
 import { services } from "@/lib/services";
 import { formatPrice } from "@/lib/format";
@@ -76,7 +78,7 @@ const reviews = [
 ];
 
 export default async function HomePage() {
-  const [{ hero, grid }, inventoryCount, settings] = await Promise.all([homeProducts(), countPublished(), getSettings()]);
+  const [{ hero, grid }, inventoryCount, settings, collections, publishers] = await Promise.all([homeProducts(), countPublished(), getSettings(), listCollections(), listPublishers()]);
   const trustPoints = trustPointsFor(settings["commerce.freeShippingThreshold"], settings["commerce.returnWindowDays"]);
   const headline = settings["marketplace.homepageHeadline"].trim();
   const subheadline = settings["marketplace.homepageSubheadline"].trim();
@@ -211,7 +213,6 @@ export default async function HomePage() {
                   <Link
                     href={`/store/${p.slug}`}
                     className="block rounded-md transition-transform duration-300 hover:-translate-y-2 focus-visible:-translate-y-2"
-                    aria-label={`View ${p.title} ${p.issue}`}
                   >
                     <CoverArt
                       product={p}
@@ -261,8 +262,8 @@ export default async function HomePage() {
         </div>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {grid.map((p, i) => (
-            <ProductCard key={p.slug} product={p} priority={i < 4} />
+          {grid.map((p) => (
+            <ProductCard key={p.slug} product={p} />
           ))}
         </div>
 
@@ -273,6 +274,11 @@ export default async function HomePage() {
           </Link>{" "}
           — we source books privately for clients every week.
         </p>
+
+        <div className="mt-14 grid gap-10">
+          <CollectionCards collections={collections} />
+          <PublisherChips publishers={publishers.slice(0, 12)} />
+        </div>
       </Section>
 
       {/* -------------------------------------------------------- services */}

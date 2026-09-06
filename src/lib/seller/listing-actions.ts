@@ -1,4 +1,5 @@
 "use server";
+import { pingListing } from "@/lib/indexnow";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -75,6 +76,7 @@ export async function createListingAction(_prev: ActionState<{ id: string }> | u
     if (status === "pending") await notifyAdmins("products.manage", { type: "listing.pending", title: `Listing awaiting review: ${d.title} ${d.issue}`, body: seller.displayName, href: `/admin/products/${product.id}` });
     revalidatePath("/dashboard/listings");
     revalidatePath("/store");
+    if (status === "published") await pingListing(slug);
   } catch (err) {
     if (err instanceof AuthError || err instanceof UploadError) return failState(err.message);
     throw err;
@@ -122,6 +124,7 @@ export async function updateListingAction(_prev: ActionState | undefined, formDa
     revalidatePath(`/dashboard/listings/${product.id}`);
     revalidatePath(`/store/${product.slug}`);
     revalidatePath("/store");
+    if (status === "published" || product.status === "published") await pingListing(product.slug);
     return okState(undefined, status === "pending" ? "Saved — the listing is queued for review." : "Listing saved.");
   } catch (err) {
     if (err instanceof AuthError || err instanceof UploadError) return failState(err.message);
@@ -150,6 +153,7 @@ export async function setListingStatusAction(id: string, next: "hidden" | "publi
     revalidatePath("/dashboard/listings");
     revalidatePath(`/store/${product.slug}`);
     revalidatePath("/store");
+    if (status === "published" || product.status === "published") await pingListing(product.slug);
     return okState(undefined, `Listing ${status === "pending" ? "submitted for review" : status}.`);
   } catch (err) {
     if (err instanceof AuthError) return failState(err.message);
@@ -170,6 +174,7 @@ export async function deleteListingAction(id: string): Promise<ActionState> {
     await audit({ actor: { id: user.id, email: user.email, type: "seller" }, action: "listing.delete", targetType: "product", targetId: id, summary: `${product.title} ${product.issue} removed by seller` });
     revalidatePath("/dashboard/listings");
     revalidatePath("/store");
+    if (product.status === "published") await pingListing(product.slug);
     return okState(undefined, "Listing removed.");
   } catch (err) {
     if (err instanceof AuthError) return failState(err.message);

@@ -1,4 +1,5 @@
 "use server";
+import { pingIndexNow, pingListing } from "@/lib/indexnow";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -81,6 +82,7 @@ export async function createProductAdminAction(_prev: ActionState | undefined, f
     await saveImages(formData, product.id, admin.id, 0);
     await audit({ actor: actorOf(admin), action: "product.create", targetType: "product", targetId: product.id, summary: `Created listing ${d.title} ${d.issue} (${status})` });
     revalidatePath("/store");
+    if (status === "published") await pingListing(product.slug);
     id = product.id;
     return okState(undefined, "Listing created.");
   });
@@ -112,6 +114,7 @@ export async function updateProductAdminAction(_prev: ActionState | undefined, f
     revalidatePath(`/store/${product.slug}`);
     revalidatePath("/store");
     revalidatePath(`/admin/products/${product.id}`);
+    if (status === "published" || product.status === "published") await pingListing(product.slug);
     return okState(undefined, "Listing saved.");
   });
 }
@@ -135,6 +138,7 @@ export async function moderateListingAction(id: string, decision: Decision, note
     revalidatePath("/store");
     revalidatePath(`/admin/products/${id}`);
     revalidatePath("/admin/products");
+    if (status === "published" || product.status === "published") await pingListing(product.slug);
     return okState(undefined, `Listing ${status}.`);
   });
 }
@@ -267,6 +271,7 @@ export async function importProductsAction(_prev: ActionState<{ created: number;
     await audit({ actor: actorOf(admin), action: "product.import", targetType: "product", summary: `CSV import: ${created} created, ${errors.length} errors` });
     revalidatePath("/store");
     revalidatePath("/admin/products");
+    if (publish && created > 0) await pingIndexNow(["/store", "/collections", "/publishers"]);
     return okState({ created, errors }, `${created} listing${created === 1 ? "" : "s"} imported${errors.length ? `, ${errors.length} row${errors.length === 1 ? "" : "s"} skipped` : ""}.`);
   });
 }
