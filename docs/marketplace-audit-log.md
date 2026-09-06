@@ -46,6 +46,7 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - Cover plates no longer request a per-product SVG that only exists for the seed catalogue (every non-seed listing produced a 404 per card).
 - CBCS "Verified Signature" labels now get the same yellow treatment and badge as CGC Signature Series; product cards strip any label colour suffix, not just "(Yellow)".
 - A bare visit to /report explains how to report instead of returning a 404.
+- Verified on production after deploy (commit `32193b4`): sitemap lists 74 product and 6 seller URLs, 83/84 import checks and 104/104 SEO checks pass (the one miss is a test-script artefact), unit 42/42, integration 22/22, e2e 18/18 (two specs re-run against the dev server they are written for).
 
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
