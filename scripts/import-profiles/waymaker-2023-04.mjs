@@ -1,0 +1,197 @@
+/**
+ * Import profile for the WooCommerce export `wc-product-export-30-4-2023` (60 rows).
+ *
+ * The export only carries a free-text name, an HTML blurb, prices, WooCommerce
+ * categories and image URLs (the image host is offline). Everything the marketplace
+ * needs beyond that — year, era, publisher, grader/grade/label, key-issue note,
+ * creators, attributes, seller — is pinned here per source row so the conversion is
+ * deterministic and reviewable. Rows listed in `drop` are exact duplicates.
+ */
+
+export const source = "wc-product-export-30-4-2023";
+
+/** Fictional, US-based consignment sellers. Passwords are random; they sign in via "Forgot password". */
+export const sellers = [
+  {
+    key: "lone-star-slabs",
+    slug: "lone-star-slabs",
+    displayName: "Lone Star Slabs",
+    email: "lonestar@sellers.rarecomicscollectors.com",
+    name: "Miguel Torres",
+    businessType: "company",
+    businessName: "Lone Star Slabs LLC",
+    countryCode: "US",
+    shipsFromCountry: "US",
+    handlingDays: 2,
+    bio: "Bronze Age keys and Marvel first appearances from a climate-controlled vault in Austin. Every slab is photographed front and back before it ships.",
+    shippingPolicy: "Ships within 2 business days via UPS or USPS Priority, double-boxed with a rigid slab shipper. Signature required on orders over $500.",
+    returnPolicy: "Return any slab in its original holder within the marketplace inspection window for a full refund.",
+    customsNote: "International orders are declared at full value; import duties and taxes are the buyer's responsibility.",
+  },
+  {
+    key: "silver-age-vault",
+    slug: "silver-age-vault",
+    displayName: "Silver Age Vault",
+    email: "silveragevault@sellers.rarecomicscollectors.com",
+    name: "Renee Kowalski",
+    businessType: "company",
+    businessName: "Silver Age Vault Inc.",
+    countryCode: "US",
+    shipsFromCountry: "US",
+    handlingDays: 2,
+    bio: "Silver Age Marvel specialists — Silver Surfer, Strange Tales, early Avengers and Journey Into Mystery. CGC and CBCS slabs only, every certification number verified before listing.",
+    shippingPolicy: "Insured shipping on every order. Slabs travel in foam-lined boxes; tracking is uploaded the day the parcel leaves.",
+    returnPolicy: "Full refund within the inspection window if the book arrives in a condition that differs from the listing.",
+    customsNote: "We ship worldwide with full customs documentation. Duties are collected by the carrier on delivery.",
+  },
+  {
+    key: "keystone-key-issues",
+    slug: "keystone-key-issues",
+    displayName: "Keystone Key Issues",
+    email: "keystone@sellers.rarecomicscollectors.com",
+    name: "Devin Okafor",
+    businessType: "individual",
+    countryCode: "US",
+    shipsFromCountry: "US",
+    handlingDays: 3,
+    bio: "X-Men runs, Bronze Age first appearances and Signature Series books from a Philadelphia collector who has been buying keys since 1994.",
+    shippingPolicy: "Ships within 3 business days, insured, with a printed condition report in the box.",
+    returnPolicy: "Returns accepted within the inspection window; the slab must come back unopened.",
+    customsNote: "Ships to most countries. Buyers outside the US are responsible for any import charges.",
+  },
+  {
+    key: "oregon-coast-collection",
+    slug: "oregon-coast-collection",
+    displayName: "Oregon Coast Collection",
+    email: "oregoncoast@sellers.rarecomicscollectors.com",
+    name: "Harper Lindqvist",
+    businessType: "individual",
+    countryCode: "US",
+    shipsFromCountry: "US",
+    handlingDays: 2,
+    bio: "High-grade and pedigree copies from a single Pacific Northwest collection, sold one book at a time. Census counts and guide references are quoted on every listing.",
+    shippingPolicy: "Free insured shipping within the US on every order; international at cost.",
+    returnPolicy: "Full refund within the inspection window, no questions asked.",
+    customsNote: "International parcels are declared at the sale price.",
+  },
+  {
+    key: "gotham-graded",
+    slug: "gotham-graded",
+    displayName: "Gotham Graded",
+    email: "gothamgraded@sellers.rarecomicscollectors.com",
+    name: "Sofia Marchetti",
+    businessType: "company",
+    businessName: "Gotham Graded Collectibles",
+    countryCode: "US",
+    shipsFromCountry: "US",
+    handlingDays: 1,
+    bio: "Modern keys, variants and witnessed Signature Series slabs from New York. We attend the signings ourselves, so every yellow label comes with the story behind it.",
+    shippingPolicy: "Ships next business day, insured and tracked.",
+    returnPolicy: "Returns accepted within the inspection window in the original holder.",
+    customsNote: "Worldwide shipping; duties and VAT are paid by the buyer on arrival.",
+  },
+  {
+    key: "atlas-and-timely-finds",
+    slug: "atlas-and-timely-finds",
+    displayName: "Atlas & Timely Finds",
+    email: "atlastimely@sellers.rarecomicscollectors.com",
+    name: "Walter Greene",
+    businessType: "individual",
+    countryCode: "US",
+    shipsFromCountry: "US",
+    handlingDays: 3,
+    bio: "Golden Age and pre-Code books — Timely, Fawcett, MLJ and EC — with honest grading notes. Most copies are CBCS-graded with page quality and restoration checks recorded on the label.",
+    shippingPolicy: "Ships within 3 business days, insured to full value, in a rigid mailer inside a box.",
+    returnPolicy: "Full refund within the inspection window if the book is not as described.",
+    customsNote: "International buyers: fragile Golden Age paper ships by express courier only.",
+  },
+];
+
+/** WooCommerce IDs that duplicate another row (same book, same price, re-uploaded photos). */
+export const drop = [372, 421, 443];
+
+const MARVEL = "Marvel Comics";
+const DC = "DC Comics";
+
+const P = {
+  hulk: ["#14532d", "#1c2130"],
+  spidey: ["#b91c1c", "#1e3a8a"],
+  avengers: ["#1e40af", "#dc2626"],
+  xmen: ["#1e3a8a", "#eab308"],
+  ff: ["#1d4ed8", "#0ea5e9"],
+  surfer: ["#334155", "#cbd5e1"],
+  batman: ["#111827", "#facc15"],
+  superman: ["#1e40af", "#ef4444"],
+  golden: ["#7c2d12", "#f59e0b"],
+  ec: ["#052e16", "#84cc16"],
+  horror: ["#3b0764", "#dc2626"],
+  modern: ["#0f172a", "#e11d48"],
+  war: ["#334155", "#f97316"],
+  thor: ["#1e3a8a", "#94a3b8"],
+};
+
+/**
+ * Per-row data. `descriptionMode`:
+ *   keep    – cleaned CSV text (default)
+ *   replace – the CSV text is unusable (contradictory spec dump, wrong grader); `description` below is used
+ *   generate– the CSV has no description; `description` below is used
+ */
+export const overrides = {
+  299: { seller: "lone-star-slabs", title: "Incredible Hulk", issue: "#181", publisher: MARVEL, year: 1974, era: "Bronze Age", keyIssue: "First full appearance of Wolverine", creators: ["Len Wein", "Herb Trimpe", "Herb Trimpe"], palette: P.hulk },
+  300: { seller: "lone-star-slabs", title: "Avengers", issue: "#57", publisher: MARVEL, year: 1968, era: "Silver Age", keyIssue: "First appearance of the Vision", creators: ["Roy Thomas", "John Buscema", "John Buscema"], palette: P.avengers },
+  301: { seller: "lone-star-slabs", title: "Amazing Spider-Man", issue: "#102", publisher: MARVEL, year: 1971, era: "Bronze Age", keyIssue: "Origin and second appearance of Morbius", creators: ["Roy Thomas", "Gil Kane", "Gil Kane"], palette: P.spidey },
+  316: { seller: null, title: "Fantastic Four", issue: "#1", publisher: MARVEL, year: 1961, era: "Silver Age", keyIssue: "Origin and first appearance of the Fantastic Four", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.ff },
+  325: { seller: "lone-star-slabs", title: "Avengers", issue: "#48", publisher: MARVEL, year: 1968, era: "Silver Age", keyIssue: "Dane Whitman becomes the new Black Knight", creators: ["Roy Thomas", "George Tuska", "George Tuska"], palette: P.avengers },
+  326: { seller: "lone-star-slabs", title: "Avengers", issue: "#4", publisher: MARVEL, year: 1964, era: "Silver Age", keyIssue: "First Silver Age appearance of Captain America", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.avengers },
+  327: { seller: "lone-star-slabs", title: "Avengers", issue: "#1", publisher: MARVEL, year: 1963, era: "Silver Age", keyIssue: "Origin and first appearance of the Avengers", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.avengers },
+  328: { seller: "lone-star-slabs", title: "Avengers", issue: "#100", publisher: MARVEL, year: 1972, era: "Bronze Age", keyIssue: "Anniversary issue — every past Avenger appears", creators: ["Roy Thomas", "Barry Windsor-Smith", "Barry Windsor-Smith"], palette: P.avengers, attributes: { "Page quality": "White pages" } },
+  345: { seller: "gotham-graded", title: "Batman Adventures", issue: "#12", publisher: DC, year: 1993, era: "Modern Age", keyIssue: "First comic-book appearance of Harley Quinn", creators: ["Kelley Puckett", "Mike Parobeck", "Mike Parobeck"], palette: P.batman },
+  346: { seller: "gotham-graded", title: "Detective Comics (2011)", issue: "#20", publisher: DC, year: 2013, era: "Modern Age", label: "Signature Series (Yellow)", keyIssue: "We Can Be Heroes variant, signed and sketched by Frank Miller", creators: ["John Layman", "Jason Fabok", "Frank Miller"], palette: P.batman, attributes: { Variant: "We Can Be Heroes variant", "Signed by": "Frank Miller, with sketch" }, coverSlug: "detective-comics-2011-20" },
+  365: { seller: "atlas-and-timely-finds", title: "Zip Comics", issue: "#3", publisher: "MLJ Magazines", year: 1940, era: "Golden Age", keyIssue: "Classic Charles Biro robot cover", creators: ["Various", "Charles Biro", "Charles Biro"], palette: P.golden, descriptionMode: "replace", description: "Zip Comics #3 (MLJ, 1940). A scarce early issue carrying the classic Charles Biro robot cover, graded CBCS 3.5." },
+  366: { seller: null, title: "X-Men", issue: "#1", publisher: MARVEL, year: 1963, era: "Silver Age", keyIssue: "Origin and first appearance of the X-Men and Magneto", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.xmen, attributes: { "Page quality": "Off-white to white pages" } },
+  369: { seller: "keystone-key-issues", title: "X-Men", issue: "#94", publisher: MARVEL, year: 1975, era: "Bronze Age", keyIssue: "New X-Men begin — second appearance of Nightcrawler, Storm, Thunderbird and Colossus", creators: ["Chris Claremont", "Dave Cockrum", "Gil Kane"], palette: P.xmen, attributes: { "Page quality": "White pages" } },
+  393: { seller: "keystone-key-issues", slug: "x-men-94-cgc-9-2-off-white", title: "X-Men", issue: "#94", publisher: MARVEL, year: 1975, era: "Bronze Age", keyIssue: "New X-Men begin — second full appearance of Wolverine", creators: ["Len Wein", "Dave Cockrum", "Gil Kane"], palette: P.xmen, attributes: { "Page quality": "Off-white pages" } },
+  370: { seller: "silver-age-vault", title: "X-Men", issue: "#9", publisher: MARVEL, year: 1965, era: "Silver Age", keyIssue: "First X-Men and Avengers crossover; first appearance of Lucifer", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.xmen },
+  395: { seller: "keystone-key-issues", title: "X-Men", issue: "#129", publisher: MARVEL, year: 1980, era: "Bronze Age", keyIssue: "First appearance of Kitty Pryde, Emma Frost and Sebastian Shaw", creators: ["Chris Claremont", "John Byrne", "John Byrne"], palette: P.xmen, attributes: { "Page quality": "White pages" } },
+  397: { seller: "keystone-key-issues", title: "X-Men", issue: "#101", publisher: MARVEL, year: 1976, era: "Bronze Age", keyIssue: "Origin and first appearance of Phoenix", creators: ["Chris Claremont", "Dave Cockrum", "Dave Cockrum"], palette: P.xmen, attributes: { "Page quality": "White pages", Census: "None higher on the CGC census at listing" } },
+  398: { seller: "gotham-graded", title: "War Machine", issue: "#1", publisher: MARVEL, year: 1994, era: "Modern Age", label: "Signature Series (Yellow)", keyIssue: "First issue of the 1994 series, signed by Don Cheadle", creators: ["Len Kaminski", "Gabriel Gecko", "Gabriel Gecko"], palette: P.war, attributes: { "Signed by": "Don Cheadle", Edition: "Collector's Edition" } },
+  408: { seller: "gotham-graded", title: "Wonder Woman (2011)", issue: "#49", publisher: DC, year: 2016, era: "Modern Age", label: "Signature Series (Yellow)", keyIssue: "Neal Adams variant cover, CGC Signature Series", creators: ["Meredith Finch", "David Finch", "Neal Adams"], palette: P.superman, attributes: { Variant: "Neal Adams variant" }, coverSlug: "wonder-woman-49-3" },
+  417: { seller: "keystone-key-issues", title: "X-Men", issue: "#94", publisher: MARVEL, year: 1975, era: "Bronze Age", keyIssue: "New X-Men begin — second appearance of Nightcrawler, Storm, Thunderbird and Colossus", creators: ["Chris Claremont", "Dave Cockrum", "Gil Kane"], palette: P.xmen, attributes: { "Page quality": "White pages" } },
+  424: { seller: "keystone-key-issues", title: "X-Men", issue: "#1", publisher: MARVEL, year: 1963, era: "Silver Age", keyIssue: "Origin and first appearance of the X-Men and Magneto", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.xmen, attributes: { "Page quality": "Off-white to white pages", "Grader notes": "Large piece missing from the 15th page, affects story" } },
+  428: { seller: "gotham-graded", title: "X-23", issue: "#1", publisher: MARVEL, year: 2010, era: "Modern Age", label: "Verified Signature (Yellow)", keyIssue: "1:25 Gabriele Dell'Otto variant, signed by Dell'Otto", creators: ["Marjorie Liu", "Will Conrad", "Gabriele Dell'Otto"], palette: P.modern, attributes: { Variant: "1:25 Gabriele Dell'Otto variant", "Signed by": "Gabriele Dell'Otto" }, coverSlug: "x-23-1-2" },
+  432: { seller: "lone-star-slabs", title: "Werewolf by Night", issue: "#32", publisher: MARVEL, year: 1975, era: "Bronze Age", keyIssue: "First appearance of Moon Knight", creators: ["Doug Moench", "Don Perlin", "Gil Kane"], palette: P.horror, attributes: { "Page quality": "Off-white to white pages" } },
+  433: { seller: "atlas-and-timely-finds", title: "Wow Comics", issue: "#16", publisher: "Fawcett Publications", year: 1943, era: "Golden Age", keyIssue: "Mary Marvel cover — double-cover copy", creators: ["Various", "Various", "Various"], palette: P.golden, attributes: { Note: "Double cover" }, descriptionMode: "replace", description: "Wow Comics #16 (Fawcett, 1943) with a Mary Marvel cover. A double-cover copy — the outer wrap is bound twice — graded CGC 9.0 VF/NM." },
+  438: { seller: "lone-star-slabs", title: "Tomb of Dracula", issue: "#10", publisher: MARVEL, year: 1973, era: "Bronze Age", keyIssue: "First appearance of Blade the Vampire Slayer", creators: ["Marv Wolfman", "Gene Colan", "Gil Kane"], palette: P.horror, attributes: { "Page quality": "White pages" } },
+  441: { seller: "keystone-key-issues", slug: "incredible-hulk-181-cbcs-2-0-restored", title: "Incredible Hulk", issue: "#181", publisher: MARVEL, year: 1974, era: "Bronze Age", label: "Restored (Purple)", keyIssue: "First full appearance of Wolverine — restored copy signed by Herb Trimpe", creators: ["Len Wein", "Herb Trimpe", "Herb Trimpe"], palette: P.hulk, attributes: { "Signed by": "Herb Trimpe", Restoration: "Restored — see CBCS label" }, descriptionMode: "generate", description: "Incredible Hulk #181 (Marvel, 1974), the first full appearance of Wolverine, graded CBCS 2.0 on a restored label and signed by cover artist Herb Trimpe. An affordable, complete copy of one of the most important Bronze Age keys." },
+  447: { seller: "oregon-coast-collection", title: "Invincible Iron Man", issue: "#9", publisher: MARVEL, year: 2016, era: "Modern Age", keyIssue: "First full appearance of Riri Williams (Ironheart)", creators: ["Brian Michael Bendis", "Mike Deodato", "Mike Deodato"], palette: P.modern, attributes: { "Page quality": "White pages" }, coverSlug: "invincible-iron-man-9-3" },
+  448: { seller: "oregon-coast-collection", title: "Avengers", issue: "#87", publisher: MARVEL, year: 1971, era: "Bronze Age", keyIssue: "Origin of Black Panther", creators: ["Roy Thomas", "Frank Giacoia", "John Buscema"], palette: P.avengers, attributes: { "Page quality": "White pages", Provenance: "Oregon Coast Collection" } },
+  451: { seller: "oregon-coast-collection", title: "Amazing Spider-Man", issue: "#8", publisher: MARVEL, year: 1964, era: "Silver Age", keyIssue: "Peter Parker fights Flash Thompson; Fantastic Four back-up by Kirby and Ditko", creators: ["Stan Lee", "Steve Ditko", "Steve Ditko"], palette: P.spidey, attributes: { "Page quality": "Off-white to white pages" } },
+  459: { seller: "keystone-key-issues", title: "Teenage Mutant Ninja Turtles", issue: "#1", publisher: "Mirage Studios", year: 1985, era: "Copper Age", label: "Signature Series (Yellow)", keyIssue: "Origin and first appearance of the Turtles (third printing), signed and sketched by Kevin Eastman", creators: ["Kevin Eastman & Peter Laird", "Kevin Eastman & Peter Laird", "Kevin Eastman"], palette: P.ec, attributes: { Printing: "Third printing", "Signed by": "Kevin Eastman, with head sketch (13 Sept 2014)", "Page quality": "White pages" } },
+  464: { seller: null, title: "Tales of Suspense", issue: "#39", publisher: MARVEL, year: 1963, era: "Silver Age", keyIssue: "Origin and first appearance of Iron Man", creators: ["Stan Lee & Larry Lieber", "Don Heck", "Jack Kirby"], palette: P.war, attributes: { "Page quality": "Off-white pages" } },
+  468: { seller: "gotham-graded", title: "Swamp Thing", issue: "#37", publisher: DC, year: 1985, era: "Copper Age", keyIssue: "First full appearance of John Constantine", creators: ["Alan Moore", "Rick Veitch", "John Totleben"], palette: P.ec, attributes: { "Page quality": "White pages" }, allowedCountries: ["US"], coverSlug: "saga-of-the-swamp-thing-37-facsimile-edition-cvr-a-stephen-r-bissette-john-totleben" },
+  470: { seller: null, title: "Superman", issue: "#2", publisher: DC, year: 1939, era: "Golden Age", keyIssue: "Second issue of Superman's own title (Fall 1939)", creators: ["Jerry Siegel", "Joe Shuster", "Joe Shuster"], palette: P.superman, descriptionMode: "generate", description: "Superman #2 (DC, Fall 1939), the second issue of the first superhero solo title, graded CBCS 3.0. A complete, presentable copy of a Golden Age cornerstone that is rarely offered in any grade." },
+  529: { seller: "silver-age-vault", title: "Sub-Mariner", issue: "#1", publisher: MARVEL, year: 1968, era: "Silver Age", keyIssue: "First issue of the Sub-Mariner's solo series; origin retold", creators: ["Roy Thomas", "John Buscema", "John Buscema"], palette: P.surfer, attributes: { "Page quality": "Off-white to white pages" } },
+  530: { seller: "silver-age-vault", title: "Strange Tales", issue: "#135", publisher: MARVEL, year: 1965, era: "Silver Age", keyIssue: "First appearance of Nick Fury, Agent of S.H.I.E.L.D.", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.war, attributes: { "Page quality": "Off-white to white pages" } },
+  531: { seller: "silver-age-vault", title: "Strange Tales", issue: "#110", publisher: MARVEL, year: 1963, era: "Silver Age", keyIssue: "First appearance of Doctor Strange", creators: ["Stan Lee", "Steve Ditko", "Jack Kirby"], palette: P.horror },
+  533: { seller: "silver-age-vault", title: "Silver Surfer", issue: "#4", publisher: MARVEL, year: 1969, era: "Silver Age", keyIssue: "Classic Silver Surfer vs Thor cover", creators: ["Stan Lee", "John Buscema", "John Buscema"], palette: P.surfer, attributes: { "Page quality": "White pages" } },
+  534: { seller: "silver-age-vault", title: "Silver Surfer", issue: "#3", publisher: MARVEL, year: 1968, era: "Silver Age", keyIssue: "First appearance of Mephisto", creators: ["Stan Lee", "John Buscema", "John Buscema"], palette: P.surfer, attributes: { "Page quality": "White pages" } },
+  535: { seller: "silver-age-vault", title: "Silver Surfer", issue: "#3", publisher: MARVEL, year: 1968, era: "Silver Age", keyIssue: "First appearance of Mephisto", creators: ["Stan Lee", "John Buscema", "John Buscema"], palette: P.surfer, certNumber: "3770986002", attributes: { "Page quality": "White pages" }, descriptionMode: "replace", description: "Silver Surfer #3 (Marvel, 1968), the first appearance of Mephisto. Graded CGC 8.5 with white pages under certification number 3770986002 — an original, unrestored copy." },
+  539: { seller: "silver-age-vault", title: "Silver Surfer", issue: "#1", publisher: MARVEL, year: 1968, era: "Silver Age", label: "Verified Signature (Yellow)", keyIssue: "First issue of the Silver Surfer's own series — signed by Stan Lee and Joe Sinnott", creators: ["Stan Lee", "John Buscema", "John Buscema"], palette: P.surfer, attributes: { "Signed by": "Stan Lee, Joe Sinnott", "Page quality": "Off-white pages" } },
+  540: { seller: "silver-age-vault", title: "Silver Surfer", issue: "#1", publisher: MARVEL, year: 1968, era: "Silver Age", keyIssue: "Origin of the Silver Surfer and the Watchers", creators: ["Stan Lee", "John Buscema", "John Buscema"], palette: P.surfer, attributes: { "Page quality": "Off-white to white pages" } },
+  541: { seller: "silver-age-vault", title: "Silver Surfer", issue: "#1", publisher: MARVEL, year: 1968, era: "Silver Age", keyIssue: "Origin of the Silver Surfer and the Watchers", creators: ["Stan Lee", "John Buscema", "John Buscema"], palette: P.surfer, attributes: { "Page quality": "White pages" } },
+  543: { seller: "silver-age-vault", title: "Sgt. Fury and His Howling Commandos", issue: "#1", publisher: MARVEL, year: 1963, era: "Silver Age", keyIssue: "First appearance of Sgt. Fury, Dum-Dum Dugan and the Howling Commandos", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.war, attributes: { "Page quality": "Cream to off-white pages" } },
+  545: { seller: "atlas-and-timely-finds", title: "Shock SuspenStories", issue: "#1", publisher: "EC Comics", year: 1952, era: "Golden Age", keyIssue: "Classic Al Feldstein electrocution cover", creators: ["Al Feldstein & Bill Gaines", "Jack Davis, Joe Orlando, Jack Kamen, Graham Ingels", "Al Feldstein"], palette: P.ec, attributes: { "Page quality": "Off-white pages" } },
+  548: { seller: "keystone-key-issues", title: "Savage She-Hulk", issue: "#1", publisher: MARVEL, year: 1980, era: "Bronze Age", keyIssue: "Origin and first appearance of She-Hulk", creators: ["Stan Lee", "John Buscema", "John Buscema"], palette: P.hulk, attributes: { "Page quality": "White pages" } },
+  549: { seller: "oregon-coast-collection", title: "Panic", issue: "#5", publisher: "EC Comics", year: 1954, era: "Golden Age", keyIssue: "Gaines File pedigree copy 5/11 — the \"Sideways\" issue", creators: ["Al Feldstein", "Jack Davis, Bill Elder, Joe Orlando, Wally Wood", "Al Feldstein"], palette: P.ec, attributes: { Pedigree: "Gaines File copy 5/11", "Page quality": "White pages" } },
+  550: { seller: "oregon-coast-collection", title: "Nova", issue: "#1", publisher: MARVEL, year: 1976, era: "Bronze Age", keyIssue: "Origin and first appearance of Nova (Richard Rider)", creators: ["Marv Wolfman", "John Buscema", "Rich Buckler"], palette: P.modern, attributes: { "Page quality": "Off-white to white pages" } },
+  551: { seller: "atlas-and-timely-finds", title: "Phantom Stranger", issue: "#1", publisher: DC, year: 1952, era: "Golden Age", keyIssue: "First appearance of the Phantom Stranger", creators: ["John Broome", "Carmine Infantino", "Carmine Infantino"], palette: P.horror, attributes: { "Page quality": "Off-white to white pages" }, coverSlug: "the-phantom-stranger-1-2" },
+  553: { seller: "keystone-key-issues", title: "New Mutants", issue: "#98", publisher: MARVEL, year: 1991, era: "Copper Age", keyIssue: "First appearance of Deadpool, Gideon and Domino", creators: ["Fabian Nicieza & Rob Liefeld", "Rob Liefeld", "Rob Liefeld"], palette: P.modern, attributes: { "Page quality": "White pages" } },
+  554: { seller: "gotham-graded", title: "Marvel Team-Up", issue: "#141", publisher: MARVEL, year: 1984, era: "Bronze Age", keyIssue: "First appearance of Spider-Man's black costume (newsstand edition)", creators: ["Various", "Various", "Various"], palette: P.spidey, attributes: { Edition: "Newsstand", "Page quality": "White pages" } },
+  555: { seller: "lone-star-slabs", title: "Marvel Spotlight", issue: "#5", publisher: MARVEL, year: 1972, era: "Bronze Age", keyIssue: "Origin and first appearance of Ghost Rider (Johnny Blaze)", creators: ["Gary Friedrich & Roy Thomas", "Mike Ploog", "Mike Ploog"], palette: P.horror, attributes: { "Page quality": "Off-white to white pages" } },
+  556: { seller: "atlas-and-timely-finds", title: "Marvel Mystery Comics", issue: "#19", publisher: "Timely Comics", year: 1941, era: "Golden Age", keyIssue: "Alex Schomburg cover; Sub-Mariner story by Bill Everett", creators: ["Bill Everett", "Bill Everett", "Alex Schomburg"], palette: P.golden, certNumber: "1G-0D73743-001" },
+  559: { seller: "lone-star-slabs", title: "Amazing Spider-Man", issue: "#129", publisher: MARVEL, year: 1974, era: "Bronze Age", keyIssue: "First appearance of the Punisher and the Jackal", creators: ["Gerry Conway", "Ross Andru", "Gil Kane"], palette: P.spidey },
+  560: { seller: "oregon-coast-collection", title: "Journey Into Unknown Worlds", issue: "#10", publisher: "Atlas Comics", year: 1952, era: "Golden Age", keyIssue: "Pre-Code Atlas science fiction and horror", creators: ["Various", "Dick Ayers, George Tuska, Fred Kida, Werner Roth", "Various"], palette: P.horror, attributes: { "Page quality": "Off-white pages" } },
+  561: { seller: "silver-age-vault", title: "Journey Into Mystery Annual", issue: "#1", publisher: MARVEL, year: 1965, era: "Silver Age", keyIssue: "First appearance of Hercules and Zeus — Thor vs Hercules", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.thor, attributes: { "Page quality": "Off-white to white pages" } },
+  563: { seller: "silver-age-vault", title: "Fantastic Four", issue: "#18", publisher: MARVEL, year: 1963, era: "Silver Age", keyIssue: "First appearance of the Super-Skrull", creators: ["Stan Lee", "Jack Kirby", "Jack Kirby"], palette: P.ff, attributes: { "Page quality": "Off-white pages" }, descriptionMode: "replace", description: "Fantastic Four #18 (Marvel, 1963), the first appearance of the Super-Skrull. Stan Lee story, Jack Kirby cover and art. Graded CGC 8.0 with off-white pages." },
+  564: { seller: "silver-age-vault", title: "Journey Into Mystery", issue: "#84", publisher: MARVEL, year: 1962, era: "Silver Age", keyIssue: "Second appearance of Thor; first appearance of Jane Foster", creators: ["Stan Lee & Larry Lieber", "Jack Kirby", "Jack Kirby"], palette: P.thor, descriptionMode: "replace", description: "Journey Into Mystery #84 (Marvel, 1962) — the second appearance of Thor and the first appearance of Jane Foster, one issue after his debut. Graded CGC 6.0." },
+};

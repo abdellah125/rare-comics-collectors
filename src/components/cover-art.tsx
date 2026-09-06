@@ -25,8 +25,10 @@ export function CoverArt({
   const [from, to] = product.palette;
   const slabbed = product.grader !== "Raw";
   const localBest = (coverMap as Record<string, string>)[product.slug] ?? null;
-  const fallbackSvg = `/covers/${product.slug}.svg`;
-  const src = imgFailed ? fallbackSvg : (localBest ?? product.image ?? fallbackSvg);
+  // Only the seed catalogue ships a per-product SVG plate; for everything else a failed
+  // load simply reveals the gradient instead of requesting a file that does not exist.
+  const fallbackSvg = localBest ? `/covers/${product.slug}.svg` : null;
+  const src = imgFailed ? fallbackSvg : (localBest ?? product.image ?? null);
 
   return (
     <div
@@ -38,16 +40,18 @@ export function CoverArt({
       }`}
     >
       {/* The wrapper carries the accessible name, so the scan itself is decorative. */}
-      <Image
-        src={src}
-        alt=""
-        fill
-        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
-        className="object-cover"
-        priority={priority}
-        unoptimized
-        onError={() => setImgFailed(true)}
-      />
+      {src && (
+        <Image
+          src={src}
+          alt=""
+          fill
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+          className="object-cover"
+          priority={priority}
+          unoptimized
+          onError={() => setImgFailed(true)}
+        />
+      )}
 
       {/* halftone / print texture */}
       <div
@@ -78,7 +82,7 @@ export function CoverArt({
           </span>
           <span
             className={`rounded-[3px] px-1.5 py-[3px] text-[9px] font-bold uppercase leading-none tracking-[0.12em] ${
-              product.label.startsWith("Signature")
+              /signature/i.test(product.label)
                 ? "bg-gold-400 text-ink-950"
                 : slabbed
                   ? "bg-ink-950/85 text-white"

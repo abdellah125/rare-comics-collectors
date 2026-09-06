@@ -11,6 +11,9 @@
  * gaps: rows edited in the admin panel (products, categories, templates, base currency) are
  * left alone.
  */
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { products } from "../src/lib/products";
@@ -328,6 +331,167 @@ async function seedCatalog() {
   log(`${CATEGORIES.length} categories, ${publishers.length} brands, ${products.length} products (${created} new)`);
 }
 
+type ImportSeller = {
+  key: string;
+  slug: string;
+  displayName: string;
+  email: string;
+  name: string;
+  businessType: string;
+  businessName?: string;
+  countryCode: string;
+  shipsFromCountry: string;
+  handlingDays: number;
+  bio: string;
+  shippingPolicy: string;
+  returnPolicy: string;
+  customsNote?: string;
+};
+type ImportListing = {
+  sourceId: number;
+  seller: string | null;
+  slug: string;
+  title: string;
+  issue: string;
+  publisher: string;
+  year: number;
+  era: string;
+  grader: string;
+  grade: string;
+  label: string;
+  certNumber: string | null;
+  price: number;
+  compareAt: number | null;
+  stock: number;
+  keyIssue: string;
+  creators: { writer: string; artist: string; cover: string };
+  summary: string;
+  description: string;
+  highlights: string[];
+  palette: [string, string];
+  featured: boolean;
+  attributes: Record<string, string>;
+  tags: string[];
+  allowedCountries: string[];
+};
+type ImportFile = { source: string; sellers: ImportSeller[]; listings: ImportListing[] };
+
+/**
+ * Catalogue imports (prisma/data/catalog-imports/*.json, produced by
+ * scripts/import-woocommerce.mjs). Creates the consignment sellers and their
+ * listings once; existing slugs are left alone unless SEED_REFRESH_CATALOG=true.
+ * Seller accounts get an unusable random password — they sign in through
+ * "Forgot password" — and cover art comes from gocovers-map.json when present.
+ */
+async function seedImportedCatalog() {
+  const dir = path.join(process.cwd(), "prisma", "data", "catalog-imports");
+  if (!fs.existsSync(dir)) return;
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort();
+  if (files.length === 0) return;
+  const cats = Object.fromEntries((await db.category.findMany()).map((c) => [c.slug, c.id]));
+  const covers = coverMap as Record<string, string>;
+  const newPaths: string[] = [];
+  for (const file of files) {
+    const data = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")) as ImportFile;
+    const sellerIds: Record<string, string> = {};
+    for (const s of data.sellers) {
+      const passwordHash = await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 12);
+      const user = await db.user.upsert({
+        where: { email: s.email },
+        create: { email: s.email, name: s.name, passwordHash, isSeller: true, countryCode: s.countryCode, emailVerifiedAt: new Date() },
+        update: { isSeller: true },
+      });
+      const profile = await db.sellerProfile.upsert({
+        where: { userId: user.id },
+        create: {
+          userId: user.id,
+          slug: s.slug,
+          displayName: s.displayName,
+          bio: s.bio,
+          status: "approved",
+          approvedAt: new Date(),
+          verificationStatus: "verified",
+          verifiedAt: new Date(),
+          businessType: s.businessType,
+          businessName: s.businessName ?? null,
+          countryCode: s.countryCode,
+          shipsFromCountry: s.shipsFromCountry,
+          handlingDays: s.handlingDays,
+          shippingPolicy: s.shippingPolicy,
+          returnPolicy: s.returnPolicy,
+          customsNote: s.customsNote ?? null,
+        },
+        update: {},
+      });
+      sellerIds[s.key] = profile.id;
+    }
+    let created = 0;
+    for (const [i, l] of data.listings.entries()) {
+      const brandSlug = l.publisher.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const brand = await db.brand.upsert({ where: { slug: brandSlug }, create: { slug: brandSlug, name: l.publisher }, update: {} });
+      const sellerId = l.seller ? (sellerIds[l.seller] ?? null) : null;
+      if (l.seller && !sellerId) throw new Error(`Import ${file}: listing ${l.sourceId} references unknown seller "${l.seller}"`);
+      const record = {
+        title: l.title,
+        issue: l.issue,
+        publisher: l.publisher,
+        brandId: brand.id,
+        categoryId: cats[ERA_CATEGORY[l.era]] ?? null,
+        sellerId,
+        year: l.year,
+        era: l.era,
+        grader: l.grader,
+        grade: l.grade,
+        label: l.label,
+        certNumber: l.certNumber,
+        price: l.price,
+        compareAt: l.compareAt,
+        stock: l.stock,
+        keyIssue: l.keyIssue,
+        writer: l.creators.writer,
+        artist: l.creators.artist,
+        coverArtist: l.creators.cover,
+        summary: l.summary,
+        description: l.description,
+        highlightsJson: JSON.stringify(l.highlights),
+        paletteFrom: l.palette[0],
+        paletteTo: l.palette[1],
+        featured: l.featured,
+        attributesJson: JSON.stringify(l.attributes),
+        tagsJson: JSON.stringify(l.tags),
+        allowedCountriesJson: JSON.stringify(l.allowedCountries),
+        weightGrams: 450,
+      };
+      const existing = await db.product.findUnique({ where: { slug: l.slug }, select: { id: true } });
+      if (existing) {
+        if (process.env.SEED_REFRESH_CATALOG === "true") await db.product.update({ where: { id: existing.id }, data: record });
+        continue;
+      }
+      const sku = `IMP-${l.sourceId}`;
+      if (await db.product.findUnique({ where: { sku }, select: { id: true } })) continue;
+      const cover = covers[l.slug];
+      await db.product.create({
+        data: {
+          ...record,
+          slug: l.slug,
+          sku,
+          status: "published",
+          // Staggered so the "newest" ordering reads like a real week of listings.
+          publishedAt: new Date(Date.now() - i * 3_600_000),
+          ...(cover ? { images: { create: [{ url: cover, alt: `${l.title} ${l.issue} cover`, position: 0 }] } } : {}),
+        },
+      });
+      newPaths.push(`/store/${l.slug}`);
+      created += 1;
+    }
+    log(`import ${data.source}: ${data.sellers.length} sellers, ${data.listings.length} listings (${created} new)`);
+  }
+  if (newPaths.length > 0) {
+    // Tell IndexNow-capable search engines about the new pages once the site is serving them.
+    await db.job.create({ data: { type: "indexnow_ping", payloadJson: JSON.stringify({ paths: [...newPaths, "/store", "/collections", "/publishers"] }), maxAttempts: 3 } });
+  }
+}
+
 async function seedDemo() {
   if (process.env.SEED_DEMO !== "true" && process.env.NODE_ENV === "production") return;
   if (process.env.SEED_DEMO !== "true") {
@@ -378,6 +542,7 @@ async function main() {
   await seedLocales();
   await seedTemplates();
   await seedCatalog();
+  await seedImportedCatalog();
   await seedDemo();
   console.log("Done.");
 }

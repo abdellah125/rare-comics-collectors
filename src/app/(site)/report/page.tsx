@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ReportForm } from "@/components/report-form";
 import { Container } from "@/components/ui";
@@ -13,7 +14,20 @@ export default async function ReportPage({ searchParams }: PageProps<"/report">)
   const sp = await searchParams;
   const type = typeof sp.type === "string" && (REPORT_TYPES as readonly string[]).includes(sp.type) ? (sp.type as (typeof REPORT_TYPES)[number]) : null;
   const id = typeof sp.id === "string" ? sp.id : null;
-  if (!type || !id) notFound();
+  // Reports are opened from a listing, storefront or review; a bare visit gets directions instead of a 404.
+  if (!type || !id) {
+    return (
+      <Container className="py-12 lg:py-16">
+        <div className="mx-auto max-w-xl">
+          <h1 className="font-display text-3xl font-semibold text-ink-950">Report a problem</h1>
+          <p className="mt-3 text-[15px] leading-relaxed text-ink-600">
+            To report a listing, open it in the <Link href="/store" className="font-semibold text-brand-700 underline-offset-4 hover:underline">store</Link> and use &ldquo;Report this listing&rdquo; below the price. Sellers and reviews can be reported from the same spot on their pages. For anything else,{" "}
+            <Link href="/support" className="font-semibold text-brand-700 underline-offset-4 hover:underline">open a support ticket</Link>.
+          </p>
+        </div>
+      </Container>
+    );
+  }
   let label = "";
   if (type === "listing") {
     const p = await db.product.findFirst({ where: { id, status: "published", deletedAt: null }, select: { title: true, issue: true } });

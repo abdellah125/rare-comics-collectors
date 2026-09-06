@@ -190,7 +190,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
               </Link>
               {product.keyIssue && <Badge tone="gold">Key issue</Badge>}
               {onSale && <Badge tone="sale">Sale</Badge>}
-              {product.label.startsWith("Signature") && <Badge tone="brand">Signature Series</Badge>}
+              {/signature/i.test(product.label) && <Badge tone="brand">{product.grader === "CBCS" ? "Verified Signature" : "Signature Series"}</Badge>}
             </div>
 
             <h1 className="mt-4 font-display text-3xl font-semibold leading-tight text-ink-950 sm:text-4xl">

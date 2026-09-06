@@ -46,7 +46,7 @@ export function ProductCard({ product, priority = false }: { product: ProductSum
               <span className="font-semibold text-ink-900">
                 {product.grader} {product.grade}
               </span>{" "}
-              · {product.label.replace(" (Yellow)", "")}
+              · {product.label.replace(/ \((Yellow|Purple|Green|Blue)\)$/, "")}
             </>
           )}
         </p>

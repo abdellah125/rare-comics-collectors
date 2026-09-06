@@ -87,7 +87,7 @@ export const viewport: Viewport = { themeColor: "#0d1017", width: "device-width"
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await getSettings();
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable} ${orbitron.variable} h-full antialiased`} style={brandStyle(settings["marketplace.primaryColor"]) as React.CSSProperties | undefined}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${display.variable} ${orbitron.variable} h-full antialiased`} style={brandStyle(settings["marketplace.primaryColor"]) as React.CSSProperties | undefined}>
       <body className="flex min-h-full flex-col bg-white">{children}</body>
     </html>
   );

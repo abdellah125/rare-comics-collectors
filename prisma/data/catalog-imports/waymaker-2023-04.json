@@ -1,0 +1,3121 @@
+{
+  "source": "wc-product-export-30-4-2023",
+  "generatedAt": "2026-09-06T06:09:54.522Z",
+  "sellers": [
+    {
+      "key": "lone-star-slabs",
+      "slug": "lone-star-slabs",
+      "displayName": "Lone Star Slabs",
+      "email": "lonestar@sellers.rarecomicscollectors.com",
+      "name": "Miguel Torres",
+      "businessType": "company",
+      "businessName": "Lone Star Slabs LLC",
+      "countryCode": "US",
+      "shipsFromCountry": "US",
+      "handlingDays": 2,
+      "bio": "Bronze Age keys and Marvel first appearances from a climate-controlled vault in Austin. Every slab is photographed front and back before it ships.",
+      "shippingPolicy": "Ships within 2 business days via UPS or USPS Priority, double-boxed with a rigid slab shipper. Signature required on orders over $500.",
+      "returnPolicy": "Return any slab in its original holder within the marketplace inspection window for a full refund.",
+      "customsNote": "International orders are declared at full value; import duties and taxes are the buyer's responsibility."
+    },
+    {
+      "key": "silver-age-vault",
+      "slug": "silver-age-vault",
+      "displayName": "Silver Age Vault",
+      "email": "silveragevault@sellers.rarecomicscollectors.com",
+      "name": "Renee Kowalski",
+      "businessType": "company",
+      "businessName": "Silver Age Vault Inc.",
+      "countryCode": "US",
+      "shipsFromCountry": "US",
+      "handlingDays": 2,
+      "bio": "Silver Age Marvel specialists — Silver Surfer, Strange Tales, early Avengers and Journey Into Mystery. CGC and CBCS slabs only, every certification number verified before listing.",
+      "shippingPolicy": "Insured shipping on every order. Slabs travel in foam-lined boxes; tracking is uploaded the day the parcel leaves.",
+      "returnPolicy": "Full refund within the inspection window if the book arrives in a condition that differs from the listing.",
+      "customsNote": "We ship worldwide with full customs documentation. Duties are collected by the carrier on delivery."
+    },
+    {
+      "key": "keystone-key-issues",
+      "slug": "keystone-key-issues",
+      "displayName": "Keystone Key Issues",
+      "email": "keystone@sellers.rarecomicscollectors.com",
+      "name": "Devin Okafor",
+      "businessType": "individual",
+      "countryCode": "US",
+      "shipsFromCountry": "US",
+      "handlingDays": 3,
+      "bio": "X-Men runs, Bronze Age first appearances and Signature Series books from a Philadelphia collector who has been buying keys since 1994.",
+      "shippingPolicy": "Ships within 3 business days, insured, with a printed condition report in the box.",
+      "returnPolicy": "Returns accepted within the inspection window; the slab must come back unopened.",
+      "customsNote": "Ships to most countries. Buyers outside the US are responsible for any import charges."
+    },
+    {
+      "key": "oregon-coast-collection",
+      "slug": "oregon-coast-collection",
+      "displayName": "Oregon Coast Collection",
+      "email": "oregoncoast@sellers.rarecomicscollectors.com",
+      "name": "Harper Lindqvist",
+      "businessType": "individual",
+      "countryCode": "US",
+      "shipsFromCountry": "US",
+      "handlingDays": 2,
+      "bio": "High-grade and pedigree copies from a single Pacific Northwest collection, sold one book at a time. Census counts and guide references are quoted on every listing.",
+      "shippingPolicy": "Free insured shipping within the US on every order; international at cost.",
+      "returnPolicy": "Full refund within the inspection window, no questions asked.",
+      "customsNote": "International parcels are declared at the sale price."
+    },
+    {
+      "key": "gotham-graded",
+      "slug": "gotham-graded",
+      "displayName": "Gotham Graded",
+      "email": "gothamgraded@sellers.rarecomicscollectors.com",
+      "name": "Sofia Marchetti",
+      "businessType": "company",
+      "businessName": "Gotham Graded Collectibles",
+      "countryCode": "US",
+      "shipsFromCountry": "US",
+      "handlingDays": 1,
+      "bio": "Modern keys, variants and witnessed Signature Series slabs from New York. We attend the signings ourselves, so every yellow label comes with the story behind it.",
+      "shippingPolicy": "Ships next business day, insured and tracked.",
+      "returnPolicy": "Returns accepted within the inspection window in the original holder.",
+      "customsNote": "Worldwide shipping; duties and VAT are paid by the buyer on arrival."
+    },
+    {
+      "key": "atlas-and-timely-finds",
+      "slug": "atlas-and-timely-finds",
+      "displayName": "Atlas & Timely Finds",
+      "email": "atlastimely@sellers.rarecomicscollectors.com",
+      "name": "Walter Greene",
+      "businessType": "individual",
+      "countryCode": "US",
+      "shipsFromCountry": "US",
+      "handlingDays": 3,
+      "bio": "Golden Age and pre-Code books — Timely, Fawcett, MLJ and EC — with honest grading notes. Most copies are CBCS-graded with page quality and restoration checks recorded on the label.",
+      "shippingPolicy": "Ships within 3 business days, insured to full value, in a rigid mailer inside a box.",
+      "returnPolicy": "Full refund within the inspection window if the book is not as described.",
+      "customsNote": "International buyers: fragile Golden Age paper ships by express courier only."
+    }
+  ],
+  "listings": [
+    {
+      "sourceId": 299,
+      "sourceName": "Incredible Hulk #181 CGC 3.5 VG- 1st Full Appearance of Wolverine",
+      "seller": "lone-star-slabs",
+      "slug": "incredible-hulk-181-cgc-3-5",
+      "title": "Incredible Hulk",
+      "issue": "#181",
+      "publisher": "Marvel Comics",
+      "year": 1974,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "3.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 290000,
+      "compareAt": 350000,
+      "stock": 1,
+      "keyIssue": "First full appearance of Wolverine",
+      "creators": {
+        "writer": "Len Wein",
+        "artist": "Herb Trimpe",
+        "cover": "Herb Trimpe"
+      },
+      "summary": "Incredible Hulk #181 (Marvel Comics, 1974) — First full appearance of Wolverine. CGC 3.5.",
+      "description": "Available for sale is Incredible Hulk #181 graded by CGC in 3.5 VG- condition. This key bronze age issue features the first full appearance of Wolverine — a grail for many comic collectors. Here’s your chance to add this key issue to your collection today!",
+      "highlights": [
+        "First full appearance of Wolverine",
+        "CGC 3.5",
+        "Marvel Comics, 1974 — Bronze Age",
+        "Written by Len Wein; cover by Herb Trimpe"
+      ],
+      "palette": [
+        "#14532d",
+        "#1c2130"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Hulk"
+      },
+      "tags": [
+        "Hulk",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "incredible-hulk-181",
+      "coverFile": "incredible-hulk-181",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/11111.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/111.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/11.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/1.png"
+      ]
+    },
+    {
+      "sourceId": 300,
+      "sourceName": "Avengers #57 CGC 9.4 NM 1st Appearance of Vision",
+      "seller": "lone-star-slabs",
+      "slug": "avengers-57-cgc-9-4",
+      "title": "Avengers",
+      "issue": "#57",
+      "publisher": "Marvel Comics",
+      "year": 1968,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "9.4",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 220000,
+      "compareAt": 290000,
+      "stock": 1,
+      "keyIssue": "First appearance of the Vision",
+      "creators": {
+        "writer": "Roy Thomas",
+        "artist": "John Buscema",
+        "cover": "John Buscema"
+      },
+      "summary": "Avengers #57 (Marvel Comics, 1968) — First appearance of the Vision. CGC 9.4.",
+      "description": "Available for sale is Avengers #57 graded by CGC in 9.4 NM condition. This iconic issue from the Silver Age of Comics, features the first appearance of the Vision, one of Marvel’s most enduring and popular characters. Add this highly collectible key issue to your comic book collection today!",
+      "highlights": [
+        "First appearance of the Vision",
+        "CGC 9.4",
+        "Marvel Comics, 1968 — Silver Age",
+        "Written by Roy Thomas; cover by John Buscema"
+      ],
+      "palette": [
+        "#1e40af",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Avengers"
+      },
+      "tags": [
+        "Avengers",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "avengers-57",
+      "coverFile": "avengers-57",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/2.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/22.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/222.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/2222.png"
+      ]
+    },
+    {
+      "sourceId": 301,
+      "sourceName": "Amazing Spider-Man #102 CGC 9.4 NM Origin & 2nd Appearance of Morbius",
+      "seller": "lone-star-slabs",
+      "slug": "amazing-spider-man-102-cgc-9-4",
+      "title": "Amazing Spider-Man",
+      "issue": "#102",
+      "publisher": "Marvel Comics",
+      "year": 1971,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "9.4",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 77000,
+      "compareAt": 99900,
+      "stock": 1,
+      "keyIssue": "Origin and second appearance of Morbius",
+      "creators": {
+        "writer": "Roy Thomas",
+        "artist": "Gil Kane",
+        "cover": "Gil Kane"
+      },
+      "summary": "Amazing Spider-Man #102 (Marvel Comics, 1971) — Origin and second appearance of Morbius. CGC 9.4.",
+      "description": "Available for sale is Amazing Spider-Man #102 graded by CGC in 9.4 NM condition. This issue features the second appearance of Morbius, and also tells his origin story. Add this Bronze Age key issue to your collection today!",
+      "highlights": [
+        "Origin and second appearance of Morbius",
+        "CGC 9.4",
+        "Marvel Comics, 1971 — Bronze Age",
+        "Written by Roy Thomas; cover by Gil Kane"
+      ],
+      "palette": [
+        "#b91c1c",
+        "#1e3a8a"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Spider-Man"
+      },
+      "tags": [
+        "Spider-Man",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "amazing-spider-man-102",
+      "coverFile": "amazing-spider-man-102",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/3333.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/333.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/33.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/3.png"
+      ]
+    },
+    {
+      "sourceId": 316,
+      "sourceName": "Fantastic Four #1 CGC 2.0 GD",
+      "seller": null,
+      "slug": "fantastic-four-1-cgc-2-0",
+      "title": "Fantastic Four",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1961,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "2.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 1092500,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of the Fantastic Four",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Fantastic Four #1 (Marvel Comics, 1961) — Origin and first appearance of the Fantastic Four. CGC 2.0.",
+      "description": "Meet Marvel’s First Family: Mr. Fantastic, the Invisible Girl, the Human Torch, and The Thing. In this first issue, the FF must confront the menace known as the Mole Man and his giant underground monsters, as they attack atomic plants all over the world.",
+      "highlights": [
+        "Origin and first appearance of the Fantastic Four",
+        "CGC 2.0",
+        "Marvel Comics, 1961 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#1d4ed8",
+        "#0ea5e9"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Fantastic Four"
+      },
+      "tags": [
+        "Fantastic Four",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "fantastic-four-1",
+      "coverFile": "fantastic-four-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/Fantastic-Four-1-CGC-2-0-Front.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/Fantastic-Four-1-CGC-2-0-Back-Label.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/Fantastic-Four-1-CGC-2-0-Back.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/Fantastic-Four-1-CGC-2-0-Front-Label.jpg"
+      ]
+    },
+    {
+      "sourceId": 325,
+      "sourceName": "Avengers #48 CGC 8.5 VF+",
+      "seller": "lone-star-slabs",
+      "slug": "avengers-48-cgc-8-5",
+      "title": "Avengers",
+      "issue": "#48",
+      "publisher": "Marvel Comics",
+      "year": 1968,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "8.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 190000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Dane Whitman becomes the new Black Knight",
+      "creators": {
+        "writer": "Roy Thomas",
+        "artist": "George Tuska",
+        "cover": "George Tuska"
+      },
+      "summary": "Avengers #48 (Marvel Comics, 1968) — Dane Whitman becomes the new Black Knight. CGC 8.5.",
+      "description": "Dane Whitman becomes the new Black Knight\n\nAvailable for sale is Avengers #48 graded by CGC in 8.5 VF+ condition. This comic features Dane Whitman becoming the new Black Knight, who is set to make his MCU debut in the Eternals movie. Add this Silver Age key issue to your collection today!",
+      "highlights": [
+        "Dane Whitman becomes the new Black Knight",
+        "CGC 8.5",
+        "Marvel Comics, 1968 — Silver Age",
+        "Written by Roy Thomas; cover by George Tuska"
+      ],
+      "palette": [
+        "#1e40af",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Avengers"
+      },
+      "tags": [
+        "Avengers",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "avengers-48",
+      "coverFile": "avengers-48",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/4444.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/444.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/44.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/4.png"
+      ]
+    },
+    {
+      "sourceId": 326,
+      "sourceName": "Avengers #4 CGC 6.5 FN+",
+      "seller": "lone-star-slabs",
+      "slug": "avengers-4-cgc-6-5",
+      "title": "Avengers",
+      "issue": "#4",
+      "publisher": "Marvel Comics",
+      "year": 1964,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "6.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 280000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First Silver Age appearance of Captain America",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Avengers #4 (Marvel Comics, 1964) — First Silver Age appearance of Captain America. CGC 6.5.",
+      "description": "1st Silver Age Appearance of Captain America\n\nAvailable for sale is Avengers #4 graded by CGC in 6.5 FN+ condition. This comic features the first Silver Age appearance of Captain America, and is a must-have issue for any serious collector of comics. Make this key issue yours today!",
+      "highlights": [
+        "First Silver Age appearance of Captain America",
+        "CGC 6.5",
+        "Marvel Comics, 1964 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#1e40af",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Avengers"
+      },
+      "tags": [
+        "Avengers",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "avengers-4",
+      "coverFile": "avengers-4",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/5.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/55.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/555.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/5555.png"
+      ]
+    },
+    {
+      "sourceId": 327,
+      "sourceName": "Avengers #1 CGC 3.5 VG- Origin & First Appearance of the Avengers",
+      "seller": "lone-star-slabs",
+      "slug": "avengers-1-cgc-3-5",
+      "title": "Avengers",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1963,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "3.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 320000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of the Avengers",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Avengers #1 (Marvel Comics, 1963) — Origin and first appearance of the Avengers. CGC 3.5.",
+      "description": "Available for sale is Avengers #1 graded by CGC in 3.5 VG- condition! A holy grail for many comic collectors, this Silver Age mega key issue features the origin and first appearance of the Avengers! Add this comic to your collection today!",
+      "highlights": [
+        "Origin and first appearance of the Avengers",
+        "CGC 3.5",
+        "Marvel Comics, 1963 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#1e40af",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Avengers"
+      },
+      "tags": [
+        "Avengers",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "avengers-1",
+      "coverFile": "avengers-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/6.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/66.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/666.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/6666.png"
+      ]
+    },
+    {
+      "sourceId": 328,
+      "sourceName": "Avengers #100 CGC 9.8 NM/M All past Avengers appear in story",
+      "seller": "lone-star-slabs",
+      "slug": "avengers-100-cgc-9-8",
+      "title": "Avengers",
+      "issue": "#100",
+      "publisher": "Marvel Comics",
+      "year": 1972,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 80000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Anniversary issue — every past Avenger appears",
+      "creators": {
+        "writer": "Roy Thomas",
+        "artist": "Barry Windsor-Smith",
+        "cover": "Barry Windsor-Smith"
+      },
+      "summary": "Avengers #100 (Marvel Comics, 1972) — Anniversary issue — every past Avenger appears. CGC 9.8, white pages.",
+      "description": "Available for sale is Avengers #100 graded by CGC in 9.8 NM/M condition with perfect white pages. According to the CGC Census, there are only 40 copies of this comic graded in 9.8 condition making it ultra difficult to come by. Add this key bronze age comic to your collection today!",
+      "highlights": [
+        "Anniversary issue — every past Avenger appears",
+        "CGC 9.8, white pages",
+        "Marvel Comics, 1972 — Bronze Age",
+        "Written by Roy Thomas; cover by Barry Windsor-Smith"
+      ],
+      "palette": [
+        "#1e40af",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Captain America",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Captain America",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "avengers-100",
+      "coverFile": "avengers-100",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/7.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/77.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/777.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/7777.png"
+      ]
+    },
+    {
+      "sourceId": 345,
+      "sourceName": "Batman Adventures #12 CGC 9.8 NM/M",
+      "seller": "gotham-graded",
+      "slug": "batman-adventures-12-cgc-9-8",
+      "title": "Batman Adventures",
+      "issue": "#12",
+      "publisher": "DC Comics",
+      "year": 1993,
+      "era": "Modern Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 250000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First comic-book appearance of Harley Quinn",
+      "creators": {
+        "writer": "Kelley Puckett",
+        "artist": "Mike Parobeck",
+        "cover": "Mike Parobeck"
+      },
+      "summary": "Batman Adventures #12 (DC Comics, 1993) — First comic-book appearance of Harley Quinn. CGC 9.8.",
+      "description": "Available for sale is Batman Adventures #12 graded by CGC in 9.8 NM/M condition. Featuring the first in-comic appearance of Harley Quinn, this modern comic is one of the most sought after key issues by collectors today. Add it to your collection while you can!",
+      "highlights": [
+        "First comic-book appearance of Harley Quinn",
+        "CGC 9.8",
+        "DC Comics, 1993 — Modern Age",
+        "Written by Kelley Puckett; cover by Mike Parobeck"
+      ],
+      "palette": [
+        "#111827",
+        "#facc15"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Batman"
+      },
+      "tags": [
+        "Batman",
+        "Modern Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "batman-adventures-12",
+      "coverFile": "batman-adventures-12",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/8.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/888.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/8888.png"
+      ]
+    },
+    {
+      "sourceId": 346,
+      "sourceName": "Detective Comics (2011) #20 CGC SS 9.8 NM/M",
+      "seller": "gotham-graded",
+      "slug": "detective-comics-2011-20-cgc-9-8",
+      "title": "Detective Comics (2011)",
+      "issue": "#20",
+      "publisher": "DC Comics",
+      "year": 2013,
+      "era": "Modern Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Signature Series (Yellow)",
+      "certNumber": null,
+      "price": 99900,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "We Can Be Heroes variant, signed and sketched by Frank Miller",
+      "creators": {
+        "writer": "John Layman",
+        "artist": "Jason Fabok",
+        "cover": "Frank Miller"
+      },
+      "summary": "Detective Comics (2011) #20 (DC Comics, 2013) — We Can Be Heroes variant, signed and sketched by Frank Miller. CGC 9.8.",
+      "description": "Available for sale is the We Can Be Heroes Variant of Detective Comics (2011) #20 graded by CGC in 9.8 NM/M condition and signed & sketched by the legendary Frank Miller. Add this unique, custom sketched signature series comic to your collection today!",
+      "highlights": [
+        "We Can Be Heroes variant, signed and sketched by Frank Miller",
+        "CGC 9.8 — Signature Series",
+        "DC Comics, 2013 — Modern Age",
+        "Written by John Layman; cover by Frank Miller",
+        "Signed by Frank Miller, with sketch"
+      ],
+      "palette": [
+        "#111827",
+        "#facc15"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Batman",
+        "Variant": "We Can Be Heroes variant",
+        "Signed by": "Frank Miller, with sketch"
+      },
+      "tags": [
+        "Batman",
+        "Modern Age",
+        "CGC",
+        "Signature Series"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "detective-comics-2011-20",
+      "coverFile": "detective-comics-2011-20",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/03/9.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/99.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/999.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/03/9999.png"
+      ]
+    },
+    {
+      "sourceId": 365,
+      "sourceName": "ZiP COMICS #3 CBCS 3.5 RARE Robot Cover Bondage MLJ 1940 Biro Golden Age Comics",
+      "seller": "atlas-and-timely-finds",
+      "slug": "zip-comics-3-cbcs-3-5",
+      "title": "Zip Comics",
+      "issue": "#3",
+      "publisher": "MLJ Magazines",
+      "year": 1940,
+      "era": "Golden Age",
+      "grader": "CBCS",
+      "grade": "3.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 135500,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Classic Charles Biro robot cover",
+      "creators": {
+        "writer": "Various",
+        "artist": "Charles Biro",
+        "cover": "Charles Biro"
+      },
+      "summary": "Zip Comics #3 (MLJ Magazines, 1940) — Classic Charles Biro robot cover. CBCS 3.5.",
+      "description": "Zip Comics #3 (MLJ, 1940). A scarce early issue carrying the classic Charles Biro robot cover, graded CBCS 3.5.",
+      "highlights": [
+        "Classic Charles Biro robot cover",
+        "CBCS 3.5",
+        "MLJ Magazines, 1940 — Golden Age",
+        "cover by Charles Biro"
+      ],
+      "palette": [
+        "#7c2d12",
+        "#f59e0b"
+      ],
+      "featured": false,
+      "attributes": {},
+      "tags": [
+        "Golden Age",
+        "CBCS"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "zip-comics-3",
+      "coverFile": "zip-comics-3",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_ea9cea0e-c5d1-4294-b708-0026c0039ee5.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_321b4c2d-dd50-40f2-8b46-6b23a46db31d.jpg"
+      ]
+    },
+    {
+      "sourceId": 366,
+      "sourceName": "X-MEN #1 SEPTEMBER 1963 CGC 4.5 VG+ (FIRST X-MEN & MAGNETO)",
+      "seller": null,
+      "slug": "x-men-1-cgc-4-5",
+      "title": "X-Men",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1963,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "4.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 531400,
+      "compareAt": 540000,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of the X-Men and Magneto",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "X-Men #1 (Marvel Comics, 1963) — Origin and first appearance of the X-Men and Magneto. CGC 4.5, off-white to white pages.",
+      "description": "Marvel. Origin and first appearance of the X-Men (Professor X, Cyclops, Iceman, Angel, Beast and Marvel Girl) and Magneto. Stan Lee story. Jack Kirby cover and art. Off-white to white pages. Key Silver Age Marvel comic.",
+      "highlights": [
+        "Origin and first appearance of the X-Men and Magneto",
+        "CGC 4.5, off-white to white pages",
+        "Marvel Comics, 1963 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#eab308"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "X-Men",
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "X-Men",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "x-men-1",
+      "coverFile": "x-men-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/34324-1.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/5435234234-1.jpg"
+      ]
+    },
+    {
+      "sourceId": 369,
+      "sourceName": "X-MEN #94 AUGUST 1975 CGC 9.2 NM",
+      "seller": "keystone-key-issues",
+      "slug": "x-men-94-cgc-9-2",
+      "title": "X-Men",
+      "issue": "#94",
+      "publisher": "Marvel Comics",
+      "year": 1975,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "9.2",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 293500,
+      "compareAt": 365500,
+      "stock": 1,
+      "keyIssue": "New X-Men begin — second appearance of Nightcrawler, Storm, Thunderbird and Colossus",
+      "creators": {
+        "writer": "Chris Claremont",
+        "artist": "Dave Cockrum",
+        "cover": "Gil Kane"
+      },
+      "summary": "X-Men #94 (Marvel Comics, 1975) — New X-Men begin — second appearance of Nightcrawler, Storm, Thunderbird and Colossus. CGC 9.2, white pages.",
+      "description": "Marvel. New X-Men begin. Sunfire leaves. Second appearance of Nightcrawler, Storm, Thunderbird and Colossus. Len Wein and Chris Claremont story. Gil Kane and Dave Cockrum cover. Dave Cockrum and Bob McLeod art. White pages.",
+      "highlights": [
+        "New X-Men begin — second appearance of Nightcrawler, Storm, Thunderbird and Colossus",
+        "CGC 9.2, white pages",
+        "Marvel Comics, 1975 — Bronze Age",
+        "Written by Chris Claremont; cover by Gil Kane"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#eab308"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "X-Men",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "X-Men",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "x-men-94",
+      "coverFile": "x-men-94",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/345235234.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/5454.png"
+      ]
+    },
+    {
+      "sourceId": 370,
+      "sourceName": "X-Men #9 CGC 4.0 VG",
+      "seller": "silver-age-vault",
+      "slug": "x-men-9-cgc-4-0",
+      "title": "X-Men",
+      "issue": "#9",
+      "publisher": "Marvel Comics",
+      "year": 1965,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "4.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 50000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First X-Men and Avengers crossover; first appearance of Lucifer",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "X-Men #9 (Marvel Comics, 1965) — First X-Men and Avengers crossover; first appearance of Lucifer. CGC 4.0.",
+      "description": "Where the lethal Lucifer lurks, he must face…the Avengers! But defeating him could destroy the world, so the X-Men must defeat the Avengers instead!",
+      "highlights": [
+        "First X-Men and Avengers crossover; first appearance of Lucifer",
+        "CGC 4.0",
+        "Marvel Comics, 1965 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#eab308"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "X-Men"
+      },
+      "tags": [
+        "X-Men",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "x-men-9",
+      "coverFile": "x-men-9",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/X-Men-9-CGC-4-0-Front.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/X-Men-9-CGC-4-0-Front-Label.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/X-Men-9-CGC-4-0-Back.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/X-Men-9-CGC-4-0-Back-Label.jpg"
+      ]
+    },
+    {
+      "sourceId": 393,
+      "sourceName": "X-MEN #94 AUGUST 1975 CGC 9.2 NM",
+      "seller": "keystone-key-issues",
+      "slug": "x-men-94-cgc-9-2-off-white",
+      "title": "X-Men",
+      "issue": "#94",
+      "publisher": "Marvel Comics",
+      "year": 1975,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "9.2",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 375600,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "New X-Men begin — second full appearance of Wolverine",
+      "creators": {
+        "writer": "Len Wein",
+        "artist": "Dave Cockrum",
+        "cover": "Gil Kane"
+      },
+      "summary": "X-Men #94 (Marvel Comics, 1975) — New X-Men begin — second full appearance of Wolverine. CGC 9.2, off-white pages.",
+      "description": "Marvel. First appearance of the new X-Men - Storm, Nightcrawler, Colossus and Thunderbird. Second full appearance of Wolverine. Len Wein story. Gil Kane and Dave Cockrum cover. Dave Cockrum art. Off-white pages. Key Bronze Age Marvel comic.",
+      "highlights": [
+        "New X-Men begin — second full appearance of Wolverine",
+        "CGC 9.2, off-white pages",
+        "Marvel Comics, 1975 — Bronze Age",
+        "Written by Len Wein; cover by Gil Kane"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#eab308"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "X-Men",
+        "Page quality": "Off-white pages"
+      },
+      "tags": [
+        "X-Men",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "x-men-94",
+      "coverFile": "x-men-94",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/32234234.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/6434.png"
+      ]
+    },
+    {
+      "sourceId": 395,
+      "sourceName": "X-MEN #129 JANUARY 1980 CGC 9.8 NM/MINT (FIRST KITTY PRYDE, EMMA FROST & SEBASTIAN SHAW)",
+      "seller": "keystone-key-issues",
+      "slug": "x-men-129-cgc-9-8",
+      "title": "X-Men",
+      "issue": "#129",
+      "publisher": "Marvel Comics",
+      "year": 1980,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 87700,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of Kitty Pryde, Emma Frost and Sebastian Shaw",
+      "creators": {
+        "writer": "Chris Claremont",
+        "artist": "John Byrne",
+        "cover": "John Byrne"
+      },
+      "summary": "X-Men #129 (Marvel Comics, 1980) — First appearance of Kitty Pryde, Emma Frost and Sebastian Shaw. CGC 9.8, white pages.",
+      "description": "Marvel. First appearances of Kitty Pryde, White Queen (Emma Frost) and Sebastian Shaw. Mastermind appearance. Chris Claremont story. John Byrne and Terry Austin cover and art. White pages. Key Bronze Age \"X-Men\" issue.",
+      "highlights": [
+        "First appearance of Kitty Pryde, Emma Frost and Sebastian Shaw",
+        "CGC 9.8, white pages",
+        "Marvel Comics, 1980 — Bronze Age",
+        "Written by Chris Claremont; cover by John Byrne"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#eab308"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "X-Men",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "X-Men",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "x-men-129",
+      "coverFile": "x-men-129",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/76587.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/764768678-1.jpg"
+      ]
+    },
+    {
+      "sourceId": 397,
+      "sourceName": "X-MEN #101 OCTOBER 1976 CGC 9.8 NM/MINT (FIRST APPEARANCE PHOENIX).",
+      "seller": "keystone-key-issues",
+      "slug": "x-men-101-cgc-9-8",
+      "title": "X-Men",
+      "issue": "#101",
+      "publisher": "Marvel Comics",
+      "year": 1976,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 539000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of Phoenix",
+      "creators": {
+        "writer": "Chris Claremont",
+        "artist": "Dave Cockrum",
+        "cover": "Dave Cockrum"
+      },
+      "summary": "X-Men #101 (Marvel Comics, 1976) — Origin and first appearance of Phoenix. CGC 9.8, white pages.",
+      "description": "Marvel. Origin and first appearance of Phoenix. Black Tom Cassidy and Juggernaut appearance. Chris Claremont story. Dave Cockrum cover and art. Frank Chiaramonte art. White pages. None higher in CGC Census. Key Bronze Age \"X-Men\" comic.",
+      "highlights": [
+        "Origin and first appearance of Phoenix",
+        "CGC 9.8, white pages",
+        "Marvel Comics, 1976 — Bronze Age",
+        "Written by Chris Claremont; cover by Dave Cockrum"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#eab308"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "X-Men",
+        "Page quality": "White pages",
+        "Census": "None higher on the CGC census at listing"
+      },
+      "tags": [
+        "X-Men",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "x-men-101",
+      "coverFile": "x-men-101",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/435434543.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/4435.png"
+      ]
+    },
+    {
+      "sourceId": 398,
+      "sourceName": "War Machine #1 CGC SS 9.4 NM Signed by Don Cheadle",
+      "seller": "gotham-graded",
+      "slug": "war-machine-1-cgc-9-4",
+      "title": "War Machine",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1994,
+      "era": "Modern Age",
+      "grader": "CGC",
+      "grade": "9.4",
+      "label": "Signature Series (Yellow)",
+      "certNumber": null,
+      "price": 32499,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First issue of the 1994 series, signed by Don Cheadle",
+      "creators": {
+        "writer": "Len Kaminski",
+        "artist": "Gabriel Gecko",
+        "cover": "Gabriel Gecko"
+      },
+      "summary": "War Machine #1 (Marvel Comics, 1994) — First issue of the 1994 series, signed by Don Cheadle. CGC 9.4.",
+      "description": "War Machine’s first issue in his 1994 ongoing series! First on the agenda? War Machine must take on Eda Arul and the Advisor! Plus, revelations about James Rhodes, the man behind the armored suit.",
+      "highlights": [
+        "First issue of the 1994 series, signed by Don Cheadle",
+        "CGC 9.4 — Signature Series",
+        "Marvel Comics, 1994 — Modern Age",
+        "Written by Len Kaminski; cover by Gabriel Gecko",
+        "Signed by Don Cheadle"
+      ],
+      "palette": [
+        "#334155",
+        "#f97316"
+      ],
+      "featured": false,
+      "attributes": {
+        "Signed by": "Don Cheadle",
+        "Edition": "Collector's Edition"
+      },
+      "tags": [
+        "Modern Age",
+        "CGC",
+        "Signature Series"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "war-machine-1",
+      "coverFile": "war-machine-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/War-Machine-1-CGC-SS-9-4-Collectors-Edition-Front.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/War-Machine-1-CGC-SS-9-4-Collectors-Edition-Front-Label.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/War-Machine-1-CGC-SS-9-4-Collectors-Edition-Back.jpg"
+      ]
+    },
+    {
+      "sourceId": 408,
+      "sourceName": "Wonder Woman (2011) #49 CGC SS 9.8 NM/M Adams Variant",
+      "seller": "gotham-graded",
+      "slug": "wonder-woman-2011-49-cgc-9-8",
+      "title": "Wonder Woman (2011)",
+      "issue": "#49",
+      "publisher": "DC Comics",
+      "year": 2016,
+      "era": "Modern Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Signature Series (Yellow)",
+      "certNumber": null,
+      "price": 15900,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Neal Adams variant cover, CGC Signature Series",
+      "creators": {
+        "writer": "Meredith Finch",
+        "artist": "David Finch",
+        "cover": "Neal Adams"
+      },
+      "summary": "Wonder Woman (2011) #49 (DC Comics, 2016) — Neal Adams variant cover, CGC Signature Series. CGC 9.8.",
+      "description": "Wonder Woman confronts what the return of Ares and Apollo will mean for her, and how it will impact her role as the God of War.",
+      "highlights": [
+        "Neal Adams variant cover, CGC Signature Series",
+        "CGC 9.8 — Signature Series",
+        "DC Comics, 2016 — Modern Age",
+        "Written by Meredith Finch; cover by Neal Adams"
+      ],
+      "palette": [
+        "#1e40af",
+        "#ef4444"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Superman, Wonder Woman",
+        "Variant": "Neal Adams variant"
+      },
+      "tags": [
+        "Superman",
+        "Wonder Woman",
+        "Modern Age",
+        "CGC",
+        "Signature Series"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "wonder-woman-49-3",
+      "coverFile": "wonder-woman-2011-49",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Wonder-Woman-2011-49-CGC-SS-9-8-Adams-Variant-Front.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Wonder-Woman-2011-49-CGC-SS-9-8-Adams-Variant-Front-Label.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Wonder-Woman-2011-49-CGC-SS-9-8-Adams-Variant-Back.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Wonder-Woman-2011-49-CGC-SS-9-8-Adams-Variant-Back-Label.jpg"
+      ]
+    },
+    {
+      "sourceId": 417,
+      "sourceName": "X-MEN #94 AUGUST 1975 CGC 8.0 VF",
+      "seller": "keystone-key-issues",
+      "slug": "x-men-94-cgc-8-0",
+      "title": "X-Men",
+      "issue": "#94",
+      "publisher": "Marvel Comics",
+      "year": 1975,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "8.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 200000,
+      "compareAt": 232800,
+      "stock": 1,
+      "keyIssue": "New X-Men begin — second appearance of Nightcrawler, Storm, Thunderbird and Colossus",
+      "creators": {
+        "writer": "Chris Claremont",
+        "artist": "Dave Cockrum",
+        "cover": "Gil Kane"
+      },
+      "summary": "X-Men #94 (Marvel Comics, 1975) — New X-Men begin — second appearance of Nightcrawler, Storm, Thunderbird and Colossus. CGC 8.0, white pages.",
+      "description": "Marvel. New X-Men begin. Sunfire leaves. Second appearance of Nightcrawler, Storm, Thunderbird and Colossus. Len Wein and Chris Claremont story. Gil Kane and Dave Cockrum cover. Dave Cockrum and Bob McLeod art. White pages.",
+      "highlights": [
+        "New X-Men begin — second appearance of Nightcrawler, Storm, Thunderbird and Colossus",
+        "CGC 8.0, white pages",
+        "Marvel Comics, 1975 — Bronze Age",
+        "Written by Chris Claremont; cover by Gil Kane"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#eab308"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "X-Men",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "X-Men",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "x-men-94",
+      "coverFile": "x-men-94",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/32432.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/654643544.jpg"
+      ]
+    },
+    {
+      "sourceId": 424,
+      "sourceName": "X-men #1 CBCS 0.5 - MEGA KEY - 1st App X-men And Magneto 1963",
+      "seller": "keystone-key-issues",
+      "slug": "x-men-1-cbcs-0-5",
+      "title": "X-Men",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1963,
+      "era": "Silver Age",
+      "grader": "CBCS",
+      "grade": "0.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 327000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of the X-Men and Magneto",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "X-Men #1 (Marvel Comics, 1963) — Origin and first appearance of the X-Men and Magneto. CBCS 0.5, off-white to white pages.",
+      "description": "CBCS notes: large piece missing from 15th page, affects story. CBCS has assigned near perfect off-white /white pages! CBCS case is in excellent shape! This is a really nice book for the grade! The cover has nice bright colors!",
+      "highlights": [
+        "Origin and first appearance of the X-Men and Magneto",
+        "CBCS 0.5, off-white to white pages",
+        "Marvel Comics, 1963 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#eab308"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "X-Men",
+        "Page quality": "Off-white to white pages",
+        "Grader notes": "Large piece missing from the 15th page, affects story"
+      },
+      "tags": [
+        "X-Men",
+        "Silver Age",
+        "CBCS"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "x-men-1",
+      "coverFile": "x-men-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_606d30f5-7c00-46ff-b781-3b6a6ffc94fb.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_b0687f73-b912-4685-a079-2ff5f036ca57.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_af5b1382-a148-481e-a3ce-ee8c0873a3dd.jpg"
+      ]
+    },
+    {
+      "sourceId": 428,
+      "sourceName": "X-23 #1 1:25 Gabrielle Dell’Otto Variant CBCS 9.8 - 2010 Signed by Dell'Otto!",
+      "seller": "gotham-graded",
+      "slug": "x-23-1-cbcs-9-8",
+      "title": "X-23",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 2010,
+      "era": "Modern Age",
+      "grader": "CBCS",
+      "grade": "9.8",
+      "label": "Verified Signature (Yellow)",
+      "certNumber": null,
+      "price": 175000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "1:25 Gabriele Dell'Otto variant, signed by Dell'Otto",
+      "creators": {
+        "writer": "Marjorie Liu",
+        "artist": "Will Conrad",
+        "cover": "Gabriele Dell'Otto"
+      },
+      "summary": "X-23 #1 (Marvel Comics, 2010) — 1:25 Gabriele Dell'Otto variant, signed by Dell'Otto. CBCS 9.8.",
+      "description": "X-23 #1 1:25 Gabrielle Dell’Otto Variant CBCS 9.8! 2010 Signed by Dell'Otto! This is a rare book and a great additon to anyone's collection. High potential for this book!",
+      "highlights": [
+        "1:25 Gabriele Dell'Otto variant, signed by Dell'Otto",
+        "CBCS 9.8 — Verified Signature",
+        "Marvel Comics, 2010 — Modern Age",
+        "Written by Marjorie Liu; cover by Gabriele Dell'Otto",
+        "Signed by Gabriele Dell'Otto"
+      ],
+      "palette": [
+        "#0f172a",
+        "#e11d48"
+      ],
+      "featured": false,
+      "attributes": {
+        "Variant": "1:25 Gabriele Dell'Otto variant",
+        "Signed by": "Gabriele Dell'Otto"
+      },
+      "tags": [
+        "Modern Age",
+        "CBCS",
+        "Verified Signature"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "x-23-1-2",
+      "coverFile": "x-23-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_77323f96-0bb3-41db-9737-f902b229189b.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_a174f30c-1b5b-4746-9768-17b54edc4389.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_55450311-146b-44c3-b89a-9312fed5d6f7.jpg"
+      ]
+    },
+    {
+      "sourceId": 432,
+      "sourceName": "Werewolf by Night #32 CGC 7.5 1ST MOON KNIGHT Off-White to White Pages Disney",
+      "seller": "lone-star-slabs",
+      "slug": "werewolf-by-night-32-cgc-7-5",
+      "title": "Werewolf by Night",
+      "issue": "#32",
+      "publisher": "Marvel Comics",
+      "year": 1975,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "7.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 144949,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of Moon Knight",
+      "creators": {
+        "writer": "Doug Moench",
+        "artist": "Don Perlin",
+        "cover": "Gil Kane"
+      },
+      "summary": "Werewolf by Night #32 (Marvel Comics, 1975) — First appearance of Moon Knight. CGC 7.5, off-white to white pages.",
+      "description": "Werewolf by Night #32 8/1975. 1st Appearance Moon Knight. CGC Graded 7.5 Off-White to White Pages.",
+      "highlights": [
+        "First appearance of Moon Knight",
+        "CGC 7.5, off-white to white pages",
+        "Marvel Comics, 1975 — Bronze Age",
+        "Written by Doug Moench; cover by Gil Kane"
+      ],
+      "palette": [
+        "#3b0764",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "werewolf-by-night-32",
+      "coverFile": "werewolf-by-night-32",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_40cbe0a1-f3f0-4a5a-94f4-22aac3a31136.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_45842ffc-425c-43fa-9b1f-6bd135e2563d.jpg"
+      ]
+    },
+    {
+      "sourceId": 433,
+      "sourceName": "Wow Comics #16 FAWCETT 1943 CGC 9.0 VF/NM - Mary Marvel - Double Cover",
+      "seller": "atlas-and-timely-finds",
+      "slug": "wow-comics-16-cgc-9-0",
+      "title": "Wow Comics",
+      "issue": "#16",
+      "publisher": "Fawcett Publications",
+      "year": 1943,
+      "era": "Golden Age",
+      "grader": "CGC",
+      "grade": "9.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 159900,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Mary Marvel cover — double-cover copy",
+      "creators": {
+        "writer": "Various",
+        "artist": "Various",
+        "cover": "Various"
+      },
+      "summary": "Wow Comics #16 (Fawcett Publications, 1943) — Mary Marvel cover — double-cover copy. CGC 9.0.",
+      "description": "Wow Comics #16 (Fawcett, 1943) with a Mary Marvel cover. A double-cover copy — the outer wrap is bound twice — graded CGC 9.0 VF/NM.",
+      "highlights": [
+        "Mary Marvel cover — double-cover copy",
+        "CGC 9.0",
+        "Fawcett Publications, 1943 — Golden Age"
+      ],
+      "palette": [
+        "#7c2d12",
+        "#f59e0b"
+      ],
+      "featured": false,
+      "attributes": {
+        "Note": "Double cover"
+      },
+      "tags": [
+        "Golden Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "wow-comics-16",
+      "coverFile": "wow-comics-16",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_3a51e64e-56d4-4122-81f1-82ef1573d851.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_1d986792-fa31-4fa5-9df3-f962f0e9a1a2.jpg"
+      ]
+    },
+    {
+      "sourceId": 438,
+      "sourceName": "TOMB OF DRACULA #10 JULY 1973 CGC 8.0 VF (FIRST BLADE THE VAMPIRE SLAYER)",
+      "seller": "lone-star-slabs",
+      "slug": "tomb-of-dracula-10-cgc-8-0",
+      "title": "Tomb of Dracula",
+      "issue": "#10",
+      "publisher": "Marvel Comics",
+      "year": 1973,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "8.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 239000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of Blade the Vampire Slayer",
+      "creators": {
+        "writer": "Marv Wolfman",
+        "artist": "Gene Colan",
+        "cover": "Gil Kane"
+      },
+      "summary": "Tomb of Dracula #10 (Marvel Comics, 1973) — First appearance of Blade the Vampire Slayer. CGC 8.0, white pages.",
+      "description": "Marvel. First appearance of Blade the Vampire Slayer. Marv Wolfman story. Gil Kane and Tom Palmer cover. Gene Colan and Jack Abel art. White pages. Key Bronze Age Marvel comic.",
+      "highlights": [
+        "First appearance of Blade the Vampire Slayer",
+        "CGC 8.0, white pages",
+        "Marvel Comics, 1973 — Bronze Age",
+        "Written by Marv Wolfman; cover by Gil Kane"
+      ],
+      "palette": [
+        "#3b0764",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "tomb-of-dracula-10",
+      "coverFile": "tomb-of-dracula-10",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture_4648066e-26bc-47b9-917c-ad30681b6399.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture7.png"
+      ]
+    },
+    {
+      "sourceId": 441,
+      "sourceName": "The Incredible Hulk #181 (Wolverine 1st app) CBCS 2.0 restored sign Herb Trimpe",
+      "seller": "keystone-key-issues",
+      "slug": "incredible-hulk-181-cbcs-2-0-restored",
+      "title": "Incredible Hulk",
+      "issue": "#181",
+      "publisher": "Marvel Comics",
+      "year": 1974,
+      "era": "Bronze Age",
+      "grader": "CBCS",
+      "grade": "2.0",
+      "label": "Restored (Purple)",
+      "certNumber": null,
+      "price": 178000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First full appearance of Wolverine — restored copy signed by Herb Trimpe",
+      "creators": {
+        "writer": "Len Wein",
+        "artist": "Herb Trimpe",
+        "cover": "Herb Trimpe"
+      },
+      "summary": "Incredible Hulk #181 (Marvel Comics, 1974) — First full appearance of Wolverine — restored copy signed by Herb Trimpe. CBCS 2.0.",
+      "description": "Incredible Hulk #181 (Marvel, 1974), the first full appearance of Wolverine, graded CBCS 2.0 on a restored label and signed by cover artist Herb Trimpe. An affordable, complete copy of one of the most important Bronze Age keys.",
+      "highlights": [
+        "First full appearance of Wolverine — restored copy signed by Herb Trimpe",
+        "CBCS 2.0 — Restored",
+        "Marvel Comics, 1974 — Bronze Age",
+        "Written by Len Wein; cover by Herb Trimpe",
+        "Signed by Herb Trimpe"
+      ],
+      "palette": [
+        "#14532d",
+        "#1c2130"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Hulk",
+        "Signed by": "Herb Trimpe",
+        "Restoration": "Restored — see CBCS label"
+      },
+      "tags": [
+        "Hulk",
+        "Bronze Age",
+        "CBCS",
+        "Restored"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "incredible-hulk-181",
+      "coverFile": "incredible-hulk-181",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/32543543-1.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/435234-1.jpg"
+      ]
+    },
+    {
+      "sourceId": 447,
+      "sourceName": "The Invincible Iron Man #9 (Marvel, 2016) CGC NM/MT 9.8 White pages",
+      "seller": "oregon-coast-collection",
+      "slug": "invincible-iron-man-9-cgc-9-8",
+      "title": "Invincible Iron Man",
+      "issue": "#9",
+      "publisher": "Marvel Comics",
+      "year": 2016,
+      "era": "Modern Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 37500,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First full appearance of Riri Williams (Ironheart)",
+      "creators": {
+        "writer": "Brian Michael Bendis",
+        "artist": "Mike Deodato",
+        "cover": "Mike Deodato"
+      },
+      "summary": "Invincible Iron Man #9 (Marvel Comics, 2016) — First full appearance of Riri Williams (Ironheart). CGC 9.8, white pages.",
+      "description": "The Invincible Iron Man #9 (Marvel, 2016) CGC NM/MT 9.8 White pages. First full appearance of Riri Williams (aka Ironheart), who will make her MCU debut in Black Panther: Wakanda Forever ahead of her upcoming TV series. Mike Deodato cover and art. Overstreet 2022 NM- 9.2 value = $175. CGC census 8/22: 1193 in 9.8",
+      "highlights": [
+        "First full appearance of Riri Williams (Ironheart)",
+        "CGC 9.8, white pages",
+        "Marvel Comics, 2016 — Modern Age",
+        "Written by Brian Michael Bendis; cover by Mike Deodato"
+      ],
+      "palette": [
+        "#0f172a",
+        "#e11d48"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Iron Man",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Iron Man",
+        "Modern Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "invincible-iron-man-9-3",
+      "coverFile": "invincible-iron-man-9",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/534.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/87565.jpg"
+      ]
+    },
+    {
+      "sourceId": 448,
+      "sourceName": "The Avengers #87 (Marvel, 1971) CGC NM/MT 9.8 White pages",
+      "seller": "oregon-coast-collection",
+      "slug": "avengers-87-cgc-9-8",
+      "title": "Avengers",
+      "issue": "#87",
+      "publisher": "Marvel Comics",
+      "year": 1971,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 210900,
+      "compareAt": 243700,
+      "stock": 1,
+      "keyIssue": "Origin of Black Panther",
+      "creators": {
+        "writer": "Roy Thomas",
+        "artist": "Frank Giacoia",
+        "cover": "John Buscema"
+      },
+      "summary": "Avengers #87 (Marvel Comics, 1971) — Origin of Black Panther. CGC 9.8, white pages.",
+      "description": "The Avengers #87 (Marvel, 1971) CGC NM/MT 9.8 White pages. Origin of Black Panther. John Buscema cover. Featuring Iron Man, Thor, Vision, Scarlet Witch, Goliath, and Quicksilver. Overstreet 2022 NM- 9.2 value = $325. CGC census 8/22: 15 in 9.8, none higher. From the Oregon Coast Collection.",
+      "highlights": [
+        "Origin of Black Panther",
+        "CGC 9.8, white pages",
+        "Marvel Comics, 1971 — Bronze Age",
+        "Written by Roy Thomas; cover by John Buscema"
+      ],
+      "palette": [
+        "#1e40af",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Avengers",
+        "Page quality": "White pages",
+        "Provenance": "Oregon Coast Collection"
+      },
+      "tags": [
+        "Avengers",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "avengers-87",
+      "coverFile": "avengers-87",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture_658bb5ba-1d9d-405d-843a-2ef9316d5d5a.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture3.png"
+      ]
+    },
+    {
+      "sourceId": 451,
+      "sourceName": "The Amazing Spider-Man #8 (Marvel, 1964) CGC VF 8.0 Off-white to white pages",
+      "seller": "oregon-coast-collection",
+      "slug": "amazing-spider-man-8-cgc-8-0",
+      "title": "Amazing Spider-Man",
+      "issue": "#8",
+      "publisher": "Marvel Comics",
+      "year": 1964,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "8.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 138900,
+      "compareAt": 151300,
+      "stock": 1,
+      "keyIssue": "Peter Parker fights Flash Thompson; Fantastic Four back-up by Kirby and Ditko",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Steve Ditko",
+        "cover": "Steve Ditko"
+      },
+      "summary": "Amazing Spider-Man #8 (Marvel Comics, 1964) — Peter Parker fights Flash Thompson; Fantastic Four back-up by Kirby and Ditko. CGC 8.0, off-white to white pages.",
+      "description": "The Amazing Spider-Man #8 (Marvel, 1964) CGC VF 8.0 Off-white to white pages. Peter Parker fights Flash Thompson. Steve Ditko cover and art. Fantastic Four appearance in a back-up story with art by Jack Kirby and Ditko. Overstreet 2022 VF 8.0 value = $1,000. CGC census 8/22: 113 in 8.0, 224 higher.",
+      "highlights": [
+        "Peter Parker fights Flash Thompson; Fantastic Four back-up by Kirby and Ditko",
+        "CGC 8.0, off-white to white pages",
+        "Marvel Comics, 1964 — Silver Age",
+        "Written by Stan Lee; cover by Steve Ditko"
+      ],
+      "palette": [
+        "#b91c1c",
+        "#1e3a8a"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Spider-Man",
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "Spider-Man",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "amazing-spider-man-8",
+      "coverFile": "amazing-spider-man-8",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture_aa45923b-7aaa-42e2-9da6-ff1c6c5c21c0.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture5_d6225ecc-15d7-47c6-b164-50f7c3e902bb.png"
+      ]
+    },
+    {
+      "sourceId": 459,
+      "sourceName": "TEENAGE MUTANT NINJA TURTLES #1 FEBRUARY 1985 CGC 9.6 NM+ - SIGNATURE SERIES WITH SKETCH.",
+      "seller": "keystone-key-issues",
+      "slug": "teenage-mutant-ninja-turtles-1-cgc-9-6",
+      "title": "Teenage Mutant Ninja Turtles",
+      "issue": "#1",
+      "publisher": "Mirage Studios",
+      "year": 1985,
+      "era": "Copper Age",
+      "grader": "CGC",
+      "grade": "9.6",
+      "label": "Signature Series (Yellow)",
+      "certNumber": null,
+      "price": 43700,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of the Turtles (third printing), signed and sketched by Kevin Eastman",
+      "creators": {
+        "writer": "Kevin Eastman & Peter Laird",
+        "artist": "Kevin Eastman & Peter Laird",
+        "cover": "Kevin Eastman"
+      },
+      "summary": "Teenage Mutant Ninja Turtles #1 (Mirage Studios, 1985) — Origin and first appearance of the Turtles (third printing), signed and sketched by Kevin Eastman. CGC 9.6, white pages.",
+      "description": "Mirage Studios. Third printing. Back cover has been signed in silver paint pen by \"Teenage Mutant Ninja Turtles\" co-creator Kevin Eastman (Sept. 13, 2014). Additionally, Eastman has added a head sketch of one of the Turtles. Origin and first appearance of the Teenage Mutant Ninja Turtles, Shredder and Splinter. Wraparound cover. Kevin Eastman and Peter Laird story and art. Cover by Kevin Eastman. White pages.",
+      "highlights": [
+        "Origin and first appearance of the Turtles (third printing), signed and sketched by Kevin Eastman",
+        "CGC 9.6 — Signature Series, white pages",
+        "Mirage Studios, 1985 — Copper Age",
+        "Written by Kevin Eastman & Peter Laird; cover by Kevin Eastman",
+        "Signed by Kevin Eastman, with head sketch (13 Sept 2014)"
+      ],
+      "palette": [
+        "#052e16",
+        "#84cc16"
+      ],
+      "featured": false,
+      "attributes": {
+        "Printing": "Third printing",
+        "Signed by": "Kevin Eastman, with head sketch (13 Sept 2014)",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Copper Age",
+        "CGC",
+        "Signature Series"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "teenage-mutant-ninja-turtles-1",
+      "coverFile": "teenage-mutant-ninja-turtles-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/6745634.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/545674734253-1.jpg"
+      ]
+    },
+    {
+      "sourceId": 464,
+      "sourceName": "TALES OF SUSPENSE #39 MARCH 1963 CGC 6.5 FINE+ (FIRST IRON MAN).",
+      "seller": null,
+      "slug": "tales-of-suspense-39-cgc-6-5",
+      "title": "Tales of Suspense",
+      "issue": "#39",
+      "publisher": "Marvel Comics",
+      "year": 1963,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "6.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 1490300,
+      "compareAt": 1648900,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of Iron Man",
+      "creators": {
+        "writer": "Stan Lee & Larry Lieber",
+        "artist": "Don Heck",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Tales of Suspense #39 (Marvel Comics, 1963) — Origin and first appearance of Iron Man. CGC 6.5, off-white pages.",
+      "description": "Marvel. Origin and first appearance of Iron Man (Tony Stark). Stan Lee and Larry Lieber stories. Jack Kirby and Don Heck cover w/additional art by Steve Ditko and Gene Colan. Off-white pages. Key Silver Age Marvel comic featuring the first appearance of one of Marvel's most popular superheroes.",
+      "highlights": [
+        "Origin and first appearance of Iron Man",
+        "CGC 6.5, off-white pages",
+        "Marvel Comics, 1963 — Silver Age",
+        "Written by Stan Lee & Larry Lieber; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#334155",
+        "#f97316"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Iron Man",
+        "Page quality": "Off-white pages"
+      },
+      "tags": [
+        "Iron Man",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "tales-of-suspense-39",
+      "coverFile": "tales-of-suspense-39",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/234235453.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/4352342352344234-1.jpg"
+      ]
+    },
+    {
+      "sourceId": 468,
+      "sourceName": "SWAMP THING #37 - CGC-9.8, WP - 1st full John Constantine",
+      "seller": "gotham-graded",
+      "slug": "swamp-thing-37-cgc-9-8",
+      "title": "Swamp Thing",
+      "issue": "#37",
+      "publisher": "DC Comics",
+      "year": 1985,
+      "era": "Copper Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 139900,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First full appearance of John Constantine",
+      "creators": {
+        "writer": "Alan Moore",
+        "artist": "Rick Veitch",
+        "cover": "John Totleben"
+      },
+      "summary": "Swamp Thing #37 (DC Comics, 1985) — First full appearance of John Constantine. CGC 9.8, white pages.",
+      "description": "SWAMP THING #37 - CGC-9.8, WP - 1st full John Constantine.\n\nBrand new case just received back from cgc",
+      "highlights": [
+        "First full appearance of John Constantine",
+        "CGC 9.8, white pages",
+        "DC Comics, 1985 — Copper Age",
+        "Written by Alan Moore; cover by John Totleben"
+      ],
+      "palette": [
+        "#052e16",
+        "#84cc16"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Copper Age",
+        "CGC"
+      ],
+      "allowedCountries": [
+        "US"
+      ],
+      "coverSlug": "saga-of-the-swamp-thing-37-facsimile-edition-cvr-a-stephen-r-bissette-john-totleben",
+      "coverFile": "swamp-thing-37",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/574209346.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/23897483.jpg"
+      ]
+    },
+    {
+      "sourceId": 470,
+      "sourceName": "SUPERMAN #2 (DC: Fall 1939) Suicide Intervention CBCS 3.0",
+      "seller": null,
+      "slug": "superman-2-cbcs-3-0",
+      "title": "Superman",
+      "issue": "#2",
+      "publisher": "DC Comics",
+      "year": 1939,
+      "era": "Golden Age",
+      "grader": "CBCS",
+      "grade": "3.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 682000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Second issue of Superman's own title (Fall 1939)",
+      "creators": {
+        "writer": "Jerry Siegel",
+        "artist": "Joe Shuster",
+        "cover": "Joe Shuster"
+      },
+      "summary": "Superman #2 (DC Comics, 1939) — Second issue of Superman's own title (Fall 1939). CBCS 3.0.",
+      "description": "Superman #2 (DC, Fall 1939), the second issue of the first superhero solo title, graded CBCS 3.0. A complete, presentable copy of a Golden Age cornerstone that is rarely offered in any grade.",
+      "highlights": [
+        "Second issue of Superman's own title (Fall 1939)",
+        "CBCS 3.0",
+        "DC Comics, 1939 — Golden Age",
+        "Written by Jerry Siegel; cover by Joe Shuster"
+      ],
+      "palette": [
+        "#1e40af",
+        "#ef4444"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Superman"
+      },
+      "tags": [
+        "Superman",
+        "Golden Age",
+        "CBCS"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "superman-2",
+      "coverFile": "superman-2",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_1ab46154-929d-4276-9412-b1efc744f347.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_a05d4298-4d64-471e-a77e-fa32d2d5da9a-1.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_a05d4298-4d64-471e-a77e-fa32d2d5da9a.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_2540e5dd-349b-4e84-ba63-0c6edf55ff94.jpg"
+      ]
+    },
+    {
+      "sourceId": 529,
+      "sourceName": "SUB-MARINER #1 MAY 1968 CGC 8.0 VF",
+      "seller": "silver-age-vault",
+      "slug": "sub-mariner-1-cgc-8-0",
+      "title": "Sub-Mariner",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1968,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "8.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 122300,
+      "compareAt": 131200,
+      "stock": 1,
+      "keyIssue": "First issue of the Sub-Mariner's solo series; origin retold",
+      "creators": {
+        "writer": "Roy Thomas",
+        "artist": "John Buscema",
+        "cover": "John Buscema"
+      },
+      "summary": "Sub-Mariner #1 (Marvel Comics, 1968) — First issue of the Sub-Mariner's solo series; origin retold. CGC 8.0, off-white to white pages.",
+      "description": "Marvel. Story continued from Iron Man And Sub-Mariner #1. Origin of Sub-Mariner retold. Roy Thomas story. John Buscema and Sol Brodsky cover. John Buscema and Frank Giacoia art. Off-white to white pages. Key Silver Age Marvel comic.",
+      "highlights": [
+        "First issue of the Sub-Mariner's solo series; origin retold",
+        "CGC 8.0, off-white to white pages",
+        "Marvel Comics, 1968 — Silver Age",
+        "Written by Roy Thomas; cover by John Buscema"
+      ],
+      "palette": [
+        "#334155",
+        "#cbd5e1"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "sub-mariner-1",
+      "coverFile": "sub-mariner-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture1.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture2.png"
+      ]
+    },
+    {
+      "sourceId": 530,
+      "sourceName": "STRANGE TALES #135 AUGUST 1965 CGC 7.0 FINE/VF (FIRST NICK FURY)",
+      "seller": "silver-age-vault",
+      "slug": "strange-tales-135-cgc-7-0",
+      "title": "Strange Tales",
+      "issue": "#135",
+      "publisher": "Marvel Comics",
+      "year": 1965,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "7.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 120300,
+      "compareAt": 147300,
+      "stock": 1,
+      "keyIssue": "First appearance of Nick Fury, Agent of S.H.I.E.L.D.",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Strange Tales #135 (Marvel Comics, 1965) — First appearance of Nick Fury, Agent of S.H.I.E.L.D.. CGC 7.0, off-white to white pages.",
+      "description": "Marvel. First appearance of Nick Fury, Agent Of S.H.I.E.L.D. Tony Stark and Baron Mordo appearance. Stan Lee, Jack Kirby and Steve Ditko stories. Jack Kirby and Frank Giacoia cover. Jack Kirby, Steve Ditko and Dick Ayers art. Off-white to white pages. Key Silver Age Marvel comic.",
+      "highlights": [
+        "First appearance of Nick Fury, Agent of S.H.I.E.L.D.",
+        "CGC 7.0, off-white to white pages",
+        "Marvel Comics, 1965 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#334155",
+        "#f97316"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "strange-tales-135",
+      "coverFile": "strange-tales-135",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/32423.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/42342343.jpg"
+      ]
+    },
+    {
+      "sourceId": 531,
+      "sourceName": "Strange Tales #110 Graded 5.0 1st Doctor Strange Avengers  CGC or CBCS it 1963",
+      "seller": "silver-age-vault",
+      "slug": "strange-tales-110-cbcs-5-0",
+      "title": "Strange Tales",
+      "issue": "#110",
+      "publisher": "Marvel Comics",
+      "year": 1963,
+      "era": "Silver Age",
+      "grader": "CBCS",
+      "grade": "5.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 230100,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of Doctor Strange",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Steve Ditko",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Strange Tales #110 (Marvel Comics, 1963) — First appearance of Doctor Strange. CBCS 5.0.",
+      "description": "Strange Tales 110. 1st Doctor Strange. 1963 Marvel.",
+      "highlights": [
+        "First appearance of Doctor Strange",
+        "CBCS 5.0",
+        "Marvel Comics, 1963 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#3b0764",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {},
+      "tags": [
+        "Silver Age",
+        "CBCS"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "strange-tales-110",
+      "coverFile": "strange-tales-110",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_48f47977-f5ed-4e53-9fa7-0962b746d4bf.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_b8684d23-1d58-4a0e-bcd7-c1185483a345.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_34f45c21-7c20-4983-930e-bae578c7eb4c.jpg"
+      ]
+    },
+    {
+      "sourceId": 533,
+      "sourceName": "SILVER SURFER #4 FEBRUARY 1969 CGC 8.0 VF (SILVER SURFER VS THOR)",
+      "seller": "silver-age-vault",
+      "slug": "silver-surfer-4-cgc-8-0",
+      "title": "Silver Surfer",
+      "issue": "#4",
+      "publisher": "Marvel Comics",
+      "year": 1969,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "8.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 135700,
+      "compareAt": 197800,
+      "stock": 1,
+      "keyIssue": "Classic Silver Surfer vs Thor cover",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "John Buscema",
+        "cover": "John Buscema"
+      },
+      "summary": "Silver Surfer #4 (Marvel Comics, 1969) — Classic Silver Surfer vs Thor cover. CGC 8.0, white pages.",
+      "description": "Marvel. Thor and Loki appearance. Incredible Hulk, Thing and Hercules cameo. \"Tales Of The Watcher\" back-up story. Stan Lee story. John Buscema cover and art w/additional art by Howard Purcell, Sal Buscema and Paul Reinman. White pages.",
+      "highlights": [
+        "Classic Silver Surfer vs Thor cover",
+        "CGC 8.0, white pages",
+        "Marvel Comics, 1969 — Silver Age",
+        "Written by Stan Lee; cover by John Buscema"
+      ],
+      "palette": [
+        "#334155",
+        "#cbd5e1"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Silver Surfer",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Silver Surfer",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "silver-surfer-4",
+      "coverFile": "silver-surfer-4",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/346345.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/43523.png"
+      ]
+    },
+    {
+      "sourceId": 534,
+      "sourceName": "SILVER SURFER #3 DECEMBER 1968 CGC 8.0 VF (FIRST MEPHISTO)",
+      "seller": "silver-age-vault",
+      "slug": "silver-surfer-3-cgc-8-0",
+      "title": "Silver Surfer",
+      "issue": "#3",
+      "publisher": "Marvel Comics",
+      "year": 1968,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "8.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 139000,
+      "compareAt": 183400,
+      "stock": 1,
+      "keyIssue": "First appearance of Mephisto",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "John Buscema",
+        "cover": "John Buscema"
+      },
+      "summary": "Silver Surfer #3 (Marvel Comics, 1968) — First appearance of Mephisto. CGC 8.0, white pages.",
+      "description": "Marvel Comics. First appearance of Mephisto. Tales of the Watcher backup story. Stan Lee story. John Buscema cover w/Buscema, Joe Sinnott, Gene Colan and Paul Reinman art. White pages.",
+      "highlights": [
+        "First appearance of Mephisto",
+        "CGC 8.0, white pages",
+        "Marvel Comics, 1968 — Silver Age",
+        "Written by Stan Lee; cover by John Buscema"
+      ],
+      "palette": [
+        "#334155",
+        "#cbd5e1"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Silver Surfer",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Silver Surfer",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "silver-surfer-3",
+      "coverFile": "silver-surfer-3",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture_bc39835b-fc57-485d-9cfc-746e4a0fd163.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture5.png"
+      ]
+    },
+    {
+      "sourceId": 535,
+      "sourceName": "Silver Surfer #3 CGC 8.5  White pages 1968  Marvel 1st Mephisto Silver Age",
+      "seller": "silver-age-vault",
+      "slug": "silver-surfer-3-cgc-8-5",
+      "title": "Silver Surfer",
+      "issue": "#3",
+      "publisher": "Marvel Comics",
+      "year": 1968,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "8.5",
+      "label": "Universal Blue",
+      "certNumber": "3770986002",
+      "price": 260000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of Mephisto",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "John Buscema",
+        "cover": "John Buscema"
+      },
+      "summary": "Silver Surfer #3 (Marvel Comics, 1968) — First appearance of Mephisto. CGC 8.5, white pages.",
+      "description": "Silver Surfer #3 (Marvel, 1968), the first appearance of Mephisto. Graded CGC 8.5 with white pages under certification number 3770986002 — an original, unrestored copy.",
+      "highlights": [
+        "First appearance of Mephisto",
+        "CGC 8.5, white pages",
+        "Marvel Comics, 1968 — Silver Age",
+        "Written by Stan Lee; cover by John Buscema",
+        "Certification number 3770986002, verifiable on the CGC website"
+      ],
+      "palette": [
+        "#334155",
+        "#cbd5e1"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Silver Surfer",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Silver Surfer",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "silver-surfer-3",
+      "coverFile": "silver-surfer-3",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_8a61acbf-139d-48b7-8d93-2e5f4e73a093.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_765c2501-0acb-421e-98d2-e52af8f74f68.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture5.png"
+      ]
+    },
+    {
+      "sourceId": 539,
+      "sourceName": "Silver Surfer #1 CBCS 8.5 SS - 1st Silver Surfer in own Series! Origin Watchers",
+      "seller": "silver-age-vault",
+      "slug": "silver-surfer-1-cbcs-8-5",
+      "title": "Silver Surfer",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1968,
+      "era": "Silver Age",
+      "grader": "CBCS",
+      "grade": "8.5",
+      "label": "Verified Signature (Yellow)",
+      "certNumber": null,
+      "price": 539500,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First issue of the Silver Surfer's own series — signed by Stan Lee and Joe Sinnott",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "John Buscema",
+        "cover": "John Buscema"
+      },
+      "summary": "Silver Surfer #1 (Marvel Comics, 1968) — First issue of the Silver Surfer's own series — signed by Stan Lee and Joe Sinnott. CBCS 8.5, off-white pages.",
+      "description": "Silver Surfer #1 CBCS (like CGC) 8.5 SS with Off-White Pages Signed by Stan Lee & Joe Sinnott. 1st Silver Surfer in his own Series! Origin of Silver Surfer & the Watchers. Watcher backup stories begin.",
+      "highlights": [
+        "First issue of the Silver Surfer's own series — signed by Stan Lee and Joe Sinnott",
+        "CBCS 8.5 — Verified Signature, off-white pages",
+        "Marvel Comics, 1968 — Silver Age",
+        "Written by Stan Lee; cover by John Buscema",
+        "Signed by Stan Lee, Joe Sinnott"
+      ],
+      "palette": [
+        "#334155",
+        "#cbd5e1"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Silver Surfer",
+        "Signed by": "Stan Lee, Joe Sinnott",
+        "Page quality": "Off-white pages"
+      },
+      "tags": [
+        "Silver Surfer",
+        "Silver Age",
+        "CBCS",
+        "Verified Signature"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "silver-surfer-1",
+      "coverFile": "silver-surfer-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_178de1e2-653b-4536-be92-75484116569f.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_ce63c544-e03e-4146-af76-e02d5f121e6f.jpg"
+      ]
+    },
+    {
+      "sourceId": 540,
+      "sourceName": "SILVER SURFER #1 AUGUST 1968 CGC 6.5 FINE+",
+      "seller": "silver-age-vault",
+      "slug": "silver-surfer-1-cgc-6-5",
+      "title": "Silver Surfer",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1968,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "6.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 147000,
+      "compareAt": 177000,
+      "stock": 1,
+      "keyIssue": "Origin of the Silver Surfer and the Watchers",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "John Buscema",
+        "cover": "John Buscema"
+      },
+      "summary": "Silver Surfer #1 (Marvel Comics, 1968) — Origin of the Silver Surfer and the Watchers. CGC 6.5, off-white to white pages.",
+      "description": "Marvel. Origin of The Silver Surfer. \"Tales Of The Watcher\" begin. Origin of The Watchers. Stan Lee story. John Buscema cover and art w/additional art by Joe Sinnott, Gene Colan and Syd Shores. Off-white to white pages.",
+      "highlights": [
+        "Origin of the Silver Surfer and the Watchers",
+        "CGC 6.5, off-white to white pages",
+        "Marvel Comics, 1968 — Silver Age",
+        "Written by Stan Lee; cover by John Buscema"
+      ],
+      "palette": [
+        "#334155",
+        "#cbd5e1"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Silver Surfer",
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "Silver Surfer",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "silver-surfer-1",
+      "coverFile": "silver-surfer-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture_686077e7-093d-413e-8667-f783426f3ed4.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture4.png"
+      ]
+    },
+    {
+      "sourceId": 541,
+      "sourceName": "SILVER SURFER #1 AUGUST 1968 CGC 6.0 FINE",
+      "seller": "silver-age-vault",
+      "slug": "silver-surfer-1-cgc-6-0",
+      "title": "Silver Surfer",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1968,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "6.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 110900,
+      "compareAt": 136700,
+      "stock": 1,
+      "keyIssue": "Origin of the Silver Surfer and the Watchers",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "John Buscema",
+        "cover": "John Buscema"
+      },
+      "summary": "Silver Surfer #1 (Marvel Comics, 1968) — Origin of the Silver Surfer and the Watchers. CGC 6.0, white pages.",
+      "description": "Marvel. Origin of The Silver Surfer. \"Tales Of The Watcher\" begin. Origin of The Watchers. Stan Lee story. John Buscema cover and art w/additional art by Joe Sinnott, Gene Colan and Syd Shores. White pages.",
+      "highlights": [
+        "Origin of the Silver Surfer and the Watchers",
+        "CGC 6.0, white pages",
+        "Marvel Comics, 1968 — Silver Age",
+        "Written by Stan Lee; cover by John Buscema"
+      ],
+      "palette": [
+        "#334155",
+        "#cbd5e1"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Silver Surfer",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Silver Surfer",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "silver-surfer-1",
+      "coverFile": "silver-surfer-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture-2.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/2.png"
+      ]
+    },
+    {
+      "sourceId": 543,
+      "sourceName": "SGT. FURY AND HIS HOWLING COMMANDOS #1 MAY 1963 CGC 4.0 VG (FIRST SGT. FURY).",
+      "seller": "silver-age-vault",
+      "slug": "sgt-fury-and-his-howling-commandos-1-cgc-4-0",
+      "title": "Sgt. Fury and His Howling Commandos",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1963,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "4.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 118900,
+      "compareAt": 156700,
+      "stock": 1,
+      "keyIssue": "First appearance of Sgt. Fury, Dum-Dum Dugan and the Howling Commandos",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Sgt. Fury and His Howling Commandos #1 (Marvel Comics, 1963) — First appearance of Sgt. Fury, Dum-Dum Dugan and the Howling Commandos. CGC 4.0, cream to off-white pages.",
+      "description": "Marvel. First appearance of Sgt. Fury, Dum-Dum Dugan, The Howlers and Captain \"Happy Sam\" Sawyer. Stan Lee story. Jack Kirby and Dick Ayers cover and art. Cream to off-white pages. Key Silver Age Marvel comic.",
+      "highlights": [
+        "First appearance of Sgt. Fury, Dum-Dum Dugan and the Howling Commandos",
+        "CGC 4.0, cream to off-white pages",
+        "Marvel Comics, 1963 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#334155",
+        "#f97316"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "Cream to off-white pages"
+      },
+      "tags": [
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "sgt-fury-and-his-howling-commandos-1",
+      "coverFile": "sgt-fury-and-his-howling-commandos-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture_6a25252c-7fc1-4cd6-b9f8-49fb18562887.png",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/Capture5_2cf7296f-51b7-4bb8-8d94-abaa85a9e66f.png"
+      ]
+    },
+    {
+      "sourceId": 545,
+      "sourceName": "SHOCK SUSPENSTORIES\" #1 FEBRUARY-MARCH 1952 CGC 6.0 FINE",
+      "seller": "atlas-and-timely-finds",
+      "slug": "shock-suspenstories-1-cgc-6-0",
+      "title": "Shock SuspenStories",
+      "issue": "#1",
+      "publisher": "EC Comics",
+      "year": 1952,
+      "era": "Golden Age",
+      "grader": "CGC",
+      "grade": "6.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 53000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Classic Al Feldstein electrocution cover",
+      "creators": {
+        "writer": "Al Feldstein & Bill Gaines",
+        "artist": "Jack Davis, Joe Orlando, Jack Kamen, Graham Ingels",
+        "cover": "Al Feldstein"
+      },
+      "summary": "Shock SuspenStories #1 (EC Comics, 1952) — Classic Al Feldstein electrocution cover. CGC 6.0, off-white pages.",
+      "description": "EC. Electrocution cover. Al Feldstein and Bill Gaines stories. Al Feldstein cover. Jack Kamen, Jack Davis, Joe Orlando and Graham Ingels art. Off-white pages.",
+      "highlights": [
+        "Classic Al Feldstein electrocution cover",
+        "CGC 6.0, off-white pages",
+        "EC Comics, 1952 — Golden Age",
+        "Written by Al Feldstein & Bill Gaines; cover by Al Feldstein"
+      ],
+      "palette": [
+        "#052e16",
+        "#84cc16"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "Off-white pages"
+      },
+      "tags": [
+        "Golden Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "shock-suspenstories-1",
+      "coverFile": "shock-suspenstories-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/76456.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/764573465.jpg"
+      ]
+    },
+    {
+      "sourceId": 548,
+      "sourceName": "SAVAGE SHE-HULK #1 FEBRUARY 1980 CGC 9.8 NM/MINT (FIRST SHE-HULK).",
+      "seller": "keystone-key-issues",
+      "slug": "savage-she-hulk-1-cgc-9-8",
+      "title": "Savage She-Hulk",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1980,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 30000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of She-Hulk",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "John Buscema",
+        "cover": "John Buscema"
+      },
+      "summary": "Savage She-Hulk #1 (Marvel Comics, 1980) — Origin and first appearance of She-Hulk. CGC 9.8, white pages.",
+      "description": "Origin and first appearance of She-Hulk (Jennifer Walters). Origin of The Incredible Hulk retold. Stan Lee story. John Buscema and Joe Sinnott cover. John Buscema and Chic Stone art. White pages.",
+      "highlights": [
+        "Origin and first appearance of She-Hulk",
+        "CGC 9.8, white pages",
+        "Marvel Comics, 1980 — Bronze Age",
+        "Written by Stan Lee; cover by John Buscema"
+      ],
+      "palette": [
+        "#14532d",
+        "#1c2130"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Hulk",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Hulk",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "savage-she-hulk-1",
+      "coverFile": "savage-she-hulk-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/465.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/85676578.jpg"
+      ]
+    },
+    {
+      "sourceId": 549,
+      "sourceName": "Panic #5 Gaines File pedigree 5/11 (EC, 1954) CBCS NM/MT 9.8 White pages",
+      "seller": "oregon-coast-collection",
+      "slug": "panic-5-cbcs-9-8",
+      "title": "Panic",
+      "issue": "#5",
+      "publisher": "EC Comics",
+      "year": 1954,
+      "era": "Golden Age",
+      "grader": "CBCS",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 75200,
+      "compareAt": 88000,
+      "stock": 1,
+      "keyIssue": "Gaines File pedigree copy 5/11 — the \"Sideways\" issue",
+      "creators": {
+        "writer": "Al Feldstein",
+        "artist": "Jack Davis, Bill Elder, Joe Orlando, Wally Wood",
+        "cover": "Al Feldstein"
+      },
+      "summary": "Panic #5 (EC Comics, 1954) — Gaines File pedigree copy 5/11 — the \"Sideways\" issue. CBCS 9.8, white pages.",
+      "description": "Panic #5 Gaines File pedigree 5/11 (EC, 1954) CBCS NM/MT 9.8 White pages. \"Sideways\" issue. Great Al Feldstein cover and art. Jack Davis, Bill Elder, Joe Orlando, and Wally Wood art.",
+      "highlights": [
+        "Gaines File pedigree copy 5/11 — the \"Sideways\" issue",
+        "CBCS 9.8, white pages",
+        "EC Comics, 1954 — Golden Age",
+        "Written by Al Feldstein; cover by Al Feldstein"
+      ],
+      "palette": [
+        "#052e16",
+        "#84cc16"
+      ],
+      "featured": false,
+      "attributes": {
+        "Pedigree": "Gaines File copy 5/11",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Golden Age",
+        "CBCS"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "panic-5",
+      "coverFile": "panic-5",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/324-scaled.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/5324235-scaled.jpg"
+      ]
+    },
+    {
+      "sourceId": 550,
+      "sourceName": "Nova #1 (Marvel, 1976) CBCS NM/MT 9.8 Off-white to white pages",
+      "seller": "oregon-coast-collection",
+      "slug": "nova-1-cbcs-9-8",
+      "title": "Nova",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1976,
+      "era": "Bronze Age",
+      "grader": "CBCS",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 122300,
+      "compareAt": 182300,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of Nova (Richard Rider)",
+      "creators": {
+        "writer": "Marv Wolfman",
+        "artist": "John Buscema",
+        "cover": "Rich Buckler"
+      },
+      "summary": "Nova #1 (Marvel Comics, 1976) — Origin and first appearance of Nova (Richard Rider). CBCS 9.8, off-white to white pages.",
+      "description": "Nova #1 (Marvel, 1976) CBCS NM/MT 9.8 Off-white to white pages. Origin and first appearance of Nova (Richard Rider), whose MCU debut is now in active development. First appearance of Ginger Jaye. Rich Buckler cover. Joe Sinnott and John Buscema art.",
+      "highlights": [
+        "Origin and first appearance of Nova (Richard Rider)",
+        "CBCS 9.8, off-white to white pages",
+        "Marvel Comics, 1976 — Bronze Age",
+        "Written by Marv Wolfman; cover by Rich Buckler"
+      ],
+      "palette": [
+        "#0f172a",
+        "#e11d48"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "Bronze Age",
+        "CBCS"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "nova-1",
+      "coverFile": "nova-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/345-scaled.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/643534.jpg"
+      ]
+    },
+    {
+      "sourceId": 551,
+      "sourceName": "Phantom Stranger #1 CBCS 4.5 1st App. OW/W 1952 Infantino Murphy Anderson Scarce",
+      "seller": "atlas-and-timely-finds",
+      "slug": "phantom-stranger-1-cbcs-4-5",
+      "title": "Phantom Stranger",
+      "issue": "#1",
+      "publisher": "DC Comics",
+      "year": 1952,
+      "era": "Golden Age",
+      "grader": "CBCS",
+      "grade": "4.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 235000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of the Phantom Stranger",
+      "creators": {
+        "writer": "John Broome",
+        "artist": "Carmine Infantino",
+        "cover": "Carmine Infantino"
+      },
+      "summary": "Phantom Stranger #1 (DC Comics, 1952) — First appearance of the Phantom Stranger. CBCS 4.5, off-white to white pages.",
+      "description": "Phantom Stranger #1 CBCS 4.5 1st App. Case is immaculate with no scratches or marring whatsoever. No Newton rings. Staples firmly attached.",
+      "highlights": [
+        "First appearance of the Phantom Stranger",
+        "CBCS 4.5, off-white to white pages",
+        "DC Comics, 1952 — Golden Age",
+        "Written by John Broome; cover by Carmine Infantino"
+      ],
+      "palette": [
+        "#3b0764",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "Golden Age",
+        "CBCS"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "the-phantom-stranger-1-2",
+      "coverFile": "phantom-stranger-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_eb3ac16c-ed2e-49b2-9284-630a3c4145a2.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_174794f5-879e-41ef-a1cb-b994c682c49d.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_b147c4b4-2649-4397-ba34-7feb76b91af3.jpg"
+      ]
+    },
+    {
+      "sourceId": 553,
+      "sourceName": "NEW MUTANTS #98 FEBRUARY 1991 CGC 9.6 NM+ (FIRST DEADPOOL)",
+      "seller": "keystone-key-issues",
+      "slug": "new-mutants-98-cgc-9-6",
+      "title": "New Mutants",
+      "issue": "#98",
+      "publisher": "Marvel Comics",
+      "year": 1991,
+      "era": "Copper Age",
+      "grader": "CGC",
+      "grade": "9.6",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 23900,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of Deadpool, Gideon and Domino",
+      "creators": {
+        "writer": "Fabian Nicieza & Rob Liefeld",
+        "artist": "Rob Liefeld",
+        "cover": "Rob Liefeld"
+      },
+      "summary": "New Mutants #98 (Marvel Comics, 1991) — First appearance of Deadpool, Gideon and Domino. CGC 9.6, white pages.",
+      "description": "Marvel. First appearance of fan-favorite Deadpool (Wade Wilson), Gideon and Copycat (Vanessa Carlysle) as Domino. Rictor leaves the New Mutants. Fabien Nicieza story. Rob Liefeld story, cover and art. White pages. Key Modern Age Marvel comic.",
+      "highlights": [
+        "First appearance of Deadpool, Gideon and Domino",
+        "CGC 9.6, white pages",
+        "Marvel Comics, 1991 — Copper Age",
+        "Written by Fabian Nicieza & Rob Liefeld; cover by Rob Liefeld"
+      ],
+      "palette": [
+        "#0f172a",
+        "#e11d48"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Copper Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "new-mutants-98",
+      "coverFile": "new-mutants-98",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/764754.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/764748.jpg"
+      ]
+    },
+    {
+      "sourceId": 554,
+      "sourceName": "MARVEL TEAM-UP #141 CGC 9.8 WHITE PAGES NEWSSTAND 1ST BLACK SUIT",
+      "seller": "gotham-graded",
+      "slug": "marvel-team-up-141-cgc-9-8",
+      "title": "Marvel Team-Up",
+      "issue": "#141",
+      "publisher": "Marvel Comics",
+      "year": 1984,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "9.8",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 126500,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of Spider-Man's black costume (newsstand edition)",
+      "creators": {
+        "writer": "Various",
+        "artist": "Various",
+        "cover": "Various"
+      },
+      "summary": "Marvel Team-Up #141 (Marvel Comics, 1984) — First appearance of Spider-Man's black costume (newsstand edition). CGC 9.8, white pages.",
+      "description": "MARVEL TEAM-UP #141 CGC 9.8 WHITE PAGES NEWSSTAND 1ST BLACK SUIT.",
+      "highlights": [
+        "First appearance of Spider-Man's black costume (newsstand edition)",
+        "CGC 9.8, white pages",
+        "Marvel Comics, 1984 — Bronze Age"
+      ],
+      "palette": [
+        "#b91c1c",
+        "#1e3a8a"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Spider-Man",
+        "Edition": "Newsstand",
+        "Page quality": "White pages"
+      },
+      "tags": [
+        "Spider-Man",
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "marvel-team-up-141",
+      "coverFile": "marvel-team-up-141",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1600_5.jpg"
+      ]
+    },
+    {
+      "sourceId": 555,
+      "sourceName": "MARVEL SPOTLIGHT #5 AUGUST 1972 CGC 7.5 VF- (FIRST GHOST RIDER)",
+      "seller": "lone-star-slabs",
+      "slug": "marvel-spotlight-5-cgc-7-5",
+      "title": "Marvel Spotlight",
+      "issue": "#5",
+      "publisher": "Marvel Comics",
+      "year": 1972,
+      "era": "Bronze Age",
+      "grader": "CGC",
+      "grade": "7.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 299800,
+      "compareAt": 329100,
+      "stock": 1,
+      "keyIssue": "Origin and first appearance of Ghost Rider (Johnny Blaze)",
+      "creators": {
+        "writer": "Gary Friedrich & Roy Thomas",
+        "artist": "Mike Ploog",
+        "cover": "Mike Ploog"
+      },
+      "summary": "Marvel Spotlight #5 (Marvel Comics, 1972) — Origin and first appearance of Ghost Rider (Johnny Blaze). CGC 7.5, off-white to white pages.",
+      "description": "Marvel. Origin and First appearance of Ghost Rider (Johnny Blaze). First appearance of Roxanne Simpson. Gary Friedrich and Roy Thomas story. Mike Ploog cover and art. Off-white to white pages. Key Bronze Age Marvel comic.",
+      "highlights": [
+        "Origin and first appearance of Ghost Rider (Johnny Blaze)",
+        "CGC 7.5, off-white to white pages",
+        "Marvel Comics, 1972 — Bronze Age",
+        "Written by Gary Friedrich & Roy Thomas; cover by Mike Ploog"
+      ],
+      "palette": [
+        "#3b0764",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "Bronze Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "marvel-spotlight-5",
+      "coverFile": "marvel-spotlight-5",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/325.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/3422343.jpg"
+      ]
+    },
+    {
+      "sourceId": 556,
+      "sourceName": "Marvel Mystery Comics #19 CBCS 7.0 1941 1G-0D73743-001",
+      "seller": "atlas-and-timely-finds",
+      "slug": "marvel-mystery-comics-19-cbcs-7-0",
+      "title": "Marvel Mystery Comics",
+      "issue": "#19",
+      "publisher": "Timely Comics",
+      "year": 1941,
+      "era": "Golden Age",
+      "grader": "CBCS",
+      "grade": "7.0",
+      "label": "Universal Blue",
+      "certNumber": "1G-0D73743-001",
+      "price": 295000,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Alex Schomburg cover; Sub-Mariner story by Bill Everett",
+      "creators": {
+        "writer": "Bill Everett",
+        "artist": "Bill Everett",
+        "cover": "Alex Schomburg"
+      },
+      "summary": "Marvel Mystery Comics #19 (Timely Comics, 1941) — Alex Schomburg cover; Sub-Mariner story by Bill Everett. CBCS 7.0.",
+      "description": "Grade CBCS 7.0. Cover art by Alex Schomburg. Sub-Mariner #1 promo ad. Sub-Mariner untitled story, script and art by Bill Everett; At the urging of Betty, Namor decides for all concerned--Betty, Bob, Lynne, and Luther--to join together as a group and fight side-by-side against the Nazis.",
+      "highlights": [
+        "Alex Schomburg cover; Sub-Mariner story by Bill Everett",
+        "CBCS 7.0",
+        "Timely Comics, 1941 — Golden Age",
+        "Written by Bill Everett; cover by Alex Schomburg",
+        "Certification number 1G-0D73743-001, verifiable on the CBCS website"
+      ],
+      "palette": [
+        "#7c2d12",
+        "#f59e0b"
+      ],
+      "featured": false,
+      "attributes": {},
+      "tags": [
+        "Golden Age",
+        "CBCS"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "marvel-mystery-comics-19",
+      "coverFile": "marvel-mystery-comics-19",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_79285378-6d24-4c2b-8aa7-3aacf69ae55e.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_6b3c98d4-3867-46f5-ad57-716e3d03c0ef.jpg"
+      ]
+    },
+    {
+      "sourceId": 559,
+      "sourceName": "Marvel Amazing Spider-Man #129 CBCS 8.5! 1st app. Of The Punisher! 1974",
+      "seller": "lone-star-slabs",
+      "slug": "amazing-spider-man-129-cbcs-8-5",
+      "title": "Amazing Spider-Man",
+      "issue": "#129",
+      "publisher": "Marvel Comics",
+      "year": 1974,
+      "era": "Bronze Age",
+      "grader": "CBCS",
+      "grade": "8.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 215800,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of the Punisher and the Jackal",
+      "creators": {
+        "writer": "Gerry Conway",
+        "artist": "Ross Andru",
+        "cover": "Gil Kane"
+      },
+      "summary": "Amazing Spider-Man #129 (Marvel Comics, 1974) — First appearance of the Punisher and the Jackal. CBCS 8.5.",
+      "description": "Amazing Spider-Man #129 CBCS 8.5! 1st app. Of The Punisher! 1974!",
+      "highlights": [
+        "First appearance of the Punisher and the Jackal",
+        "CBCS 8.5",
+        "Marvel Comics, 1974 — Bronze Age",
+        "Written by Gerry Conway; cover by Gil Kane"
+      ],
+      "palette": [
+        "#b91c1c",
+        "#1e3a8a"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Spider-Man"
+      },
+      "tags": [
+        "Spider-Man",
+        "Bronze Age",
+        "CBCS"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "amazing-spider-man-129",
+      "coverFile": "amazing-spider-man-129",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/546354.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/546435.jpg"
+      ]
+    },
+    {
+      "sourceId": 560,
+      "sourceName": "Journey Into Unknown Worlds #10 (Atlas, 1952) CGC VF 8.0 Off-white pages",
+      "seller": "oregon-coast-collection",
+      "slug": "journey-into-unknown-worlds-10-cgc-8-0",
+      "title": "Journey Into Unknown Worlds",
+      "issue": "#10",
+      "publisher": "Atlas Comics",
+      "year": 1952,
+      "era": "Golden Age",
+      "grader": "CGC",
+      "grade": "8.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 82000,
+      "compareAt": 108000,
+      "stock": 1,
+      "keyIssue": "Pre-Code Atlas science fiction and horror",
+      "creators": {
+        "writer": "Various",
+        "artist": "Dick Ayers, George Tuska, Fred Kida, Werner Roth",
+        "cover": "Various"
+      },
+      "summary": "Journey Into Unknown Worlds #10 (Atlas Comics, 1952) — Pre-Code Atlas science fiction and horror. CGC 8.0, off-white pages.",
+      "description": "Journey Into Unknown Worlds #10 (Atlas, 1952) CGC VF 8.0 Off-white pages. Dick Ayers, George Tuska, Fred Kida, and Werner Roth art. Overstreet 2022 VF 8.0",
+      "highlights": [
+        "Pre-Code Atlas science fiction and horror",
+        "CGC 8.0, off-white pages",
+        "Atlas Comics, 1952 — Golden Age"
+      ],
+      "palette": [
+        "#3b0764",
+        "#dc2626"
+      ],
+      "featured": false,
+      "attributes": {
+        "Page quality": "Off-white pages"
+      },
+      "tags": [
+        "Golden Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "journey-into-unknown-worlds-10",
+      "coverFile": "journey-into-unknown-worlds-10",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/23454-scaled.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/5434324.jpg"
+      ]
+    },
+    {
+      "sourceId": 561,
+      "sourceName": "JOURNEY INTO MYSTERY ANNUAL #1 1965 CGC 8.5 VF+ (FIRST HERCULES & ZEUS).",
+      "seller": "silver-age-vault",
+      "slug": "journey-into-mystery-annual-1-cgc-8-5",
+      "title": "Journey Into Mystery Annual",
+      "issue": "#1",
+      "publisher": "Marvel Comics",
+      "year": 1965,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "8.5",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 198700,
+      "compareAt": 226700,
+      "stock": 1,
+      "keyIssue": "First appearance of Hercules and Zeus — Thor vs Hercules",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Journey Into Mystery Annual #1 (Marvel Comics, 1965) — First appearance of Hercules and Zeus — Thor vs Hercules. CGC 8.5, off-white to white pages.",
+      "description": "Marvel. First appearance of Hercules and Zeus. Thor vs. Hercules. Only issue. Becomes Thor Annual. Stan Lee story. Jack Kirby cover and art w/additional art by Vince Colletta. Off-white to white pages. Key Silver Age Thor comic.",
+      "highlights": [
+        "First appearance of Hercules and Zeus — Thor vs Hercules",
+        "CGC 8.5, off-white to white pages",
+        "Marvel Comics, 1965 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#94a3b8"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Thor",
+        "Page quality": "Off-white to white pages"
+      },
+      "tags": [
+        "Thor",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "journey-into-mystery-annual-1",
+      "coverFile": "journey-into-mystery-annual-1",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/3253.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/32432423.jpg"
+      ]
+    },
+    {
+      "sourceId": 563,
+      "sourceName": "MARVEL fantastic four #18 CGC 8.0 off white 1963 1st appearance super skrull",
+      "seller": "silver-age-vault",
+      "slug": "fantastic-four-18-cgc-8-0",
+      "title": "Fantastic Four",
+      "issue": "#18",
+      "publisher": "Marvel Comics",
+      "year": 1963,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "8.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 189999,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "First appearance of the Super-Skrull",
+      "creators": {
+        "writer": "Stan Lee",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Fantastic Four #18 (Marvel Comics, 1963) — First appearance of the Super-Skrull. CGC 8.0, off-white pages.",
+      "description": "Fantastic Four #18 (Marvel, 1963), the first appearance of the Super-Skrull. Stan Lee story, Jack Kirby cover and art. Graded CGC 8.0 with off-white pages.",
+      "highlights": [
+        "First appearance of the Super-Skrull",
+        "CGC 8.0, off-white pages",
+        "Marvel Comics, 1963 — Silver Age",
+        "Written by Stan Lee; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#1d4ed8",
+        "#0ea5e9"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Fantastic Four",
+        "Page quality": "Off-white pages"
+      },
+      "tags": [
+        "Fantastic Four",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "fantastic-four-18",
+      "coverFile": "fantastic-four-18",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_a3e35a0c-9517-4265-8a6c-73174dbe7161.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_a9bff9cc-b89b-40eb-94f6-f6d3475932fd.jpg"
+      ]
+    },
+    {
+      "sourceId": 564,
+      "sourceName": "Journey into Mystery #84 CGC 6.0 VINTAGE Marvel KEY 2nd Thor App 1st Jane Foster",
+      "seller": "silver-age-vault",
+      "slug": "journey-into-mystery-84-cgc-6-0",
+      "title": "Journey Into Mystery",
+      "issue": "#84",
+      "publisher": "Marvel Comics",
+      "year": 1962,
+      "era": "Silver Age",
+      "grader": "CGC",
+      "grade": "6.0",
+      "label": "Universal Blue",
+      "certNumber": null,
+      "price": 241270,
+      "compareAt": null,
+      "stock": 1,
+      "keyIssue": "Second appearance of Thor; first appearance of Jane Foster",
+      "creators": {
+        "writer": "Stan Lee & Larry Lieber",
+        "artist": "Jack Kirby",
+        "cover": "Jack Kirby"
+      },
+      "summary": "Journey Into Mystery #84 (Marvel Comics, 1962) — Second appearance of Thor; first appearance of Jane Foster. CGC 6.0.",
+      "description": "Journey Into Mystery #84 (Marvel, 1962) — the second appearance of Thor and the first appearance of Jane Foster, one issue after his debut. Graded CGC 6.0.",
+      "highlights": [
+        "Second appearance of Thor; first appearance of Jane Foster",
+        "CGC 6.0",
+        "Marvel Comics, 1962 — Silver Age",
+        "Written by Stan Lee & Larry Lieber; cover by Jack Kirby"
+      ],
+      "palette": [
+        "#1e3a8a",
+        "#94a3b8"
+      ],
+      "featured": false,
+      "attributes": {
+        "Character": "Thor"
+      },
+      "tags": [
+        "Thor",
+        "Silver Age",
+        "CGC"
+      ],
+      "allowedCountries": [],
+      "coverSlug": "journey-into-mystery-84",
+      "coverFile": "journey-into-mystery-84",
+      "sourceImages": [
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_117770d8-36b2-4b49-9656-38cde0226801-1.jpg",
+        "https://waymakercomics.com/wp-content/uploads/2023/04/s-l1000_01bea30f-8299-4ff9-b781-9232d35b5b5e.jpg"
+      ]
+    }
+  ]
+}
