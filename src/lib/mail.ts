@@ -2,8 +2,11 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
-import { getSettings } from "@/lib/settings";
+import { getSettings, type Settings } from "@/lib/settings";
 import { enqueueJob } from "@/lib/jobs/queue";
+import { randomToken, signValue } from "@/lib/crypto";
+import { textToHtml } from "@/lib/mail-html";
+import { fullAddress } from "@/lib/site";
 
 /**
  * Transactional email. Templates live in the database (editable in the admin),
@@ -69,6 +72,30 @@ export async function queueRawEmail(input: {
   return log.id;
 }
 
+/**
+ * Sender identity. The address must be the mailbox SMTP authenticates as (Namecheap,
+ * Google and most providers reject anything else), so MAIL_FROM's address wins and
+ * SMTP_USER is the fallback; the display name comes from MAIL_FROM or the marketplace name.
+ */
+function fromIdentity(settings: Settings): { name: string; address: string } {
+  const raw = env.smtp.from.trim();
+  const m = raw.match(/^(.*?)\s*<([^>]+)>$/);
+  const address = ((m ? m[2] : raw).trim() || env.smtp.user).trim();
+  const name = (m ? m[1].replace(/^"|"$/g, "").trim() : "") || settings["marketplace.name"];
+  return { name, address };
+}
+
+let alignmentWarned = false;
+function warnIfMisaligned(address: string) {
+  if (alignmentWarned || !env.smtp.user.includes("@")) return;
+  alignmentWarned = true;
+  const fromDomain = address.split("@")[1]?.toLowerCase();
+  const userDomain = env.smtp.user.split("@")[1]?.toLowerCase();
+  if (fromDomain && userDomain && fromDomain !== userDomain) {
+    console.warn(`[mail] MAIL_FROM domain (${fromDomain}) differs from the SMTP mailbox domain (${userDomain}); SPF/DKIM alignment will fail and mail lands in spam.`);
+  }
+}
+
 let transporter: Transporter | null = null;
 function smtp() {
   if (!transporter) {
@@ -92,7 +119,35 @@ export async function deliverEmail(emailLogId: string): Promise<void> {
     return;
   }
   try {
-    const info = await smtp().sendMail({ from: env.smtp.from, to: log.toEmail, subject: log.subject, text: log.bodyText });
+    const settings = await getSettings();
+    const meta = (log.metaJson ? (JSON.parse(log.metaJson) as Record<string, unknown>) : {}) as Record<string, unknown>;
+    const { name, address } = fromIdentity(settings);
+    warnIfMisaligned(address);
+    const support = settings["marketplace.supportEmail"].trim();
+    const siteName = settings["marketplace.name"];
+    const footer = [`${siteName} · ${fullAddress}`, `Questions? Reply to this email or write to ${support}.`];
+    const headers: Record<string, string> = {};
+    let text = log.bodyText;
+    // Marketing broadcasts carry RFC 8058 one-click unsubscribe headers and a visible link;
+    // transactional mail (orders, security, support) intentionally does not.
+    if (meta.broadcast === true && log.userId) {
+      const unsubscribe = `${env.siteUrl}/api/email/unsubscribe?u=${encodeURIComponent(signValue(log.userId, 365 * 86_400))}`;
+      headers["List-Unsubscribe"] = `<${unsubscribe}>, <mailto:${support}?subject=unsubscribe>`;
+      headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+      headers["Precedence"] = "bulk";
+      text += `\n\nYou receive marketplace updates because your account opted in. Unsubscribe: ${unsubscribe}`;
+    }
+    const info = await smtp().sendMail({
+      from: { name, address },
+      to: log.toEmail,
+      replyTo: support && support.toLowerCase() !== address.toLowerCase() ? support : undefined,
+      subject: log.subject,
+      text,
+      html: textToHtml(text, { siteName, siteUrl: env.siteUrl, footer }),
+      envelope: { from: address, to: log.toEmail },
+      messageId: `<${randomToken(18)}@${address.split("@")[1] ?? "localhost"}>`,
+      headers,
+    });
     await db.emailLog.update({ where: { id: log.id }, data: { status: "sent", provider: "smtp", messageId: info.messageId ?? null, sentAt: new Date(), error: null } });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
