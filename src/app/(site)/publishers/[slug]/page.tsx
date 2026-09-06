@@ -13,13 +13,16 @@ import { site } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
+/** "Marvel Comics" already says comics; "Timely" does not. */
+const publisherLabel = (name: string) => (/comics?$/i.test(name.trim()) ? name : `${name} Comics`);
+
 export async function generateMetadata({ params }: PageProps<"/publishers/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const publisher = await getPublisher(slug);
   if (!publisher) return pageMetadata({ title: "Publisher not found", description: "No listings from this publisher right now.", path: `/publishers/${slug}`, noIndex: true });
   const settings = await getSettings();
   return pageMetadata({
-    title: `${publisher.name} Comics for Sale — Graded Key Issues`,
+    title: `${publisherLabel(publisher.name)} for Sale — Graded Key Issues`,
     description: `${publisher.count} ${publisher.name} comic book${publisher.count === 1 ? "" : "s"} for sale: CGC and CBCS graded keys plus honestly graded raw copies. Cert-verified, insured shipping and a ${settings["commerce.returnWindowDays"]}-day return window from ${site.name}.`,
     path: `/publishers/${publisher.slug}`,
     keywords: [`${publisher.name} comics for sale`, `${publisher.name} key issues`, `CGC ${publisher.name} comics`, "graded comics for sale"],
@@ -48,7 +51,7 @@ export default async function PublisherPage({ params }: PageProps<"/publishers/[
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     "@id": `${site.url}/publishers/${publisher.slug}#page`,
-    name: `${publisher.name} comics for sale`,
+    name: `${publisherLabel(publisher.name)} for sale`,
     url: `${site.url}/publishers/${publisher.slug}`,
     isPartOf: { "@id": `${site.url}/#website` },
     about: { "@type": "Organization", name: publisher.name },
@@ -67,7 +70,7 @@ export default async function PublisherPage({ params }: PageProps<"/publishers/[
             <SectionHeading
               as="h1"
               eyebrow={`Publisher · ${products.length} listing${products.length === 1 ? "" : "s"}`}
-              title={`${publisher.name} comics`}
+              title={publisherLabel(publisher.name)}
               lead={`Graded and raw ${publisher.name} books${span ? ` from ${span}` : ""}${eras.length > 0 ? `, spanning the ${eras.join(", ")}` : ""}. Every slab is cert-verified before listing and every raw copy is graded in-house with its defects disclosed.`}
             />
             <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">

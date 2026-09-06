@@ -17,7 +17,8 @@ import { formatMoney } from "@/lib/money";
 import { fullAddress, mapDirectionsLink, mapEmbedLink, site } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
-  title: `Buy Graded Comics & Professional Comic Grading | ${site.name}`,
+  // The root layout template appends "| <site name>"; keep it out of the page title itself.
+  title: "Buy Graded Comics & Professional Comic Grading",
   description: `Shop CGC and CBCS graded key issues with an authenticity guarantee, then use ${site.name} for grading submission, pressing, restoration detection and appraisal. Insured shipping nationwide from ${site.address.city}, ${site.address.region}.`,
   path: "/",
   keywords: [
