@@ -11,7 +11,7 @@ import { CheckIcon, ShieldIcon, TruckIcon, SearchIcon } from "@/components/icons
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
 import { detailToSummary, getPublishedProduct, recordProductView, relatedProducts } from "@/lib/catalog/products";
 import { getCollection, publisherHref } from "@/lib/catalog/collections";
-import { shippingOptionsFor } from "@/lib/commerce/pricing";
+import { cheapestDeliveryOption, shippingOptionsFor } from "@/lib/commerce/pricing";
 import { priceFormatter } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/i18n";
@@ -68,7 +68,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
     product.categorySlug ? getCollection(product.categorySlug) : Promise.resolve(null),
   ]);
   const shippingOptions = await shippingOptionsFor(settings["marketplace.defaultCountry"], product.price);
-  const cheapestShipping = shippingOptions.find((o) => o.price >= 0) ?? null;
+  const cheapestShipping = cheapestDeliveryOption(shippingOptions);
   const reviews = await db.review.findMany({
     where: { productId: product.id, status: "published" },
     orderBy: { createdAt: "desc" },

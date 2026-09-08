@@ -41,6 +41,23 @@ test.describe("checkout → admin refund", () => {
     const orderNumber = new URL(page.url()).searchParams.get("order")!;
     expect(orderNumber).toMatch(/^RCC-\d{4}-\d{6}$/);
     await expectHealthy(page);
+    // The confirmation page queues a GA4-shaped purchase event for the Google tag, once per order.
+    const readPurchases = () =>
+      page.evaluate(() => {
+        const layer = (window as unknown as { dataLayer?: ArrayLike<unknown>[] }).dataLayer ?? [];
+        return Array.from(layer)
+          .map((e) => Array.from(e))
+          .filter((e) => e[0] === "event" && e[1] === "purchase")
+          .map((e) => e[2] as { transaction_id: string; value: number; currency: string; items: unknown[] });
+      });
+    const purchases = await readPurchases();
+    expect(purchases).toHaveLength(1);
+    expect(purchases[0].transaction_id).toBe(orderNumber);
+    expect(purchases[0].currency).toBe("USD");
+    expect(purchases[0].value).toBeGreaterThan(0);
+    expect(purchases[0].items.length).toBeGreaterThan(0);
+    await page.reload();
+    expect(await readPurchases()).toHaveLength(0);
     await page.goto(`/account/orders/${orderNumber}`);
     await expect(page.getByText(orderNumber).first()).toBeVisible();
 
@@ -68,8 +85,10 @@ test.describe("checkout → admin refund", () => {
 
     // 3. The audit log and the buyer's account reflect it.
     await page.goto("/admin/audit?q=refund");
-    await expect(page.locator("table")).toContainText(/refund/i);
-    await expect(page.locator("table")).toContainText(orderNumber);
+    // Streamed table segments arrive as hidden <table> chunks in production builds; the role query sees only the visible one.
+    const auditTable = page.getByRole("table").first();
+    await expect(auditTable).toContainText(/refund/i);
+    await expect(auditTable).toContainText(orderNumber);
     await page.context().clearCookies();
     await loginUser(page, E2E.buyer);
     await page.goto(`/account/orders/${orderNumber}`);

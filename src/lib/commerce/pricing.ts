@@ -52,6 +52,16 @@ export type ShippingOption = {
   isInsured: boolean;
 };
 
+/**
+ * The cheapest option that actually delivers: in-person pickup has no carrier and must never
+ * be quoted as "free shipping" on product pages or in shopping feeds.
+ */
+export function cheapestDeliveryOption(options: ShippingOption[]): ShippingOption | null {
+  const delivery = options.filter((o) => o.carrierName !== null && o.price >= 0);
+  const pool = delivery.length > 0 ? delivery : options.filter((o) => o.price >= 0);
+  return [...pool].sort((a, b) => a.price - b.price)[0] ?? null;
+}
+
 /** Shipping methods available for a destination country and order subtotal (base minor units). */
 export async function shippingOptionsFor(countryCode: string, subtotal: number): Promise<ShippingOption[]> {
   const country = await db.country.findUnique({ where: { code: countryCode }, select: { shippingZoneId: true } });

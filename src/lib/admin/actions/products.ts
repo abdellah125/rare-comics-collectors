@@ -1,5 +1,6 @@
 "use server";
-import { pingIndexNow, pingListing } from "@/lib/indexnow";
+import { pingIndexNow } from "@/lib/indexnow";
+import { listingChanged } from "@/lib/catalog/listing-changed";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -82,7 +83,7 @@ export async function createProductAdminAction(_prev: ActionState | undefined, f
     await saveImages(formData, product.id, admin.id, 0);
     await audit({ actor: actorOf(admin), action: "product.create", targetType: "product", targetId: product.id, summary: `Created listing ${d.title} ${d.issue} (${status})` });
     revalidatePath("/store");
-    if (status === "published") await pingListing(product.slug);
+    if (status === "published") await listingChanged(product.slug);
     id = product.id;
     return okState(undefined, "Listing created.");
   });
@@ -114,7 +115,7 @@ export async function updateProductAdminAction(_prev: ActionState | undefined, f
     revalidatePath(`/store/${product.slug}`);
     revalidatePath("/store");
     revalidatePath(`/admin/products/${product.id}`);
-    if (status === "published" || product.status === "published") await pingListing(product.slug);
+    if (status === "published" || product.status === "published") await listingChanged(product.slug);
     return okState(undefined, "Listing saved.");
   });
 }
@@ -138,7 +139,7 @@ export async function moderateListingAction(id: string, decision: Decision, note
     revalidatePath("/store");
     revalidatePath(`/admin/products/${id}`);
     revalidatePath("/admin/products");
-    if (status === "published" || product.status === "published") await pingListing(product.slug);
+    if (status === "published" || product.status === "published") await listingChanged(product.slug);
     return okState(undefined, `Listing ${status}.`);
   });
 }
