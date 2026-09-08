@@ -51,6 +51,7 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 ### Analytics (2026-09-08)
 - Google tag `GT-NGWX2GTZ` (gtag.js) loads on every storefront page after hydration, production deployment only (`src/components/google-tag.tsx`; `NEXT_PUBLIC_GOOGLE_TAG_ID` overrides the id). Admin pages are excluded.
 - Consent Mode v2 defaults: storage denied for EEA/UK/Switzerland visitors (cookieless pings until a future consent banner grants it), granted elsewhere.
+- Verified live: gtag.js loads, consent defaults are queued before config, a measurement hit fires to Merchant Center analytics (destination MC-TPG2B1JPZW, `gcs=G111`), `_ga` cookies set outside Europe, nothing loads on admin pages. The GT container has no Google Analytics 4 destination attached, so GA4 reports stay empty until a G- measurement id is added to the tag in Google`s tag settings (or passed as a second config).
 - Cookie policy corrected to the real cookies (`rcc_session` is a cookie, not local storage; obsolete `rcc_users`/`rcc_listings` rows removed; currency/locale/2FA cookies and the `_ga` cookies added) and the privacy policy now lists Google Analytics as a processor.
 
 ## 2. Still owed by the site owner (cannot be done from the codebase)

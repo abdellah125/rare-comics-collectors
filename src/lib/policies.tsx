@@ -632,7 +632,7 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
               <li>Grading companies, where you have asked us to submit your books.</li>
               <li>Our accountants and insurers, where legally required.</li>
               <li>
-                Google Analytics, which receives anonymised visit statistics (pages viewed, device type, truncated IP
+                Google (Analytics and Merchant Center measurement), which receives anonymised visit statistics (pages viewed, device type, truncated IP
                 address) and never your name, email address or order details. See the{" "}
                 <Link href="/policies/cookies">cookie policy</Link> for how consent is handled.
               </li>
@@ -858,8 +858,8 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
           <>
             <p>
               We keep this deliberately minimal. Besides the essential cookies and local storage that make the cart,
-              sign-in and checkout work, the only optional cookies are Google Analytics measurement cookies, and those
-              are only set where the law allows it without your consent. Everything kept in your browser is listed below.
+              sign-in and checkout work, the only optional cookies are Google&apos;s measurement cookies (Google Analytics
+              and Merchant Center), and those are only set where the law allows it without your consent. Everything kept in your browser is listed below.
             </p>
             <div className="table-wrap" tabIndex={0} role="region" aria-label="Browser storage we use">
               <table>
@@ -899,7 +899,7 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
                   <tr>
                     <td>_ga, _ga_*</td>
                     <td>Cookie (analytics, optional)</td>
-                    <td>Google Analytics: counts visits and pages viewed so we can see which parts of the store are used</td>
+                    <td>Google measurement (Analytics / Merchant Center): counts visits and pages viewed so we can see which parts of the store are used</td>
                     <td>Up to two years</td>
                   </tr>
                 </tbody>
@@ -947,8 +947,8 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
               lazily, so nothing is set until a map scrolls into view.
             </p>
             <p>
-              Visit statistics are measured with Google Analytics, which sets the _ga cookies listed above where
-              permitted and otherwise runs cookieless. Your IP address is truncated by Google before storage and we never
+              Visit statistics are measured with the Google tag (Google Analytics and Merchant Center), which sets
+              the _ga cookies listed above where permitted and otherwise runs cookieless. Your IP address is truncated by Google before storage and we never
               send it your name, email address or order details. Google&apos;s handling of this data is described in its
               own privacy policy.
             </p>
