@@ -48,6 +48,8 @@ export function PurchaseEvent({
       window.dataLayer!.push(arguments);
     } as (...args: unknown[]) => void;
     gtag("event", "purchase", { transaction_id: transactionId, value, currency, tax, shipping, payment_type: paymentType, items });
+    // The tag library normally waits for the first interaction; a confirmation page must not.
+    window.dispatchEvent(new Event("rcc:load-google-tag"));
     try {
       window.sessionStorage.setItem(key, "1");
     } catch {

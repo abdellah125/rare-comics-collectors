@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CollectionCards, PublisherChips } from "@/components/catalog-links";
 import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
-import { ProductCard } from "@/components/product-card";
+import { ProductCardServer } from "@/components/product-card-server";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
 import { collectionCopy } from "@/lib/catalog/collection-copy";
 import { collectionProducts, getCollection, listCollections, listPublishers } from "@/lib/catalog/collections";
@@ -85,7 +85,7 @@ export default async function CollectionPage({ params }: PageProps<"/collections
       <Container className="py-10 lg:py-14">
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {products.map((p, i) => (
-            <ProductCard key={p.slug} product={p} priority={i < 4} />
+            <ProductCardServer key={p.slug} product={p} priority={i < 2} deferPaint={i >= 4} />
           ))}
         </div>
 

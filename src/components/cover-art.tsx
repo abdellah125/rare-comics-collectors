@@ -1,46 +1,54 @@
-"use client";
-import Image from "next/image";
-import { useState } from "react";
+import { preload } from "react-dom";
 import type { ProductSummary } from "@/lib/products";
 import coverMap from "@/lib/gocovers-map.json";
 
 /**
- * Comic cover plate.
- * Source order: a real scan from `gocovers-map.json` (JPEG/WebP under
- * /public/covers), then the product's explicit `image`, then the generated
- * per-product SVG. If the chosen file fails to load we drop to the SVG, and the
- * gradient palette sits underneath everything so the plate never renders empty.
- * Local scans come in 640 px and 384 px WebP variants chosen through `sizes`; anything
- * else (uploads, remote URLs) is served as-is.
+ * Comic cover plate. Hook-free so it renders on the server inside product cards
+ * and only the cart buttons hydrate.
+ *
+ * Source order: a local scan from `gocovers-map.json` (WebP under /public/covers
+ * with 192/256/384/640 px WebP and AVIF siblings from scripts/optimize-covers.mjs),
+ * then the product's own image (uploads, remote URLs) served as-is. The gradient
+ * palette sits underneath, so a missing or failed image still leaves a finished
+ * plate with the title, issue and grade.
  */
-/** Local cover scans ship in two widths; anything up to 384 CSS px × DPR gets the small file. */
-const coverLoader = ({ src, width }: { src: string; width: number }) => {
-  // 192/256/384 px siblings come from scripts/optimize-covers.mjs; larger requests get the full file.
-  const variant = [192, 256, 384].find((w) => width <= w);
-  return variant ? src.replace(/\.webp$/, `-${variant}.webp`) : src;
-};
-const hasVariants = (src: string) => /^\/covers\/[^/]+\.webp$/.test(src);
+const WIDTHS = [192, 256, 384, 640] as const;
+const isLocalScan = (src: string) => /^\/covers\/[^/]+\.webp$/.test(src);
+const variantUrl = (src: string, width: number, ext: "webp" | "avif") => (width === 640 ? src.replace(/\.webp$/, `.${ext}`) : src.replace(/\.webp$/, `-${width}.${ext}`));
+const srcSetFor = (src: string, ext: "webp" | "avif") => WIDTHS.map((w) => `${variantUrl(src, w, ext)} ${w}w`).join(", ");
+
+export const DEFAULT_COVER_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px";
 
 export function CoverArt({
   product,
   className = "",
   priority = false,
-  sizes = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px",
+  sizes = DEFAULT_COVER_SIZES,
 }: {
   product: ProductSummary;
   className?: string;
+  /** Above the fold: eager, high fetch priority and a preload hint (the product page's LCP image). */
   priority?: boolean;
   /** The slot's rendered width, so the browser picks the smallest sufficient file. */
   sizes?: string;
 }) {
-  const [imgFailed, setImgFailed] = useState(false);
   const [from, to] = product.palette;
   const slabbed = product.grader !== "Raw";
-  const localBest = (coverMap as Record<string, string>)[product.slug] ?? null;
-  // Only the seed catalogue ships a per-product SVG plate; for everything else a failed
-  // load simply reveals the gradient instead of requesting a file that does not exist.
-  const fallbackSvg = localBest ? `/covers/${product.slug}.svg` : null;
-  const src = imgFailed ? fallbackSvg : (localBest ?? product.image ?? null);
+  const src = (coverMap as Record<string, string>)[product.slug] ?? product.image ?? null;
+  const responsive = src !== null && isLocalScan(src);
+  if (priority && src) {
+    preload(responsive ? variantUrl(src, 640, "avif") : src, {
+      as: "image",
+      fetchPriority: "high",
+      ...(responsive ? { imageSrcSet: srcSetFor(src, "avif"), imageSizes: sizes, type: "image/avif" } : {}),
+    });
+  }
+  const imgProps = {
+    decoding: "async" as const,
+    loading: priority ? ("eager" as const) : ("lazy" as const),
+    fetchPriority: priority ? ("high" as const) : undefined,
+    className: "absolute inset-0 h-full w-full object-cover",
+  };
 
   return (
     <div
@@ -52,19 +60,16 @@ export function CoverArt({
       }`}
     >
       {/* The wrapper carries the accessible name, so the scan itself is decorative. */}
-      {src && (
-        <Image
-          src={src}
-          alt=""
-          fill
-          sizes={sizes}
-          className="object-cover"
-          priority={priority}
-          loader={hasVariants(src) ? coverLoader : undefined}
-          unoptimized={!hasVariants(src)}
-          onError={() => setImgFailed(true)}
-        />
-      )}
+      {src &&
+        (responsive ? (
+          <picture>
+            <source type="image/avif" srcSet={srcSetFor(src, "avif")} sizes={sizes} />
+            <img src={src} srcSet={srcSetFor(src, "webp")} sizes={sizes} alt="" {...imgProps} />
+          </picture>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt="" {...imgProps} />
+        ))}
 
       {/* halftone / print texture */}
       <div

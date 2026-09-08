@@ -2,7 +2,8 @@
  * Cover art pipeline for public/covers:
  *   1. every JPEG/PNG scan becomes a full-size WebP (≤640 px wide) and gocovers-map.json
  *      points at it (the originals stay for product records that still reference them);
- *   2. every full-size WebP gets 192, 256 and 384 px siblings, which src/components/cover-art.tsx
+ *   2. every full-size WebP gets 192, 256 and 384 px WebP siblings plus AVIF versions of all four
+ *      sizes, which src/components/cover-art.tsx
  *      serves through `sizes`/`srcset` so a phone grid never downloads a desktop-sized scan.
  *
  * The scans are halftone comic art with very high entropy, so quality alone barely changes
@@ -51,6 +52,14 @@ for (const f of fs.readdirSync(dir)) {
     const out = path.join(dir, `${base}-${width}.webp`);
     if (fs.existsSync(out) && !refresh) continue;
     await sharp(original).resize({ width, withoutEnlargement: true }).webp({ quality: QUALITY, effort: 6, smartSubsample: true }).toFile(out);
+    variants += 1;
+    bytes += fs.statSync(out).size;
+  }
+  // AVIF siblings (~30% smaller than WebP on this halftone art) for every width including full size.
+  for (const width of [...COVER_VARIANT_WIDTHS, 640]) {
+    const out = path.join(dir, width === 640 ? `${base}.avif` : `${base}-${width}.avif`);
+    if (fs.existsSync(out) && !refresh) continue;
+    await sharp(original).resize({ width, withoutEnlargement: true }).avif({ quality: width >= 640 ? 55 : 50, effort: 4 }).toFile(out);
     variants += 1;
     bytes += fs.statSync(out).size;
   }

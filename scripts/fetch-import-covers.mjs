@@ -62,7 +62,9 @@ for (const file of files) {
           await sharp(buf).resize({ width: 640, withoutEnlargement: true }).webp({ quality: 72, effort: 6, smartSubsample: true }).toFile(target);
           for (const width of [192, 256, 384]) {
             await sharp(buf).resize({ width, withoutEnlargement: true }).webp({ quality: 72, effort: 6, smartSubsample: true }).toFile(target.replace(/\.webp$/, `-${width}.webp`));
+            await sharp(buf).resize({ width, withoutEnlargement: true }).avif({ quality: 50, effort: 4 }).toFile(target.replace(/\.webp$/, `-${width}.avif`));
           }
+          await sharp(buf).resize({ width: 640, withoutEnlargement: true }).avif({ quality: 55, effort: 4 }).toFile(target.replace(/\.webp$/, ".avif"));
           done.set(coverSlug, publicPath);
           ok += 1;
           console.log(`OK   ${l.title} ${l.issue} → ${publicPath} (${(fs.statSync(target).size / 1024).toFixed(0)} KB)`);

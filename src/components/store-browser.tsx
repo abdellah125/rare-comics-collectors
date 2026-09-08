@@ -327,7 +327,7 @@ export function StoreBrowser({
             <h2 className="sr-only">Listings</h2>
             <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((p, i) => (
-                <ProductCard key={p.slug} product={p} priority={i < 3} />
+                <ProductCard key={p.slug} product={p} priority={i < 2} deferPaint={i >= 4} />
               ))}
             </div>
 

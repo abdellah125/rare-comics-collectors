@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 
 import { CoverArt } from "@/components/cover-art";
 import { PurchasePanel } from "@/components/buy-buttons";
-import { ProductCard } from "@/components/product-card";
+import { ProductCardServer } from "@/components/product-card-server";
 import { Badge, Breadcrumbs, Container, Stars, ButtonLink, type Crumb } from "@/components/ui";
 import { CheckIcon, ShieldIcon, TruckIcon, SearchIcon } from "@/components/icons";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
@@ -406,7 +406,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
             </div>
             <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {related.map((p) => (
-                <ProductCard key={p.slug} product={p} />
+                <ProductCardServer key={p.slug} product={p} deferPaint />
               ))}
             </div>
           </section>

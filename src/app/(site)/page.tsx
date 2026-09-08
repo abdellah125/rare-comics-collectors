@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { CoverArt } from "@/components/cover-art";
-import { ProductCard } from "@/components/product-card";
+import { ProductCardServer } from "@/components/product-card-server";
 import { Badge, ButtonLink, Eyebrow, Section, SectionHeading, Stars } from "@/components/ui";
 import { serviceIcons, CheckIcon, PinIcon, ShieldIcon } from "@/components/icons";
 import { CollectionCards, PublisherChips } from "@/components/catalog-links";
@@ -218,7 +218,7 @@ export default async function HomePage() {
                     <CoverArt
                       product={p}
                       priority={i === 1}
-                      sizes="(max-width: 640px) 30vw, 150px"
+                      sizes="(max-width: 640px) 28vw, 150px"
                       className="aspect-[2/3] w-full shadow-[0_24px_60px_-18px_rgba(0,0,0,.85)] ring-1 ring-white/15"
                     />
                   </Link>
@@ -264,8 +264,8 @@ export default async function HomePage() {
         </div>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {grid.map((p) => (
-            <ProductCard key={p.slug} product={p} />
+          {grid.map((p, i) => (
+            <ProductCardServer key={p.slug} product={p} deferPaint={i >= 4} />
           ))}
         </div>
 
