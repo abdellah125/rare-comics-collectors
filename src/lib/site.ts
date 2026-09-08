@@ -9,6 +9,8 @@ export const site = {
   // the domain that actually serves the site.
   url: (process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "") || "https://rarecomicscollectors.com").replace(/\/$/, ""),
   locale: "en_US",
+  /** Google tag (gtag.js) id; NEXT_PUBLIC_GOOGLE_TAG_ID overrides it. Public by nature. */
+  googleTagId: "GT-NGWX2GTZ",
   currency: "USD",
   twitter: "@rarecomicscol",
   founded: "2011",

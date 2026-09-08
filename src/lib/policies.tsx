@@ -631,6 +631,11 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
               <li>Carriers, to deliver your order.</li>
               <li>Grading companies, where you have asked us to submit your books.</li>
               <li>Our accountants and insurers, where legally required.</li>
+              <li>
+                Google Analytics, which receives anonymised visit statistics (pages viewed, device type, truncated IP
+                address) and never your name, email address or order details. See the{" "}
+                <Link href="/policies/cookies">cookie policy</Link> for how consent is handled.
+              </li>
             </ul>
             <p>
               <strong>We do not sell personal information, and we never have.</strong> We do not share your data with
@@ -852,8 +857,9 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
         body: (
           <>
             <p>
-              We keep this deliberately minimal. This site sets no advertising cookies, no analytics cookies and no
-              cross-site tracking cookies of any kind. The only data kept in your browser is listed below.
+              We keep this deliberately minimal. Besides the essential cookies and local storage that make the cart,
+              sign-in and checkout work, the only optional cookies are Google Analytics measurement cookies, and those
+              are only set where the law allows it without your consent. Everything kept in your browser is listed below.
             </p>
             <div className="table-wrap" tabIndex={0} role="region" aria-label="Browser storage we use">
               <table>
@@ -874,15 +880,27 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
                   </tr>
                   <tr>
                     <td>rcc_session</td>
-                    <td>Local storage</td>
+                    <td>Cookie (essential)</td>
                     <td>Keeps you signed in to your account</td>
-                    <td>Until you sign out</td>
+                    <td>Until you sign out or the session expires</td>
                   </tr>
                   <tr>
-                    <td>rcc_users, rcc_listings</td>
-                    <td>Local storage</td>
-                    <td>Your account profile and the listings you create in the seller dashboard</td>
-                    <td>Until cleared</td>
+                    <td>rcc_login_challenge, rcc_2fa_setup, rcc_admin_session</td>
+                    <td>Cookie (essential)</td>
+                    <td>Two-factor sign-in steps and admin support sessions</td>
+                    <td>Minutes to hours</td>
+                  </tr>
+                  <tr>
+                    <td>rcc_currency, rcc_locale</td>
+                    <td>Cookie (essential)</td>
+                    <td>Remembers the currency and language you chose</td>
+                    <td>One year</td>
+                  </tr>
+                  <tr>
+                    <td>_ga, _ga_*</td>
+                    <td>Cookie (analytics, optional)</td>
+                    <td>Google Analytics: counts visits and pages viewed so we can see which parts of the store are used</td>
+                    <td>Up to two years</td>
                   </tr>
                 </tbody>
               </table>
@@ -895,9 +913,10 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
         heading: "Essential versus optional",
         body: (
           <p>
-            Everything listed above is essential — the cart, sign-in and the seller dashboard cannot work without it.
-            We set nothing optional. Because we run no advertising or profiling cookies, there is nothing here to sell
-            or share.
+            The cart, sign-in, currency and two-factor entries are essential — checkout and your account cannot work
+            without them. The Google Analytics cookies are optional: in the European Economic Area, the United Kingdom
+            and Switzerland they are switched off by default and the tag only sends anonymous, cookieless counts. We run
+            no advertising or profiling cookies, so there is nothing here to sell or share.
           </p>
         ),
       },
@@ -921,11 +940,19 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
         id: "third-party",
         heading: "Third-party content",
         body: (
-          <p>
-            The maps on our <Link href="/#visit">home page</Link> and <Link href="/contact#visit">contact page</Link>{" "}
-            are embedded from Google Maps and are subject to Google&apos;s own privacy and cookie practices. They load
-            lazily, so nothing is set until a map scrolls into view.
-          </p>
+          <>
+            <p>
+              The maps on our <Link href="/#visit">home page</Link> and <Link href="/contact#visit">contact page</Link>{" "}
+              are embedded from Google Maps and are subject to Google&apos;s own privacy and cookie practices. They load
+              lazily, so nothing is set until a map scrolls into view.
+            </p>
+            <p>
+              Visit statistics are measured with Google Analytics, which sets the _ga cookies listed above where
+              permitted and otherwise runs cookieless. Your IP address is truncated by Google before storage and we never
+              send it your name, email address or order details. Google&apos;s handling of this data is described in its
+              own privacy policy.
+            </p>
+          </>
         ),
       },
     ],

@@ -48,6 +48,11 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - A bare visit to /report explains how to report instead of returning a 404.
 - Verified on production after deploy (commit `32193b4`): sitemap lists 74 product and 6 seller URLs, 83/84 import checks and 104/104 SEO checks pass (the one miss is a test-script artefact), unit 42/42, integration 22/22, e2e 18/18 (two specs re-run against the dev server they are written for).
 
+### Analytics (2026-09-08)
+- Google tag `GT-NGWX2GTZ` (gtag.js) loads on every storefront page after hydration, production deployment only (`src/components/google-tag.tsx`; `NEXT_PUBLIC_GOOGLE_TAG_ID` overrides the id). Admin pages are excluded.
+- Consent Mode v2 defaults: storage denied for EEA/UK/Switzerland visitors (cookieless pings until a future consent banner grants it), granted elsewhere.
+- Cookie policy corrected to the real cookies (`rcc_session` is a cookie, not local storage; obsolete `rcc_users`/`rcc_listings` rows removed; currency/locale/2FA cookies and the `_ga` cookies added) and the privacy policy now lists Google Analytics as a processor.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml`.
@@ -63,3 +68,4 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - Back/forward cache is disabled by `Cache-Control: no-store` on dynamic HTML.
 - Product cover art for imported listings is the issue's cover scan, not photos of the actual slab; sellers should upload real photos from their dashboard.
 - Live Stripe/PayPal have not been exercised with a real charge; the `test` provider covers checkout → refund end-to-end.
+- No cookie-consent banner yet: EEA/UK/CH visitors are measured cookielessly (Consent Mode default denied) and never get the chance to opt in; add a small banner that calls `gtag(consent,update,…)` if full analytics coverage in Europe is wanted.

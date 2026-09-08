@@ -5,6 +5,7 @@ import { CartDrawer } from "@/components/cart-drawer";
 import { CurrencyProvider } from "@/components/currency-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { GoogleTag } from "@/components/google-tag";
 import { JsonLd } from "@/components/json-ld";
 import { getPresentmentCurrency, getEnabledCurrencies } from "@/lib/currency";
 import { organizationJsonLd } from "@/lib/seo";
@@ -24,6 +25,7 @@ export async function SiteShell({ children, banner }: { children: ReactNode; ban
   return (
     <>
       <JsonLd id="org-schema" data={organizationJsonLd()} />
+      <GoogleTag />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-ink-950 focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white"
