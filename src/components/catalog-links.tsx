@@ -46,7 +46,7 @@ export function PublisherChips({ publishers, current, heading = "Shop by publish
               className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-3.5 py-1.5 text-sm font-medium text-ink-800 hover:border-brand-300 hover:text-brand-700"
             >
               {p.name}
-              <span className="text-xs text-ink-400 tabular-nums">{p.count}</span>
+              <span className="text-xs text-ink-500 tabular-nums">{p.count}</span>
             </Link>
           </li>
         ))}

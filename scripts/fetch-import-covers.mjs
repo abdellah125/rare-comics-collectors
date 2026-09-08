@@ -59,7 +59,10 @@ for (const file of files) {
       } else {
         try {
           const buf = await download(await coverUrlFor(coverSlug));
-          await sharp(buf).resize({ width: 640, withoutEnlargement: true }).webp({ quality: 80 }).toFile(target);
+          await sharp(buf).resize({ width: 640, withoutEnlargement: true }).webp({ quality: 72, effort: 6, smartSubsample: true }).toFile(target);
+          for (const width of [192, 256, 384]) {
+            await sharp(buf).resize({ width, withoutEnlargement: true }).webp({ quality: 72, effort: 6, smartSubsample: true }).toFile(target.replace(/\.webp$/, `-${width}.webp`));
+          }
           done.set(coverSlug, publicPath);
           ok += 1;
           console.log(`OK   ${l.title} ${l.issue} → ${publicPath} (${(fs.statSync(target).size / 1024).toFixed(0)} KB)`);

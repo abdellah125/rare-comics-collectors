@@ -65,6 +65,12 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - Listings Google would disapprove are skipped and logged (`[merchant-feed] skipped <sku>: <reason>`): no image, non-positive price, missing SKU/title, duplicate id; the skip list is also written as an XML comment at the end of the feed and in the `x-feed-skipped` header.
 - Verified on production (commit `bd868dd`): 72 items, 2 skipped (the two imports without cover art), 40/40 validator checks (well-formed XML, unique ids, every required attribute, 8 items cross-checked against their product pages for price, availability, image and URL, images fetchable); the order-flow e2e proves the purchase event fires exactly once per order.
 
+### Mobile performance (2026-09-09)
+- Baseline (Lighthouse 12, mobile, simulated slow 4G): home 43, store 55, product 54, collection 56. Main causes: the Google tag library (150 KB, ~0.8 s main-thread blocking during startup, competing with fonts and covers for bandwidth), web fonts swapping in after first paint (LCP re-candidate and the only layout shift), a session fetch and re-render after hydration, cover scans served at one size, and short cache lifetimes on covers.
+- Round one: Google tag deferred to `lazyOnload`; fonts `display: optional` with size-adjusted fallbacks; session DTO rendered into the HTML (`src/lib/auth/session-dto.ts`) so AuthProvider no longer fetches on start; 192/256/384 px cover variants through a next/image loader with honest `sizes` on the hero and product page; `/covers/*` immutable for a year; publisher-chip counts raised from 3.2:1 to 4.9:1 contrast.
+- Tried and rejected: `experimental.inlineCss` (Turbopack inlined the stylesheet three times per page: 453 KB HTML / 72 KB gzipped versus a 10 KB cached stylesheet).
+- Cover scans are high-entropy halftone art (entropy 7.7 bits): WebP quality 30 only halves a 300 px file and AVIF q50 saves about 27%, so the "compress images" estimate is not achievable without visible loss; right-sizing is what was done.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml`.

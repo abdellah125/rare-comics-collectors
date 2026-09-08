@@ -159,7 +159,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
         <div className="mt-8 grid gap-10 lg:grid-cols-12 lg:gap-14">
           <div className="lg:col-span-5">
             <div className="lg:sticky lg:top-24">
-              <CoverArt product={summary} priority className="aspect-[2/3] w-full max-w-md shadow-lift ring-1 ring-ink-950/10" />
+              <CoverArt product={summary} priority sizes="(max-width: 640px) 100vw, 448px" className="aspect-[2/3] w-full max-w-md shadow-lift ring-1 ring-ink-950/10" />
               {product.images.length > 1 && (
                 <ul className="mt-3 flex max-w-md gap-2 overflow-x-auto">
                   {product.images.slice(1, 6).map((img, i) => (

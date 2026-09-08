@@ -218,6 +218,7 @@ export default async function HomePage() {
                     <CoverArt
                       product={p}
                       priority={i === 1}
+                      sizes="(max-width: 640px) 30vw, 150px"
                       className="aspect-[2/3] w-full shadow-[0_24px_60px_-18px_rgba(0,0,0,.85)] ring-1 ring-white/15"
                     />
                   </Link>

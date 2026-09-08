@@ -10,16 +10,28 @@ import coverMap from "@/lib/gocovers-map.json";
  * /public/covers), then the product's explicit `image`, then the generated
  * per-product SVG. If the chosen file fails to load we drop to the SVG, and the
  * gradient palette sits underneath everything so the plate never renders empty.
- * `unoptimized` serves the files as-is: the scans are already sized for the grid.
+ * Local scans come in 640 px and 384 px WebP variants chosen through `sizes`; anything
+ * else (uploads, remote URLs) is served as-is.
  */
+/** Local cover scans ship in two widths; anything up to 384 CSS px × DPR gets the small file. */
+const coverLoader = ({ src, width }: { src: string; width: number }) => {
+  // 192/256/384 px siblings come from scripts/optimize-covers.mjs; larger requests get the full file.
+  const variant = [192, 256, 384].find((w) => width <= w);
+  return variant ? src.replace(/\.webp$/, `-${variant}.webp`) : src;
+};
+const hasVariants = (src: string) => /^\/covers\/[^/]+\.webp$/.test(src);
+
 export function CoverArt({
   product,
   className = "",
   priority = false,
+  sizes = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px",
 }: {
   product: ProductSummary;
   className?: string;
   priority?: boolean;
+  /** The slot's rendered width, so the browser picks the smallest sufficient file. */
+  sizes?: string;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const [from, to] = product.palette;
@@ -45,10 +57,11 @@ export function CoverArt({
           src={src}
           alt=""
           fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+          sizes={sizes}
           className="object-cover"
           priority={priority}
-          unoptimized
+          loader={hasVariants(src) ? coverLoader : undefined}
+          unoptimized={!hasVariants(src)}
           onError={() => setImgFailed(true)}
         />
       )}

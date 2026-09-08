@@ -30,9 +30,9 @@ const Ctx = createContext<AuthCtx>({ user: null, loading: true, refresh: async (
  * session cookie on the server; this provider only mirrors a safe DTO from
  * /api/auth/session so public pages can stay cacheable.
  */
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({ children, initialUser }: { children: ReactNode; initialUser?: SessionUser | null }) {
+  const [user, setUser] = useState<SessionUser | null>(initialUser ?? null);
+  const [loading, setLoading] = useState(initialUser === undefined);
   const router = useRouter();
   const [, startTransition] = useTransition();
 
@@ -49,10 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Deferred so the initial session fetch doesn't set state synchronously inside the effect body.
+    // The shell passes the session with the HTML; only providers mounted without it fetch on start.
+    if (initialUser !== undefined) return;
     const id = setTimeout(() => void refresh(), 0);
     return () => clearTimeout(id);
-  }, [refresh]);
+  }, [refresh, initialUser]);
 
   const logout = useCallback(() => {
     setUser(null);

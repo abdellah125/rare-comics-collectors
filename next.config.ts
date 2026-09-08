@@ -33,8 +33,10 @@ const nextConfig: NextConfig = {
       { source: "/:area(admin|account|dashboard|cart|checkout|appeal|report)/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
       // Uploaded product photos (/api/media) and social cards (/api/og) stay indexable as images.
       { source: "/api/:path((?!media/|og).*)", headers: [{ key: "X-Robots-Tag", value: "noindex" }] },
-      // Cover scans only change with a deploy.
-      { source: "/covers/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }] },
+      // Cover scans are build-time assets: a changed cover gets a new file name (the fetch and
+      // optimise scripts never overwrite in place), so the files themselves are immutable.
+      { source: "/covers/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+      { source: "/icon.svg", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },
     ];
   },
   async rewrites() {

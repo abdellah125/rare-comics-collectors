@@ -11,6 +11,7 @@ import { getPresentmentCurrency, getEnabledCurrencies } from "@/lib/currency";
 import { organizationJsonLd } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
 import { listCollections } from "@/lib/catalog/collections";
+import { sessionDto } from "@/lib/auth/session-dto";
 import { formatMoney } from "@/lib/money";
 
 /**
@@ -18,7 +19,7 @@ import { formatMoney } from "@/lib/money";
  * drawer. Used by the (site) route group layout and the global 404 page.
  */
 export async function SiteShell({ children, banner }: { children: ReactNode; banner?: ReactNode }) {
-  const [currency, currencies, settings, collections] = await Promise.all([getPresentmentCurrency(), getEnabledCurrencies(), getSettings(), listCollections().catch(() => [])]);
+  const [currency, currencies, settings, collections, sessionUser] = await Promise.all([getPresentmentCurrency(), getEnabledCurrencies(), getSettings(), listCollections().catch(() => []), sessionDto()]);
   const brand = { name: settings["marketplace.name"], logoUrl: settings["marketplace.logoMediaId"] ? `/api/media/${settings["marketplace.logoMediaId"]}` : null };
   const threshold = settings["commerce.freeShippingThreshold"];
   const shippingNotice = threshold > 0 ? `Free insured shipping on ${settings["marketplace.defaultCountry"]} orders over ${formatMoney(threshold, "USD", "en-US", { compact: true })}` : "Insured shipping on every order";
@@ -33,7 +34,7 @@ export async function SiteShell({ children, banner }: { children: ReactNode; ban
         Skip to main content
       </a>
       <CurrencyProvider currency={{ code: currency.code, symbol: currency.symbol, decimals: currency.decimals, rateToBase: currency.rateToBase, isBase: currency.isBase }}>
-        <AuthProvider>
+        <AuthProvider initialUser={sessionUser}>
           <CartProvider>
             {banner}
             <Header brand={brand} shippingNotice={shippingNotice} />

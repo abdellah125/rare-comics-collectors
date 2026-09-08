@@ -7,9 +7,12 @@ import { brandStyle } from "@/lib/brand-color";
 import { getSettings } from "@/lib/settings";
 import { env } from "@/lib/env";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
-const display = Fraunces({ variable: "--font-display", subsets: ["latin"], display: "swap", weight: ["600", "700"] });
-const orbitron = Orbitron({ variable: "--font-orbitron", subsets: ["latin"], display: "swap", weight: ["700", "900"] });
+// `optional`: the fonts are preloaded and self-hosted, so on a decent connection they are in
+// place for the first paint; when they are late the size-adjusted fallbacks stay put instead of
+// swapping in later, which is what pushed LCP and caused the only layout shift on mobile.
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "optional" });
+const display = Fraunces({ variable: "--font-display", subsets: ["latin"], display: "optional", weight: ["600", "700"] });
+const orbitron = Orbitron({ variable: "--font-orbitron", subsets: ["latin"], display: "optional", weight: ["900"] });
 
 const baseMetadata: Metadata = {
   metadataBase: new URL(site.url),

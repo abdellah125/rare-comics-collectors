@@ -2,8 +2,10 @@ import Script from "next/script";
 import { site } from "@/lib/site";
 
 /**
- * Google tag (gtag.js) for Google Analytics / Google Ads. Loaded after hydration
- * so it never competes with the page for the first paint, and only on the
+ * Google tag (gtag.js) for Google Analytics / Google Ads. Loaded once the page has
+ * finished loading (`lazyOnload`): the 150 KB library used to block the main thread
+ * for ~0.8 s during startup and compete with fonts and covers for bandwidth, which
+ * pushed LCP out by seconds on mobile. Page views still fire on every visit. Only on the
  * production deployment so previews and local runs do not pollute the reports.
  * The tag id is public by nature (it is in the page source of every site that
  * uses one); NEXT_PUBLIC_GOOGLE_TAG_ID overrides the default in src/lib/site.ts.
@@ -24,8 +26,8 @@ export function GoogleTag() {
   if (!id || !isProduction) return null;
   return (
     <>
-      <Script src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`} strategy="afterInteractive" />
-      <Script id="google-tag-init" strategy="afterInteractive">
+      <Script src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`} strategy="lazyOnload" />
+      <Script id="google-tag-init" strategy="lazyOnload">
         {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('consent', 'default', {ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied', region: ${JSON.stringify(CONSENT_REGIONS)}});

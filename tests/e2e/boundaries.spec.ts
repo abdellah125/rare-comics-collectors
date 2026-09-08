@@ -24,8 +24,8 @@ test.describe("buyer / seller boundaries", () => {
     await loginUser(page, E2E.buyer);
     const res = await page.goto("/account/orders/RCC-2026-000001");
     expect([404, 200]).toContain(res?.status() ?? 0);
-    const body = await page.locator("body").innerText();
-    expect(body).toMatch(/not found|couldn.t find|404/i);
+    // The not-found boundary streams in after the shell; poll instead of reading the body once.
+    await expect(page.locator("body")).toContainText(/not found|couldn.t find|404/i);
     const ticket = await page.goto("/account/support/TCK-999999");
     expect(ticket?.status()).toBe(404);
   });
