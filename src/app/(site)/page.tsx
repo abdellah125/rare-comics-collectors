@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { CoverArt } from "@/components/cover-art";
-import { ProductCardServer } from "@/components/product-card-server";
+import { ProductCard } from "@/components/product-card";
 import { Badge, ButtonLink, Eyebrow, Section, SectionHeading, Stars } from "@/components/ui";
 import { serviceIcons, CheckIcon, PinIcon, ShieldIcon } from "@/components/icons";
 import { CollectionCards, PublisherChips } from "@/components/catalog-links";
@@ -265,7 +265,7 @@ export default async function HomePage() {
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {grid.map((p, i) => (
-            <ProductCardServer key={p.slug} product={p} deferPaint={i >= 4} />
+            <ProductCard key={p.slug} product={p} deferPaint={i >= 4} />
           ))}
         </div>
 

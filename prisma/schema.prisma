@@ -1397,3 +1397,43 @@ model RateLimitBucket {
 
   @@index([resetAt])
 }
+
+// ──────────────────────────────── knowledge base ────────────────────────────
+
+/// Educational guides and answers (the knowledge base). Question-style titles with a
+/// direct answer up front; the body is Markdown. Tags link an article to characters,
+/// titles and publishers so product, collection and character pages can surface it.
+model Article {
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  title          String
+  /// One paragraph that answers the question directly (also the meta description).
+  answer         String
+  /// Markdown
+  body           String
+  /// grading | collecting | buying-selling | values | characters | titles | creators | publishers | history | news | guides | faq
+  topic          String
+  tagsJson       String    @default("[]")
+  charactersJson String    @default("[]")
+  titlesJson     String    @default("[]")
+  publishersJson String    @default("[]")
+  /// JSON array of { q, a }
+  faqJson        String    @default("[]")
+  /// JSON array of related article slugs
+  relatedJson    String    @default("[]")
+  /// JSON array of { label, url? }
+  sourcesJson    String    @default("[]")
+  /// draft | published
+  status         String    @default("draft")
+  /// For news and history entries: the date of the event described
+  eventDate      DateTime?
+  authorName     String?
+  publishedAt    DateTime?
+  viewCount      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([topic, status])
+  @@index([eventDate])
+}

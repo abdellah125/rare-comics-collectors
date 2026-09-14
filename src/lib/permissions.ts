@@ -13,6 +13,7 @@ export const PERMISSIONS = {
   "sellers.manage": "Approve, reject, verify and suspend sellers",
   "products.view": "View listings",
   "products.manage": "Create, edit, moderate and delete listings",
+  "content.manage": "Write, publish and import guides and knowledge-base articles",
   "catalog.manage": "Manage categories and brands",
   "orders.view": "View orders",
   "orders.manage": "Edit, cancel and fulfil orders",
@@ -44,7 +45,7 @@ export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 export const PERMISSION_GROUPS: { label: string; keys: Permission[] }[] = [
   { label: "Overview", keys: ["dashboard.view", "reports.view", "reports.export", "audit.view"] },
   { label: "People", keys: ["users.view", "users.manage", "users.impersonate", "sellers.view", "sellers.manage", "admins.manage"] },
-  { label: "Catalog", keys: ["products.view", "products.manage", "catalog.manage", "promotions.manage", "reviews.manage"] },
+  { label: "Catalog", keys: ["products.view", "products.manage", "catalog.manage", "promotions.manage", "reviews.manage", "content.manage"] },
   { label: "Commerce", keys: ["orders.view", "orders.manage", "orders.refund", "returns.manage", "disputes.manage", "shipping.manage"] },
   { label: "Finance", keys: ["finance.view", "finance.manage", "payouts.manage"] },
   { label: "Trust & support", keys: ["moderation.manage", "support.view", "support.manage", "notifications.manage"] },
@@ -63,7 +64,7 @@ export const DEFAULT_ROLES: { slug: string; name: string; description: string; p
     slug: "moderator",
     name: "Moderator",
     description: "Listing moderation, reviews, reports and seller/user visibility.",
-    permissions: ["dashboard.view", "products.view", "products.manage", "catalog.manage", "reviews.manage", "moderation.manage", "users.view", "sellers.view", "reports.view"],
+    permissions: ["dashboard.view", "products.view", "products.manage", "catalog.manage", "content.manage", "reviews.manage", "moderation.manage", "users.view", "sellers.view", "reports.view"],
   },
   {
     slug: "support",

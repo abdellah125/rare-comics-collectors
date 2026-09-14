@@ -6,8 +6,9 @@ import { site } from "@/lib/site";
  *
  * The tag's command queue (consent defaults, `js`, `config`) is set up right after
  * hydration, so nothing that happens on the page is lost. The 150 KB library itself
- * is fetched on the visitor's first interaction (pointer, key, touch or scroll) or
- * three seconds after the load event, whichever comes first: measured on a
+ * is fetched on the visitor's first interaction (pointer, key, touch or scroll) or,
+ * failing that, once the main thread is idle at least three seconds after the load
+ * event (five at most), whichever comes first: measured on a
  * simulated mid-range phone it blocked the main thread for 0.8–1.2 s and competed
  * with fonts and covers for bandwidth when loaded during startup. Pages that need
  * the tag immediately (the order confirmation with its purchase event) dispatch
@@ -47,7 +48,7 @@ gtag('config', ${JSON.stringify(id)});
   var events = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
   events.forEach(function(e){ addEventListener(e, load, {passive: true, once: true}); });
   addEventListener(${JSON.stringify(GOOGLE_TAG_LOAD_EVENT)}, load);
-  function afterLoad(){ setTimeout(load, 3000); }
+  function afterLoad(){ setTimeout(function(){ if ('requestIdleCallback' in window) requestIdleCallback(load, {timeout: 2000}); else load(); }, 3000); }
   if (document.readyState === 'complete') afterLoad(); else addEventListener('load', afterLoad);
 })();`}
     </Script>

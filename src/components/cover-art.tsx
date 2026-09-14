@@ -1,4 +1,3 @@
-import { preload } from "react-dom";
 import type { ProductSummary } from "@/lib/products";
 import coverMap from "@/lib/gocovers-map.json";
 
@@ -27,7 +26,7 @@ export function CoverArt({
 }: {
   product: ProductSummary;
   className?: string;
-  /** Above the fold: eager, high fetch priority and a preload hint (the product page's LCP image). */
+  /** Above the fold: eager with a high fetch priority (the product page's LCP image). */
   priority?: boolean;
   /** The slot's rendered width, so the browser picks the smallest sufficient file. */
   sizes?: string;
@@ -36,13 +35,6 @@ export function CoverArt({
   const slabbed = product.grader !== "Raw";
   const src = (coverMap as Record<string, string>)[product.slug] ?? product.image ?? null;
   const responsive = src !== null && isLocalScan(src);
-  if (priority && src) {
-    preload(responsive ? variantUrl(src, 640, "avif") : src, {
-      as: "image",
-      fetchPriority: "high",
-      ...(responsive ? { imageSrcSet: srcSetFor(src, "avif"), imageSizes: sizes, type: "image/avif" } : {}),
-    });
-  }
   const imgProps = {
     decoding: "async" as const,
     loading: priority ? ("eager" as const) : ("lazy" as const),

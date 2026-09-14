@@ -5,10 +5,11 @@ import { Badge, Stars } from "@/components/ui";
 import type { ProductSummary } from "@/lib/products";
 
 /**
- * The product card's markup, hook-free so the same component renders on the
- * server (home, collections, publishers, storefronts, related books) and in the
- * client-side store browser. Prices arrive pre-formatted; the cart buttons come
- * in through `actions` and are the only part that hydrates.
+ * The product card's markup, hook-free. Rendering cards on the server was tried and
+ * measured worse: the Flight payload carried every card's markup a second time (a
+ * 20-card grid shipped 325 KB of inline RSC) and parsing it cost more main-thread
+ * time than hydrating the client card from ~1 KB of props. Prices arrive
+ * pre-formatted; the cart buttons come in through `actions`.
  */
 export function ProductCardView({
   product,

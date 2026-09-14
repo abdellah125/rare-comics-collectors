@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ProductCardServer } from "@/components/product-card-server";
+import { ProductCard } from "@/components/product-card";
 import { Breadcrumbs, Container, Stars, type Crumb } from "@/components/ui";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
 import { toSummary } from "@/lib/catalog/products";
@@ -83,7 +83,7 @@ export default async function SellerStorefrontPage({ params }: PageProps<"/selle
         ) : (
           <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {seller.products.map((p, i) => (
-              <ProductCardServer key={p.id} product={toSummary(p)} deferPaint={i >= 4} />
+              <ProductCard key={p.id} product={toSummary(p)} deferPaint={i >= 4} />
             ))}
           </div>
         )}
