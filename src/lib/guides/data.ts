@@ -145,10 +145,13 @@ export async function guidesForPublisher(name: string, take = 4): Promise<GuideS
 
 /** Newest guides for the home page, spread across topics so a batch of news does not crowd out grading and collecting. */
 export async function latestGuides(take = 3): Promise<GuideSummary[]> {
-  const rows = await db.article.findMany({ where: publishedGuideWhere, select: summarySelect, orderBy: { publishedAt: "desc" }, take: take * 6 });
+  const rows = await db.article.findMany({ where: publishedGuideWhere, select: summarySelect, orderBy: { publishedAt: "desc" }, take: 200 });
+  const preferred = ["grading", "characters", "collecting", "values", "titles", "care", "publishers", "news", "faq"];
   const picked: typeof rows = [];
-  const topics = new Set<string>();
-  for (const r of rows) if (!topics.has(r.topic) && picked.length < take) { picked.push(r); topics.add(r.topic); }
+  for (const topic of preferred) {
+    const newest = rows.find((r) => r.topic === topic && !picked.includes(r));
+    if (newest && picked.length < take) picked.push(newest);
+  }
   for (const r of rows) if (picked.length < take && !picked.includes(r)) picked.push(r);
   return picked.map(toGuideSummary);
 }
