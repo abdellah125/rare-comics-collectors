@@ -25,13 +25,27 @@ export function indexNowKeyLocationUrl(): string {
   return indexNowKeyLocation(site.url, indexNowKey(), env.indexNow.keyLocation);
 }
 
-export type IndexNowResult = { ok: boolean; status: number; submitted: number; skipped?: string };
+export type IndexNowResult = { ok: boolean; status: number; submitted: number; skipped?: string; keyLocation: string; urls: string[] };
 
-/** Submits absolute canonical URLs. Never called from a request directly — go through the job queue. */
+/** What each IndexNow response status means, in the words the admin tool shows. */
+export function describeIndexNowStatus(status: number): string {
+  switch (status) {
+    case 200: return "Accepted: the URLs were submitted and the key was verified.";
+    case 202: return "Received: accepted but the key has not been validated yet. Bing also answers 202 for a wrong key, so check the key file below.";
+    case 400: return "Bad request: the request was malformed.";
+    case 403: return "Forbidden: the key file could not be fetched or its contents do not match the key.";
+    case 422: return "Unprocessable: the URLs are outside the scope the key file verifies, or do not belong to this host.";
+    case 429: return "Too many requests: the endpoint is rate-limiting this host. Try again later.";
+    default: return status === 0 ? "Not sent." : `Unexpected response ${status}.`;
+  }
+}
+
+/** Submits absolute canonical URLs. Called by the job queue and by the admin IndexNow tool. */
 export async function submitIndexNow(paths: string[]): Promise<IndexNowResult> {
   const payload = buildIndexNowPayload(site.url, indexNowKey(), paths, env.indexNow.keyLocation);
-  if (payload.urlList.length === 0) return { ok: true, status: 0, submitted: 0, skipped: "nothing to submit" };
-  if (!env.indexNow.enabled) return { ok: true, status: 0, submitted: 0, skipped: "disabled outside production" };
+  const base = { keyLocation: payload.keyLocation, urls: payload.urlList };
+  if (payload.urlList.length === 0) return { ...base, ok: true, status: 0, submitted: 0, skipped: "nothing to submit" };
+  if (!env.indexNow.enabled) return { ...base, ok: true, status: 0, submitted: 0, skipped: "disabled outside production" };
   const res = await fetch(INDEXNOW_ENDPOINT, {
     method: "POST",
     headers: { "content-type": "application/json; charset=utf-8" },
@@ -41,7 +55,20 @@ export async function submitIndexNow(paths: string[]): Promise<IndexNowResult> {
   const ok = res.status === 200 || res.status === 202;
   if (ok) console.log(`[indexnow] submitted ${payload.urlList.length} url(s) (${res.status}) keyLocation=${payload.keyLocation}`);
   else console.warn(`[indexnow] endpoint answered ${res.status} for ${payload.urlList.length} url(s) keyLocation=${payload.keyLocation}`);
-  return { ok, status: res.status, submitted: payload.urlList.length };
+  return { ...base, ok, status: res.status, submitted: payload.urlList.length };
+}
+
+export type IndexNowKeyFileCheck = { url: string; status: number; ok: boolean; body: string; contentType: string };
+
+/** Fetches a key file the way a search engine would and reports whether it holds exactly the key. */
+export async function checkIndexNowKeyFile(url: string): Promise<IndexNowKeyFileCheck> {
+  try {
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8_000) });
+    const body = (await res.text()).slice(0, 200);
+    return { url, status: res.status, ok: res.status === 200 && body === indexNowKey(), body, contentType: res.headers.get("content-type") ?? "" };
+  } catch (err) {
+    return { url, status: 0, ok: false, body: err instanceof Error ? err.message : String(err), contentType: "" };
+  }
 }
 
 /** Queues a ping for changed pages. Never throws: telling search engines must not break a save. */
