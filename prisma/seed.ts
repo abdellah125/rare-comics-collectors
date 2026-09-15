@@ -363,7 +363,7 @@ type ImportListing = {
   price: number;
   compareAt: number | null;
   stock: number;
-  keyIssue: string;
+  keyIssue: string | null;
   creators: { writer: string; artist: string; cover: string };
   summary: string;
   description: string;
@@ -373,6 +373,8 @@ type ImportListing = {
   attributes: Record<string, string>;
   tags: string[];
   allowedCountries: string[];
+  /** Extra listing photos (public paths) shown after the cover, e.g. the back of the slab. */
+  gallery?: string[];
 };
 type ImportFile = { source: string; sellers: ImportSeller[]; listings: ImportListing[] };
 
@@ -470,6 +472,11 @@ async function seedImportedCatalog() {
       const sku = `IMP-${l.sourceId}`;
       if (await db.product.findUnique({ where: { sku }, select: { id: true } })) continue;
       const cover = covers[l.slug];
+      const gallery = (l.gallery ?? []).filter((url) => fs.existsSync(path.join(process.cwd(), "public", url)));
+      const images = [
+        ...(cover ? [{ url: cover, alt: `${l.title} ${l.issue} cover`, position: 0 }] : []),
+        ...gallery.map((url, n) => ({ url, alt: `${l.title} ${l.issue} ${n === 0 ? "back of the slab" : `photo ${n + 1}`}`, position: n + 1 })),
+      ];
       await db.product.create({
         data: {
           ...record,
@@ -478,7 +485,7 @@ async function seedImportedCatalog() {
           status: "published",
           // Staggered so the "newest" ordering reads like a real week of listings.
           publishedAt: new Date(Date.now() - i * 3_600_000),
-          ...(cover ? { images: { create: [{ url: cover, alt: `${l.title} ${l.issue} cover`, position: 0 }] } } : {}),
+          ...(images.length ? { images: { create: images } } : {}),
         },
       });
       newPaths.push(`/store/${l.slug}`);
