@@ -492,6 +492,77 @@ async function seedImportedCatalog() {
   }
 }
 
+type SeedGuide = {
+  slug: string;
+  title: string;
+  answer: string;
+  body: string;
+  topic: string;
+  tags?: string[];
+  characters?: string[];
+  titles?: string[];
+  publishers?: string[];
+  faq?: { q: string; a: string }[];
+  related?: string[];
+  sources?: { label: string; url?: string }[];
+  status?: string;
+  eventDate?: string;
+  authorName?: string;
+  publishedAt?: string;
+};
+
+/**
+ * Knowledge-base articles from prisma/data/guides/*.json (the same shape the admin
+ * JSON import accepts). New slugs are created; existing ones are left alone unless
+ * SEED_REFRESH_GUIDES=true, so edits made in the admin survive redeploys.
+ */
+async function seedGuides() {
+  const dir = path.join(process.cwd(), "prisma", "data", "guides");
+  if (!fs.existsSync(dir)) return;
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort();
+  let created = 0;
+  let updated = 0;
+  let total = 0;
+  const newPaths: string[] = [];
+  for (const file of files) {
+    const items = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")) as SeedGuide[];
+    for (const g of items) {
+      total += 1;
+      const status = g.status ?? "published";
+      const publishedAt = g.publishedAt ? new Date(g.publishedAt) : new Date();
+      const data = {
+        title: g.title,
+        answer: g.answer,
+        body: g.body,
+        topic: g.topic,
+        tagsJson: JSON.stringify(g.tags ?? []),
+        charactersJson: JSON.stringify(g.characters ?? []),
+        titlesJson: JSON.stringify(g.titles ?? []),
+        publishersJson: JSON.stringify(g.publishers ?? []),
+        faqJson: JSON.stringify(g.faq ?? []),
+        relatedJson: JSON.stringify(g.related ?? []),
+        sourcesJson: JSON.stringify(g.sources ?? []),
+        status,
+        eventDate: g.eventDate ? new Date(g.eventDate) : null,
+        authorName: g.authorName ?? null,
+      };
+      const existing = await db.article.findUnique({ where: { slug: g.slug }, select: { id: true, publishedAt: true } });
+      if (existing) {
+        if (process.env.SEED_REFRESH_GUIDES === "true") {
+          await db.article.update({ where: { id: existing.id }, data: { ...data, publishedAt: existing.publishedAt ?? (status === "published" ? publishedAt : null) } });
+          updated += 1;
+        }
+        continue;
+      }
+      await db.article.create({ data: { ...data, slug: g.slug, publishedAt: status === "published" ? publishedAt : null } });
+      created += 1;
+      if (status === "published") newPaths.push(`/guides/${g.slug}`);
+    }
+  }
+  if (files.length) log(`${total} guides in ${files.length} file(s) (${created} new, ${updated} refreshed)`);
+  if (newPaths.length) await db.job.create({ data: { type: "indexnow_ping", payloadJson: JSON.stringify({ paths: [...newPaths, "/guides"] }), maxAttempts: 3 } });
+}
+
 async function seedDemo() {
   if (process.env.SEED_DEMO !== "true" && process.env.NODE_ENV === "production") return;
   if (process.env.SEED_DEMO !== "true") {
@@ -543,6 +614,7 @@ async function main() {
   await seedTemplates();
   await seedCatalog();
   await seedImportedCatalog();
+  await seedGuides();
   await seedDemo();
   console.log("Done.");
 }

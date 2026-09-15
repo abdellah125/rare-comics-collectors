@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CollectionCards, PublisherChips } from "@/components/catalog-links";
+import { RelatedGuides } from "@/components/guide-links";
+import { listGuides } from "@/lib/guides/data";
 import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
@@ -35,7 +37,7 @@ export default async function CollectionPage({ params }: PageProps<"/collections
   const collection = await getCollection(slug);
   if (!collection || collection.count === 0) notFound();
 
-  const [products, collections, publishers, settings] = await Promise.all([collectionProducts(collection.id), listCollections(), listPublishers(), getSettings()]);
+  const [products, collections, publishers, settings, guides] = await Promise.all([collectionProducts(collection.id), listCollections(), listPublishers(), getSettings(), listGuides({ tag: collection.shortName, take: 4 })]);
   const copy = collectionCopy(collection);
   const publishersHere = publishers.filter((p) => products.some((x) => x.publisher === p.name));
   const lowest = products.reduce((min, p) => Math.min(min, p.price), Number.POSITIVE_INFINITY);
@@ -106,6 +108,11 @@ export default async function CollectionPage({ params }: PageProps<"/collections
         <div className="mt-14">
           <CollectionCards collections={collections} current={collection.slug} heading="More collections" />
         </div>
+        {guides.items.length > 0 && (
+          <div className="mt-14">
+            <RelatedGuides guides={guides.items} heading={`${collection.shortName} guides`} />
+          </div>
+        )}
       </Container>
 
       <section className="border-t border-ink-200 bg-ink-50">

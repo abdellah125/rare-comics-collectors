@@ -11,6 +11,8 @@ import { CheckIcon, ShieldIcon, TruckIcon, SearchIcon } from "@/components/icons
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
 import { detailToSummary, getPublishedProduct, recordProductView, relatedProducts } from "@/lib/catalog/products";
 import { getCollection, publisherHref } from "@/lib/catalog/collections";
+import { RelatedGuides } from "@/components/guide-links";
+import { guidesForProduct } from "@/lib/guides/data";
 import { cheapestDeliveryOption, shippingOptionsFor } from "@/lib/commerce/pricing";
 import { priceFormatter } from "@/lib/currency";
 import { db } from "@/lib/db";
@@ -61,11 +63,12 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
   if (!product) notFound();
   after(() => recordProductView(product.id));
 
-  const [related, settings, { format, formatExact }, collection] = await Promise.all([
+  const [related, settings, { format, formatExact }, collection, guides] = await Promise.all([
     relatedProducts(product),
     getSettings(),
     priceFormatterPair(),
     product.categorySlug ? getCollection(product.categorySlug) : Promise.resolve(null),
+    guidesForProduct({ title: product.title, publisher: product.publisher, era: product.era, grader: product.grader, characters: (product.attributes["Character"] ?? "").split(",").map((s) => s.trim()).filter(Boolean) }),
   ]);
   const shippingOptions = await shippingOptionsFor(settings["marketplace.defaultCountry"], product.price);
   const cheapestShipping = cheapestDeliveryOption(shippingOptions);
@@ -395,6 +398,12 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
             </div>
           </div>
         </div>
+
+        {guides.length > 0 && (
+          <div className="mt-20">
+            <RelatedGuides guides={guides} heading="Guides about this book" lead={`Background on ${product.title}, the grade and what drives the price.`} />
+          </div>
+        )}
 
         {related.length > 0 && (
           <section className="mt-20">

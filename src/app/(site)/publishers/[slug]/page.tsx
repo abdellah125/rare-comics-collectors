@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CollectionCards, PublisherChips } from "@/components/catalog-links";
+import { RelatedGuides } from "@/components/guide-links";
+import { guidesForPublisher } from "@/lib/guides/data";
 import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
@@ -34,7 +36,7 @@ export default async function PublisherPage({ params }: PageProps<"/publishers/[
   const publisher = await getPublisher(slug);
   if (!publisher) notFound();
 
-  const [products, collections, publishers, settings] = await Promise.all([publisherProducts(publisher.name), listCollections(), listPublishers(), getSettings()]);
+  const [products, collections, publishers, settings, guides] = await Promise.all([publisherProducts(publisher.name), listCollections(), listPublishers(), getSettings(), guidesForPublisher(publisher.name)]);
   const years = products.map((p) => p.year);
   const span = years.length > 0 ? `${Math.min(...years)}–${Math.max(...years)}` : null;
   const lowest = products.reduce((min, p) => Math.min(min, p.price), Number.POSITIVE_INFINITY);
@@ -109,6 +111,11 @@ export default async function PublisherPage({ params }: PageProps<"/publishers/[
         <div className="mt-14">
           <CollectionCards collections={collections} />
         </div>
+        {guides.length > 0 && (
+          <div className="mt-14">
+            <RelatedGuides guides={guides} heading={`${publisher.name} guides`} />
+          </div>
+        )}
       </Container>
     </>
   );

@@ -56,8 +56,8 @@ export function pingListing(slug: string): Promise<void> {
  * entries whose lastModified is newer than the previous run (static pages carry none).
  */
 export async function sitemapPaths(since: Date | null): Promise<string[]> {
-  const { sitemapEntries } = await import("@/lib/sitemap-entries");
-  const entries = await sitemapEntries();
+  const { allSitemapEntries } = await import("@/lib/sitemap-entries");
+  const entries = await allSitemapEntries();
   return entries
     .filter((e) => {
       if (!since) return true;

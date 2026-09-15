@@ -8,6 +8,6 @@ import { pingListing } from "@/lib/indexnow";
  * fetch rebuilds them, and IndexNow-capable search engines are pinged.
  */
 export async function listingChanged(slug: string): Promise<void> {
-  for (const path of ["/google-shopping-feed.xml", "/sitemap.xml", "/collections", "/publishers"]) revalidatePath(path);
+  for (const path of ["/google-shopping-feed.xml", "/sitemap.xml", "/sitemaps/site.xml", "/collections", "/publishers", "/characters"]) revalidatePath(path);
   await pingListing(slug);
 }

@@ -109,6 +109,11 @@ export function Footer({
                   </Link>
                 </li>
                 <li>
+                  <Link href="/characters" className="text-ink-400 hover:text-white">
+                    By character
+                  </Link>
+                </li>
+                <li>
                   <Link href="/cart" className="text-ink-400 hover:text-white">
                     Cart
                   </Link>
@@ -141,6 +146,11 @@ export function Footer({
                   <li>
                     <Link href="/contact" className="text-ink-400 hover:text-white">
                       Contact
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/guides" className="text-ink-400 hover:text-white">
+                      Collecting guides
                     </Link>
                   </li>
                   <li>

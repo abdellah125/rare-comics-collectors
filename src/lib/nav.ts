@@ -1,5 +1,6 @@
 export const primaryNav = [
   { label: "Store", href: "/store" },
+  { label: "Guides", href: "/guides" },
   { label: "Services", href: "/services" },
   { label: "Grading", href: "/services/grading-submission" },
   { label: "About", href: "/about" },

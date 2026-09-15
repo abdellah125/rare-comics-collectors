@@ -26,6 +26,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { href: "/admin/products", label: "Listings", perm: "products.view" },
       { href: "/admin/catalog", label: "Categories & brands", perm: "catalog.manage" },
+      { href: "/admin/guides", label: "Guides & articles", perm: "content.manage" },
       { href: "/admin/reviews", label: "Reviews", perm: "reviews.manage" },
       { href: "/admin/promotions", label: "Promotions", perm: "promotions.manage" },
     ],
