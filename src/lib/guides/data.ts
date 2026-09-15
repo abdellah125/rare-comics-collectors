@@ -143,9 +143,14 @@ export async function guidesForPublisher(name: string, take = 4): Promise<GuideS
   return [...history, ...rest].map(toGuideSummary);
 }
 
+/** Newest guides for the home page, spread across topics so a batch of news does not crowd out grading and collecting. */
 export async function latestGuides(take = 3): Promise<GuideSummary[]> {
-  const rows = await db.article.findMany({ where: publishedGuideWhere, select: summarySelect, orderBy: { publishedAt: "desc" }, take });
-  return rows.map(toGuideSummary);
+  const rows = await db.article.findMany({ where: publishedGuideWhere, select: summarySelect, orderBy: { publishedAt: "desc" }, take: take * 6 });
+  const picked: typeof rows = [];
+  const topics = new Set<string>();
+  for (const r of rows) if (!topics.has(r.topic) && picked.length < take) { picked.push(r); topics.add(r.topic); }
+  for (const r of rows) if (picked.length < take && !picked.includes(r)) picked.push(r);
+  return picked.map(toGuideSummary);
 }
 
 // ───────────────────────────── characters ─────────────────────────────
