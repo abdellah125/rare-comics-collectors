@@ -39,6 +39,11 @@ const nextConfig: NextConfig = {
       { source: "/icon.svg", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },
     ];
   },
+  async rewrites() {
+    // The IndexNow key file must also exist at the site root, because the protocol only
+    // verifies URLs under the key file's folder; the /indexnow/[file] handler validates the name.
+    return [{ source: "/:key([a-zA-Z0-9-]{8,128})\\.txt", destination: "/indexnow/:key.txt" }];
+  },
   async redirects() {
     // Once a custom domain is the canonical origin, the *.vercel.app alias becomes a duplicate:
     // send visitors, crawlers and old links to the real domain. Webhooks and the cron endpoint

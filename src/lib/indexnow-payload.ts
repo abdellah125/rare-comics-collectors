@@ -9,16 +9,24 @@ export const INDEXNOW_MAX_URLS = 10_000;
 
 export type IndexNowPayload = { host: string; key: string; keyLocation: string; urlList: string[] };
 
+/** The key file is served at the site root and under /indexnow/; both hold exactly the key. */
+export const INDEXNOW_KEY_FOLDER = "/indexnow";
+
 /**
- * Where the key file lives ("Option 2" hosting): /indexnow/<key>.txt on the canonical
- * origin. Every submission names it as keyLocation so the engines know where to verify.
+ * The keyLocation sent with every submission. IndexNow scopes a key to the folder its
+ * file sits in — a file at /indexnow/<key>.txt only verifies URLs under /indexnow/ (the
+ * endpoint answers 422 for anything else, confirmed live on 2026-09-15) — so the root
+ * copy, which verifies the whole site, is the default. `override` (INDEXNOW_KEY_LOCATION)
+ * forces a specific absolute URL.
  */
-export function indexNowKeyLocation(siteUrl: string, key: string): string {
-  return `${siteUrl.replace(/\/+$/, "")}/indexnow/${key}.txt`;
+export function indexNowKeyLocation(siteUrl: string, key: string, override = ""): string {
+  const forced = override.trim();
+  if (/^https:\/\/\S+\.txt$/i.test(forced)) return forced;
+  return `${siteUrl.replace(/\/+$/, "")}/${key}.txt`;
 }
 
 /** Absolute URLs on the canonical origin only, de-duplicated and capped at the protocol's batch limit. */
-export function buildIndexNowPayload(siteUrl: string, key: string, paths: string[]): IndexNowPayload {
+export function buildIndexNowPayload(siteUrl: string, key: string, paths: string[], keyLocationOverride = ""): IndexNowPayload {
   const origin = siteUrl.replace(/\/+$/, "");
   const host = new URL(origin).host;
   const urls = new Set<string>();
@@ -28,7 +36,7 @@ export function buildIndexNowPayload(siteUrl: string, key: string, paths: string
     const url = /^https?:\/\//i.test(p) ? p : `${origin}${p.startsWith("/") ? "" : "/"}${p}`;
     if (url === origin || url.startsWith(`${origin}/`)) urls.add(url);
   }
-  return { host, key, keyLocation: indexNowKeyLocation(origin, key), urlList: [...urls].slice(0, INDEXNOW_MAX_URLS) };
+  return { host, key, keyLocation: indexNowKeyLocation(origin, key, keyLocationOverride), urlList: [...urls].slice(0, INDEXNOW_MAX_URLS) };
 }
 
 /** IndexNow keys are 8–128 characters from [a-zA-Z0-9-]. */

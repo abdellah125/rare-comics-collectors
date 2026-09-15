@@ -14,8 +14,11 @@ describe("indexnow payload", () => {
     ]);
     expect(p.host).toBe("www.rarecomicscollectors.com");
     expect(p.key).toBe("dfc2e1d4b27a4fc58d5ad41e60cd5704");
-    expect(p.keyLocation).toBe("https://www.rarecomicscollectors.com/indexnow/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt");
-    expect(indexNowKeyLocation("https://www.rarecomicscollectors.com/", "dfc2e1d4b27a4fc58d5ad41e60cd5704")).toBe("https://www.rarecomicscollectors.com/indexnow/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt");
+    // The root copy verifies the whole site; a file under /indexnow/ would only verify /indexnow/* URLs.
+    expect(p.keyLocation).toBe("https://www.rarecomicscollectors.com/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt");
+    expect(indexNowKeyLocation("https://www.rarecomicscollectors.com/", "dfc2e1d4b27a4fc58d5ad41e60cd5704")).toBe("https://www.rarecomicscollectors.com/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt");
+    expect(indexNowKeyLocation("https://www.rarecomicscollectors.com", "dfc2e1d4b27a4fc58d5ad41e60cd5704", "https://www.rarecomicscollectors.com/indexnow/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt")).toBe("https://www.rarecomicscollectors.com/indexnow/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt");
+    expect(indexNowKeyLocation("https://www.rarecomicscollectors.com", "dfc2e1d4b27a4fc58d5ad41e60cd5704", "not a url")).toBe("https://www.rarecomicscollectors.com/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt");
     expect(p.urlList).toEqual(["https://www.rarecomicscollectors.com/store/action-comics-1", "https://www.rarecomicscollectors.com/"]);
   });
 

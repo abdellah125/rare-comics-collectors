@@ -7,10 +7,11 @@ import { site } from "@/lib/site";
 /**
  * IndexNow integration: Bing (and Yandex, Seznam, Naver) learn about new, changed and
  * removed pages the moment a listing is saved instead of on their next crawl. The key
- * is public by design — search engines fetch the key file at keyLocation
- * (/indexnow/<key>.txt, "Option 2" hosting) to confirm we control the host — so a
- * built-in default is fine; INDEXNOW_KEY overrides it. The key is served only by that
- * route: never in page HTML, robots.txt or the sitemaps.
+ * is public by design — search engines fetch the key file named by keyLocation to
+ * confirm we control the host — so a built-in default is fine; INDEXNOW_KEY overrides it.
+ * The file is served at /<key>.txt (the keyLocation submissions use, because IndexNow
+ * only verifies URLs under the key file's folder) and at /indexnow/<key>.txt, and
+ * nowhere else: never in page HTML, robots.txt or the sitemaps.
  */
 const DEFAULT_KEY = "dfc2e1d4b27a4fc58d5ad41e60cd5704";
 
@@ -21,14 +22,14 @@ export function indexNowKey(): string {
 
 /** Absolute URL of the key file, as sent in every submission's keyLocation. */
 export function indexNowKeyLocationUrl(): string {
-  return indexNowKeyLocation(site.url, indexNowKey());
+  return indexNowKeyLocation(site.url, indexNowKey(), env.indexNow.keyLocation);
 }
 
 export type IndexNowResult = { ok: boolean; status: number; submitted: number; skipped?: string };
 
 /** Submits absolute canonical URLs. Never called from a request directly — go through the job queue. */
 export async function submitIndexNow(paths: string[]): Promise<IndexNowResult> {
-  const payload = buildIndexNowPayload(site.url, indexNowKey(), paths);
+  const payload = buildIndexNowPayload(site.url, indexNowKey(), paths, env.indexNow.keyLocation);
   if (payload.urlList.length === 0) return { ok: true, status: 0, submitted: 0, skipped: "nothing to submit" };
   if (!env.indexNow.enabled) return { ok: true, status: 0, submitted: 0, skipped: "disabled outside production" };
   const res = await fetch(INDEXNOW_ENDPOINT, {

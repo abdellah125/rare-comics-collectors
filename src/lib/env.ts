@@ -129,6 +129,10 @@ export const env = {
     get key() {
       return str("INDEXNOW_KEY");
     },
+    /** Optional absolute https URL of the key file to send as keyLocation (default: /<key>.txt at the site root). */
+    get keyLocation() {
+      return str("INDEXNOW_KEY_LOCATION");
+    },
     /** Pings leave only the production deployment unless forced on. */
     get enabled() {
       return bool("INDEXNOW_ENABLED", str("VERCEL_ENV") === "production");
