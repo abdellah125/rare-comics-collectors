@@ -636,6 +636,10 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
                 address) and never your name, email address or order details. See the{" "}
                 <Link href="/policies/cookies">cookie policy</Link> for how consent is handled.
               </li>
+              <li>
+                Microsoft (Clarity), which receives anonymised usage recordings and heatmaps with typed text masked, and never your
+                name, email address or order details.
+              </li>
             </ul>
             <p>
               <strong>We do not sell personal information, and we never have.</strong> We do not share your data with
@@ -859,7 +863,8 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
             <p>
               We keep this deliberately minimal. Besides the essential cookies and local storage that make the cart,
               sign-in and checkout work, the only optional cookies are Google&apos;s measurement cookies (Google Analytics
-              and Merchant Center), and those are only set where the law allows it without your consent. Everything kept in your browser is listed below.
+              and Merchant Center), which are only set where the law allows it without your consent, and Microsoft Clarity&apos;s
+              usage cookies. Everything kept in your browser is listed below.
             </p>
             <div className="table-wrap" tabIndex={0} role="region" aria-label="Browser storage we use">
               <table>
@@ -902,6 +907,12 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
                     <td>Google measurement (Analytics / Merchant Center): counts visits and pages viewed so we can see which parts of the store are used</td>
                     <td>Up to two years</td>
                   </tr>
+                  <tr>
+                    <td>_clck, _clsk</td>
+                    <td>Cookie (analytics, optional)</td>
+                    <td>Microsoft Clarity: keeps the same visitor and session together so we can see how pages are used (heatmaps and session replays with typed text masked)</td>
+                    <td>Up to one year</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -915,8 +926,9 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
           <p>
             The cart, sign-in, currency and two-factor entries are essential — checkout and your account cannot work
             without them. The Google Analytics cookies are optional: in the European Economic Area, the United Kingdom
-            and Switzerland they are switched off by default and the tag only sends anonymous, cookieless counts. We run
-            no advertising or profiling cookies, so there is nothing here to sell or share.
+            and Switzerland they are switched off by default and the tag only sends anonymous, cookieless counts. The
+            Microsoft Clarity cookies are set on every visit and only tie together the pages of one visit; typed text is
+            masked. We run no advertising or profiling cookies, so there is nothing here to sell or share.
           </p>
         ),
       },
@@ -951,6 +963,11 @@ const policyBodies: Record<PolicySlug, { summary: string; keywords: string[]; se
               the _ga cookies listed above where permitted and otherwise runs cookieless. Your IP address is truncated by Google before storage and we never
               send it your name, email address or order details. Google&apos;s handling of this data is described in its
               own privacy policy.
+            </p>
+            <p>
+              We also use Microsoft Clarity to understand how visitors use the site through heatmaps and session replays.
+              Clarity sets the _clck and _clsk cookies listed above, masks text typed into forms, and is subject to
+              Microsoft&apos;s own privacy statement.
             </p>
           </>
         ),

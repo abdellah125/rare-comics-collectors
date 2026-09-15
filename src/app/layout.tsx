@@ -6,6 +6,7 @@ import { site } from "@/lib/site";
 import { brandStyle } from "@/lib/brand-color";
 import { getSettings } from "@/lib/settings";
 import { env } from "@/lib/env";
+import { ClarityTag } from "@/components/clarity-tag";
 
 // `optional`: the fonts are preloaded and self-hosted, so on a decent connection they are in
 // place for the first paint; when they are late the size-adjusted fallbacks stay put instead of
@@ -91,6 +92,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await getSettings();
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${display.variable} ${orbitron.variable} h-full antialiased`} style={brandStyle(settings["marketplace.primaryColor"]) as React.CSSProperties | undefined}>
+      <head>
+        <ClarityTag />
+      </head>
       <body className="flex min-h-full flex-col bg-white">{children}</body>
     </html>
   );
