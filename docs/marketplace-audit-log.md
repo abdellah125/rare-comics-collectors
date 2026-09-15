@@ -31,7 +31,7 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - New indexable landing pages `/collections`, `/collections/[slug]`, `/publishers`, `/publishers/[slug]` with unique titles/descriptions/H1s, editorial copy, breadcrumbs, CollectionPage + ItemList JSON-LD, and cross-links from footer, home, store and product pages (footer era links previously pointed at robots-blocked `/store?era=` URLs).
 - Product/Offer structured data only on product pages (store page now uses a summary ItemList); collection breadcrumb and rolling `priceValidUntil` on product pages.
 - Sitemap rebuilt in `src/lib/sitemap-entries.ts` (adds the new pages, drops the noindex register page); `X-Robots-Tag: noindex` on private areas and non-media API routes.
-- IndexNow: key file at `/indexnow-6c6ba387ef6cc74605a16c7a7090607d.txt`, pings on every listing change, weekly sync job.
+- IndexNow: key file (originally at the site root; moved to `/indexnow/<key>.txt` on 2026-09-15, see below), pings on every listing change, weekly sync job.
 - `GOOGLE_SITE_VERIFICATION` / `BING_SITE_VERIFICATION` env vars render the ownership meta tags.
 - Performance: cover scans re-encoded to WebP with day-long cache headers; home grid no longer eager-loads below-the-fold images. Lighthouse mobile (simulated): SEO 100, a11y 100, best practices 100, performance 72 (home) / 75 (store).
 - Titles: home no longer repeats the site name; publisher pages no longer read "DC Comics Comics".
@@ -87,6 +87,11 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 
 ### robots.txt (2026-09-15)
 - Bing Webmaster Tools reported "Syntax not understood" on line 14, the `Host:` directive (a Yandex extension Next emitted from `host:` in `src/app/robots.ts`). Removed; the file now contains only `User-Agent`, `Allow`, `Disallow` and `Sitemap` lines, all existing rules unchanged, `Sitemap: https://www.rarecomicscollectors.com/sitemap.xml` kept. Verified live with a strict line-by-line parser (known directives only, absolute sitemap URL that answers with XML, no BOM, LF endings): 0 problems.
+
+### IndexNow key hosting, Option 2 (2026-09-15)
+- Key `dfc2e1d4b27a4fc58d5ad41e60cd5704` is served at `https://www.rarecomicscollectors.com/indexnow/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt` by `src/app/indexnow/[file]/route.ts`: HTTP 200, `text/plain; charset=utf-8`, body is exactly the 32-character key with no BOM, quotes, whitespace or newline; any other file name under `/indexnow/` is a 404. The old root-level file and its `next.config.ts` rewrite were removed, so the key appears nowhere else (checked: home, store, guides, robots.txt, sitemap index, both child sitemaps and the Merchant Center feed).
+- Every submission (`submitIndexNow` in `src/lib/indexnow.ts`, used by the `indexnow_ping` and weekly `indexnow_sync` jobs) posts `{ host, key, keyLocation, urlList }` to `https://api.indexnow.org/indexnow` with `keyLocation` set to that URL (`indexNowKeyLocation()` in `src/lib/indexnow-payload.ts`, unit-tested); the server log line now records the keyLocation for each batch. `INDEXNOW_KEY` still overrides the key, and the file location follows it.
+- Verified after deployment with a byte-level check of the key file plus two real submissions naming the keyLocation: the JSON batch to api.indexnow.org and Bing's single-URL GET form (`…/indexnow?url=…&key=…&keyLocation=…`), both accepted.
 
 ### Microsoft Clarity (2026-09-15)
 - The Clarity snippet (project `yipx69jj3c`) is rendered inside `<head>` on every page by `src/components/clarity-tag.tsx` from the root layout, exactly as Microsoft's snippet (async loader, so it does not block parsing). Production only, like the Google tag, so local and preview sessions are never recorded; `NEXT_PUBLIC_CLARITY_ID` overrides the project id.

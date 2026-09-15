@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildIndexNowPayload, INDEXNOW_MAX_URLS, isValidIndexNowKey } from "@/lib/indexnow-payload";
+import { buildIndexNowPayload, INDEXNOW_MAX_URLS, indexNowKeyLocation, isValidIndexNowKey } from "@/lib/indexnow-payload";
 
 describe("indexnow payload", () => {
   it("absolutises paths on the canonical origin, drops foreign hosts and de-duplicates", () => {
-    const p = buildIndexNowPayload("https://www.rarecomicscollectors.com/", "indexnow-abc123def456", [
+    const p = buildIndexNowPayload("https://www.rarecomicscollectors.com/", "dfc2e1d4b27a4fc58d5ad41e60cd5704", [
       "/store/action-comics-1",
       "store/action-comics-1",
       "https://www.rarecomicscollectors.com/store/action-comics-1",
@@ -13,7 +13,9 @@ describe("indexnow payload", () => {
       "/",
     ]);
     expect(p.host).toBe("www.rarecomicscollectors.com");
-    expect(p.keyLocation).toBe("https://www.rarecomicscollectors.com/indexnow-abc123def456.txt");
+    expect(p.key).toBe("dfc2e1d4b27a4fc58d5ad41e60cd5704");
+    expect(p.keyLocation).toBe("https://www.rarecomicscollectors.com/indexnow/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt");
+    expect(indexNowKeyLocation("https://www.rarecomicscollectors.com/", "dfc2e1d4b27a4fc58d5ad41e60cd5704")).toBe("https://www.rarecomicscollectors.com/indexnow/dfc2e1d4b27a4fc58d5ad41e60cd5704.txt");
     expect(p.urlList).toEqual(["https://www.rarecomicscollectors.com/store/action-comics-1", "https://www.rarecomicscollectors.com/"]);
   });
 
@@ -23,6 +25,7 @@ describe("indexnow payload", () => {
   });
 
   it("validates key shape", () => {
+    expect(isValidIndexNowKey("dfc2e1d4b27a4fc58d5ad41e60cd5704")).toBe(true);
     expect(isValidIndexNowKey("indexnow-0123456789abcdef")).toBe(true);
     expect(isValidIndexNowKey("short")).toBe(false);
     expect(isValidIndexNowKey("has space 123456")).toBe(false);

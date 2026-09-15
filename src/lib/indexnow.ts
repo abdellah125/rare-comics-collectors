@@ -1,20 +1,27 @@
 import "server-only";
 import { env } from "@/lib/env";
-import { buildIndexNowPayload, INDEXNOW_ENDPOINT, isValidIndexNowKey } from "@/lib/indexnow-payload";
+import { buildIndexNowPayload, INDEXNOW_ENDPOINT, indexNowKeyLocation, isValidIndexNowKey } from "@/lib/indexnow-payload";
 import { enqueueJob } from "@/lib/jobs/queue";
 import { site } from "@/lib/site";
 
 /**
  * IndexNow integration: Bing (and Yandex, Seznam, Naver) learn about new, changed and
  * removed pages the moment a listing is saved instead of on their next crawl. The key
- * is public by design — search engines fetch /<key>.txt to confirm we control the host —
- * so a built-in default is fine; INDEXNOW_KEY overrides it.
+ * is public by design — search engines fetch the key file at keyLocation
+ * (/indexnow/<key>.txt, "Option 2" hosting) to confirm we control the host — so a
+ * built-in default is fine; INDEXNOW_KEY overrides it. The key is served only by that
+ * route: never in page HTML, robots.txt or the sitemaps.
  */
-const DEFAULT_KEY = "indexnow-6c6ba387ef6cc74605a16c7a7090607d";
+const DEFAULT_KEY = "dfc2e1d4b27a4fc58d5ad41e60cd5704";
 
 export function indexNowKey(): string {
   const configured = env.indexNow.key.trim();
   return isValidIndexNowKey(configured) ? configured : DEFAULT_KEY;
+}
+
+/** Absolute URL of the key file, as sent in every submission's keyLocation. */
+export function indexNowKeyLocationUrl(): string {
+  return indexNowKeyLocation(site.url, indexNowKey());
 }
 
 export type IndexNowResult = { ok: boolean; status: number; submitted: number; skipped?: string };
@@ -31,8 +38,8 @@ export async function submitIndexNow(paths: string[]): Promise<IndexNowResult> {
     signal: AbortSignal.timeout(10_000),
   });
   const ok = res.status === 200 || res.status === 202;
-  if (ok) console.log(`[indexnow] submitted ${payload.urlList.length} url(s) (${res.status})`);
-  else console.warn(`[indexnow] endpoint answered ${res.status} for ${payload.urlList.length} url(s)`);
+  if (ok) console.log(`[indexnow] submitted ${payload.urlList.length} url(s) (${res.status}) keyLocation=${payload.keyLocation}`);
+  else console.warn(`[indexnow] endpoint answered ${res.status} for ${payload.urlList.length} url(s) keyLocation=${payload.keyLocation}`);
   return { ok, status: res.status, submitted: payload.urlList.length };
 }
 
