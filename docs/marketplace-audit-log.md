@@ -85,6 +85,9 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - Verified on production (commit `70f13bb`, deployed 2026-09-15): the build applied the migration and seeded all 107 articles; the same probe passes 36/36 against https://www.rarecomicscollectors.com (sitemap index → `site.xml` 166 URLs + `guides-1.xml` 107 URLs; canonical, title, description and Open Graph tags on guide pages; Article/BreadcrumbList/FAQPage JSON-LD; `/guides?q=` noindex; `/admin/guides` 307 to login with `noindex, nofollow`; every guide page and all 234 distinct internal links resolve). The Merchant Center feed and IndexNow key file are unaffected (feed still 72 items, 2 skipped).
 - Follow-up: the home-page block picked four news articles because every seed article shares a publish date; `latestGuides()` now spreads its picks across topics.
 
+### robots.txt (2026-09-15)
+- Bing Webmaster Tools reported "Syntax not understood" on line 14, the `Host:` directive (a Yandex extension Next emitted from `host:` in `src/app/robots.ts`). Removed; the file now contains only `User-Agent`, `Allow`, `Disallow` and `Sitemap` lines, all existing rules unchanged, `Sitemap: https://www.rarecomicscollectors.com/sitemap.xml` kept. Verified live with a strict line-by-line parser (known directives only, absolute sitemap URL that answers with XML, no BOM, LF endings): 0 problems.
+
 ### Microsoft Clarity (2026-09-15)
 - The Clarity snippet (project `yipx69jj3c`) is rendered inside `<head>` on every page by `src/components/clarity-tag.tsx` from the root layout, exactly as Microsoft's snippet (async loader, so it does not block parsing). Production only, like the Google tag, so local and preview sessions are never recorded; `NEXT_PUBLIC_CLARITY_ID` overrides the project id.
 - Cookie and privacy policies now list the `_clck` / `_clsk` cookies and name Microsoft Clarity as a recipient of anonymised usage recordings.

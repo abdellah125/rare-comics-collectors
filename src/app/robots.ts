@@ -11,7 +11,8 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin", "/account", "/dashboard", "/cart", "/checkout", "/appeal", "/report", "/api/", "/store?", "/*?q="],
       },
     ],
+    // No `host` directive: it is a Yandex extension that Bing Webmaster Tools flags as
+    // "Syntax not understood"; Google and Bing only read User-agent, Allow, Disallow and Sitemap.
     sitemap: `${site.url}/sitemap.xml`,
-    host: site.url,
   };
 }
