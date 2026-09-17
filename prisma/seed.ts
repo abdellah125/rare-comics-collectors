@@ -464,31 +464,36 @@ async function seedImportedCatalog() {
         allowedCountriesJson: JSON.stringify(l.allowedCountries),
         weightGrams: 450,
       };
-      const existing = await db.product.findUnique({ where: { slug: l.slug }, select: { id: true } });
+      const cover = covers[l.slug];
+      const existing = await db.product.findUnique({ where: { slug: l.slug }, select: { id: true, _count: { select: { images: true } } } });
       if (existing) {
         if (process.env.SEED_REFRESH_CATALOG === "true") await db.product.update({ where: { id: existing.id }, data: record });
+        // A cover found after the listing was created (scripts/fetch-import-covers.mjs) is attached here.
+        if (existing._count.images === 0 && cover) await db.productImage.create({ data: { productId: existing.id, url: cover, alt: `${l.title} ${l.issue} cover`, position: 0 } });
         continue;
       }
       const sku = `IMP-${l.sourceId}`;
       if (await db.product.findUnique({ where: { sku }, select: { id: true } })) continue;
-      const cover = covers[l.slug];
       const gallery = (l.gallery ?? []).filter((url) => fs.existsSync(path.join(process.cwd(), "public", url)));
       const images = [
         ...(cover ? [{ url: cover, alt: `${l.title} ${l.issue} cover`, position: 0 }] : []),
         ...gallery.map((url, n) => ({ url, alt: `${l.title} ${l.issue} ${n === 0 ? "back of the slab" : `photo ${n + 1}`}`, position: n + 1 })),
       ];
+      // No photo, no storefront: the listing waits as a draft until a cover is found.
+      const live = images.length > 0;
       await db.product.create({
         data: {
           ...record,
           slug: l.slug,
           sku,
-          status: "published",
+          status: live ? "published" : "draft",
+          moderationNote: live ? null : "No photo yet: add one before publishing.",
           // Staggered so the "newest" ordering reads like a real week of listings.
-          publishedAt: new Date(Date.now() - i * 3_600_000),
-          ...(images.length ? { images: { create: images } } : {}),
+          publishedAt: live ? new Date(Date.now() - i * 3_600_000) : null,
+          ...(live ? { images: { create: images } } : {}),
         },
       });
-      newPaths.push(`/store/${l.slug}`);
+      if (live) newPaths.push(`/store/${l.slug}`);
       created += 1;
     }
     log(`import ${data.source}: ${data.sellers.length} sellers, ${data.listings.length} listings (${created} new)`);

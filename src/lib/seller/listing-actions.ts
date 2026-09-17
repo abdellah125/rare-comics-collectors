@@ -113,6 +113,11 @@ export async function updateListingAction(_prev: ActionState | undefined, formDa
     let status = product.status;
     if (d.intent === "publish" && ["draft", "hidden"].includes(product.status)) status = needsReview ? "pending" : "published";
     if (product.status === "suspended") status = "suspended";
+    let noPhoto = false;
+    if (settings["listings.requireImage"] && (status === "published" || status === "pending") && (await db.productImage.count({ where: { productId: product.id } })) === 0) {
+      noPhoto = true;
+      status = product.status === "published" ? "hidden" : "draft";
+    }
     const data = listingData(d);
     if (product.stock !== d.stock) {
       await db.inventoryAdjustment.create({ data: { productId: product.id, delta: d.stock - product.stock, reason: "correction", actorId: user.id, note: "Seller edit" } });
@@ -125,7 +130,7 @@ export async function updateListingAction(_prev: ActionState | undefined, formDa
     revalidatePath(`/store/${product.slug}`);
     revalidatePath("/store");
     if (status === "published" || product.status === "published") await listingChanged(product.slug);
-    return okState(undefined, status === "pending" ? "Saved — the listing is queued for review." : "Listing saved.");
+    return okState(undefined, noPhoto ? "Saved. Add at least one photo before it can be published." : status === "pending" ? "Saved — the listing is queued for review." : "Listing saved.");
   } catch (err) {
     if (err instanceof AuthError || err instanceof UploadError) return failState(err.message);
     throw err;

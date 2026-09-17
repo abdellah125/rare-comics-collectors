@@ -11,7 +11,8 @@ export const summaryInclude = { images: { orderBy: { position: "asc" as const },
 type ProductRow = Prisma.ProductGetPayload<{ include: typeof summaryInclude }>;
 
 /** Buyable = published, not deleted, and (for marketplace listings) from an approved seller. */
-export const publishedWhere: Prisma.ProductWhereInput = { status: "published", deletedAt: null, OR: [{ sellerId: null }, { seller: { status: "approved" } }] };
+/** Buyable listings: published, not deleted, seller approved (or a house listing) and with at least one photo. */
+export const publishedWhere: Prisma.ProductWhereInput = { status: "published", deletedAt: null, images: { some: {} }, OR: [{ sellerId: null }, { seller: { status: "approved" } }] };
 
 export function toSummary(p: ProductRow): ProductSummary {
   const s: ProductSummary = {

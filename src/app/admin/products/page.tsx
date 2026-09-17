@@ -157,7 +157,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={pr.images[0].url} alt="" className="h-12 w-9 rounded object-cover ring-1 ring-ink-200" />
                       ) : (
-                        <span className="grid h-12 w-9 place-items-center rounded bg-ink-100 text-[9px] text-ink-400">none</span>
+                        <span title="Not shown in the store until it has a photo" className="grid h-12 w-9 place-items-center rounded bg-amber-50 text-center text-[9px] leading-tight text-amber-800 ring-1 ring-amber-200">no photo</span>
                       )}
                       <span>
                         <Link href={`/admin/products/${pr.id}`} className="font-semibold text-ink-950 hover:text-brand-700">

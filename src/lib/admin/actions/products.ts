@@ -68,6 +68,11 @@ async function saveImages(formData: FormData, productId: string, adminId: string
   if (url && /^(https?:\/\/|\/)/.test(url)) await db.productImage.create({ data: { productId, url, position: position++ } });
 }
 
+/** Settings › Listings › "Listings need at least one image" applies to admins and imports too: nothing goes live without a photo. */
+async function photoRequired(): Promise<boolean> {
+  return (await getSettings())["listings.requireImage"];
+}
+
 export async function createProductAdminAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
   let id = "";
   const result = await runAdmin("products.manage", async (admin) => {
@@ -77,6 +82,9 @@ export async function createProductAdminAction(_prev: ActionState | undefined, f
     const refErrors = await listingRefErrors({ categoryId: d.categoryId, brandId: d.brandId, sellerId: d.sellerId });
     if (Object.keys(refErrors).length > 0) return failState("Check the highlighted fields.", refErrors);
     const status = d.status ?? (d.intent === "publish" ? "published" : "draft");
+    const imageUrl = String(formData.get("imageUrl") ?? "").trim();
+    const photos = formData.getAll("images").filter((f) => f instanceof File && f.size > 0).length + (imageUrl.startsWith("http") || imageUrl.startsWith("/") ? 1 : 0);
+    if (status === "published" && photos === 0 && (await photoRequired())) return failState("Add at least one photo before publishing.", { images: "Required" });
     const product = await db.product.create({
       data: { ...listingData(d), ...extras(d), slug: await uniqueSlug(`${d.title} ${d.issue} ${d.grader} ${d.grade}`), sku: await uniqueSku(), sellerId: d.sellerId || null, status, publishedAt: status === "published" ? new Date() : null },
     });
@@ -108,15 +116,17 @@ export async function updateProductAdminAction(_prev: ActionState | undefined, f
       if (img.mediaId) await deleteMedia(img.mediaId);
     }
     await saveImages(formData, product.id, admin.id, product.images.length);
-    const status = d.status ?? product.status;
+    let status = d.status ?? product.status;
+    const noPhoto = status === "published" && (await photoRequired()) && (await db.productImage.count({ where: { productId: product.id } })) === 0;
+    if (noPhoto) status = product.status === "published" ? "hidden" : product.status;
     if (product.stock !== d.stock) await db.inventoryAdjustment.create({ data: { productId: product.id, delta: d.stock - product.stock, reason: "correction", actorId: admin.id, note: "Admin edit" } });
-    await db.product.update({ where: { id: product.id }, data: { ...listingData(d), ...extras(d), sellerId: d.sellerId || null, status, publishedAt: status === "published" && !product.publishedAt ? new Date() : product.publishedAt } });
+    await db.product.update({ where: { id: product.id }, data: { ...listingData(d), ...extras(d), sellerId: d.sellerId || null, status, ...(noPhoto ? { moderationNote: "No photo: hidden from the store until one is added." } : {}), publishedAt: status === "published" && !product.publishedAt ? new Date() : product.publishedAt } });
     await audit({ actor: actorOf(admin), action: "product.update", targetType: "product", targetId: product.id, summary: `Edited ${d.title} ${d.issue}`, before: { price: product.price, stock: product.stock, status: product.status, sellerId: product.sellerId }, after: { price: d.price, stock: d.stock, status, sellerId: d.sellerId || null } });
     revalidatePath(`/store/${product.slug}`);
     revalidatePath("/store");
     revalidatePath(`/admin/products/${product.id}`);
     if (status === "published" || product.status === "published") await listingChanged(product.slug);
-    return okState(undefined, "Listing saved.");
+    return okState(undefined, noPhoto ? "Listing saved. It stays off the store until it has a photo." : "Listing saved.");
   });
 }
 
@@ -129,6 +139,7 @@ export async function moderateListingAction(id: string, decision: Decision, note
     if ((decision === "reject" || decision === "suspend") && !note?.trim()) return failState("Give the seller a reason.");
     const map: Record<Decision, string> = { approve: "published", reject: "draft", suspend: "suspended", reinstate: "published", hide: "hidden", publish: "published", archive: "archived" };
     const status = map[decision];
+    if (status === "published" && (await photoRequired()) && (await db.productImage.count({ where: { productId: id } })) === 0) return failState("Add a photo before this listing goes live.");
     await db.product.update({ where: { id }, data: { status, moderationNote: note?.trim() || (decision === "approve" || decision === "reinstate" ? null : product.moderationNote), publishedAt: status === "published" && !product.publishedAt ? new Date() : product.publishedAt } });
     await audit({ actor: actorOf(admin), action: `product.${decision}`, targetType: "product", targetId: id, summary: `${product.title} ${product.issue}: ${product.status} → ${status}${note ? ` (${note})` : ""}` });
     if (product.seller) {
@@ -182,10 +193,16 @@ export async function bulkProductsAction(actionId: string, ids: string[]): Promi
     switch (actionId) {
       case "publish":
       case "approve":
-        await db.product.updateMany({ where: { id: { in: target }, status: { in: ["draft", "pending", "hidden"] } }, data: { status: "published", moderationNote: null } });
-        await db.product.updateMany({ where: { id: { in: target }, publishedAt: null, status: "published" }, data: { publishedAt: new Date() } });
-        summary = `Published ${target.length} listings`;
+      {
+        const rows = await db.product.findMany({ where: { id: { in: target } }, select: { id: true, _count: { select: { images: true } } } });
+        const requirePhoto = await photoRequired();
+        const ready = rows.filter((r) => !requirePhoto || r._count.images > 0).map((r) => r.id);
+        await db.product.updateMany({ where: { id: { in: ready }, status: { in: ["draft", "pending", "hidden"] } }, data: { status: "published", moderationNote: null } });
+        await db.product.updateMany({ where: { id: { in: ready }, publishedAt: null, status: "published" }, data: { publishedAt: new Date() } });
+        const skipped = rows.length - ready.length;
+        summary = `Published ${ready.length} listings${skipped ? ` (${skipped} skipped: no photo)` : ""}`;
         break;
+      }
       case "hide":
         await db.product.updateMany({ where: { id: { in: target } }, data: { status: "hidden" } });
         summary = `Hid ${target.length} listings`;
@@ -219,6 +236,7 @@ export async function importProductsAction(_prev: ActionState<{ created: number;
     if (!(file instanceof File) || file.size === 0) return failState("Choose a CSV file.");
     if (file.size > 5 * 1024 * 1024) return failState("CSV must be under 5 MB.");
     const publish = formData.get("publish") === "on";
+    const requirePhoto = await photoRequired();
     const records = csvRecords(await file.text());
     if (records.length === 0) return failState("No rows found. The first line must be the header.");
     const errors: string[] = [];
@@ -258,13 +276,14 @@ export async function importProductsAction(_prev: ActionState<{ created: number;
             keyIssue: r.key_issue || null,
             summary: r.summary || `${r.title} ${issue} (${year}).`,
             description: r.description || r.summary || `${r.title} ${issue} (${year}).`,
-            status: publish ? "published" : "draft",
-            publishedAt: publish ? new Date() : null,
+            status: publish && (r.image_url || !requirePhoto) ? "published" : "draft",
+            publishedAt: publish && (r.image_url || !requirePhoto) ? new Date() : null,
             ...(r.image_url ? { images: { create: { url: r.image_url, position: 0 } } } : {}),
           },
         });
         created += 1;
         void product;
+        if (publish && !r.image_url && requirePhoto) errors.push(`Line ${line}: no image_url, saved as a draft`);
       } catch (err) {
         errors.push(`Line ${line}: ${err instanceof Error ? err.message : "failed"}`);
       }
