@@ -97,6 +97,13 @@ export function registerJobHandlers() {
     if (!result.ok) throw new Error(`IndexNow responded ${result.status}`);
   });
 
+  // Daily: queued catalogue imports whose release day has come go live (100 a day by schedule).
+  registerJobHandler("catalog_release", async () => {
+    const { releaseDueListings, nextReleaseRun } = await import("@/lib/catalog/release-queue");
+    await releaseDueListings();
+    await enqueueJob("catalog_release", {}, { runAt: nextReleaseRun(), dedupe: true });
+  });
+
   registerJobHandler("retry_webhook", async (payload) => {
     const id = typeof payload.webhookEventId === "string" ? payload.webhookEventId : null;
     if (!id) return;
@@ -115,4 +122,5 @@ export async function ensureRecurringJobs() {
   await enqueueJob("cleanup_expired", {}, { dedupe: true });
   await enqueueJob("fetch_exchange_rates", {}, { dedupe: true });
   await enqueueJob("indexnow_sync", {}, { dedupe: true });
+  await enqueueJob("catalog_release", {}, { dedupe: true });
 }

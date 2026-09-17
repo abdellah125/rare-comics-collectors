@@ -25,6 +25,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     label: "Catalog",
     items: [
       { href: "/admin/products", label: "Listings", perm: "products.view" },
+      { href: "/admin/release-queue", label: "Release queue", perm: "products.view" },
       { href: "/admin/catalog", label: "Categories & brands", perm: "catalog.manage" },
       { href: "/admin/guides", label: "Guides & articles", perm: "content.manage" },
       { href: "/admin/indexnow", label: "IndexNow (Bing)", perm: "content.manage" },

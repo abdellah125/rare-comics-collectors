@@ -499,6 +499,66 @@ async function seedImportedCatalog() {
   }
 }
 
+type QueueListing = ImportListing & { file: string; releaseAt: string; image: string };
+type QueueFile = { source: string; listings: QueueListing[] };
+
+/**
+ * Release queue (prisma/data/catalog-queue/*.json, produced by scripts/import-hipcomic-csv.mjs).
+ * Queued listings are house listings created as DRAFTS with their release day; the daily
+ * `catalog_release` job publishes them. A listing whose day has already come is published right
+ * here, so the first batch is live as soon as the deployment is, unless the queue is paused.
+ * Thousands of rows, so existence checks and inserts are batched instead of one query each.
+ */
+async function seedCatalogQueue() {
+  const dir = path.join(process.cwd(), "prisma", "data", "catalog-queue");
+  if (!fs.existsSync(dir)) return;
+  const cats = Object.fromEntries((await db.category.findMany()).map((c) => [c.slug, c.id]));
+  const pausedSetting = await db.setting.findUnique({ where: { key: "catalog.releasePaused" } });
+  const paused = pausedSetting?.value === "true";
+  const now = new Date();
+  const newPaths: string[] = [];
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
+    const data = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")) as QueueFile;
+    const existing = await db.product.findMany({ select: { slug: true, sku: true, certNumber: true } });
+    const slugs = new Set(existing.map((p) => p.slug));
+    const skus = new Set(existing.map((p) => p.sku));
+    const certs = new Set(existing.map((p) => p.certNumber).filter(Boolean));
+    const fresh = data.listings.filter((l) => !slugs.has(l.slug) && !skus.has(`IMP-${l.sourceId}`) && !(l.certNumber && certs.has(l.certNumber)) && fs.existsSync(path.join(process.cwd(), "public", l.image)));
+    const brandIds: Record<string, string> = {};
+    for (const name of new Set(fresh.map((l) => l.publisher))) {
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      brandIds[name] = (await db.brand.upsert({ where: { slug }, create: { slug, name }, update: {} })).id;
+    }
+    let published = 0;
+    for (let i = 0; i < fresh.length; i += 200) {
+      const chunk = fresh.slice(i, i + 200);
+      const created = await db.product.createManyAndReturn({
+        select: { id: true, slug: true },
+        data: chunk.map((l, n) => {
+          const releaseAt = new Date(l.releaseAt);
+          const live = !paused && releaseAt <= now;
+          if (live) { published += 1; newPaths.push(`/store/${l.slug}`); }
+          return {
+            slug: l.slug, sku: `IMP-${l.sourceId}`, sellerId: null, brandId: brandIds[l.publisher], categoryId: cats[ERA_CATEGORY[l.era]] ?? null,
+            title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, era: l.era, grader: l.grader, grade: l.grade, label: l.label, certNumber: l.certNumber,
+            price: l.price, compareAt: l.compareAt, stock: l.stock, keyIssue: l.keyIssue, writer: l.creators.writer, artist: l.creators.artist, coverArtist: l.creators.cover,
+            summary: l.summary, description: l.description, highlightsJson: JSON.stringify(l.highlights), paletteFrom: l.palette[0], paletteTo: l.palette[1], featured: false,
+            attributesJson: JSON.stringify(l.attributes), tagsJson: JSON.stringify(l.tags), allowedCountriesJson: JSON.stringify(l.allowedCountries), weightGrams: 450,
+            importSource: data.source, importFile: l.file, releaseAt,
+            status: live ? "published" : "draft", publishedAt: live ? new Date(now.getTime() - (i + n) * 1000) : null,
+          };
+        }),
+      });
+      const imageOf = Object.fromEntries(chunk.map((l) => [l.slug, l]));
+      await db.productImage.createMany({ data: created.map((p) => ({ productId: p.id, url: imageOf[p.slug].image, alt: `${imageOf[p.slug].title} ${imageOf[p.slug].issue} ${imageOf[p.slug].grader} ${imageOf[p.slug].grade} slab`, position: 0 })) });
+    }
+    log(`release queue ${data.source}: ${data.listings.length} listings (${fresh.length} new, ${published} published now${paused ? ", queue paused" : ""})`);
+  }
+  for (let i = 0; i < newPaths.length; i += 100) {
+    await db.job.create({ data: { type: "indexnow_ping", payloadJson: JSON.stringify({ paths: [...newPaths.slice(i, i + 100), ...(i === 0 ? ["/store", "/collections", "/publishers"] : [])] }), maxAttempts: 3 } });
+  }
+}
+
 type SeedGuide = {
   slug: string;
   title: string;
@@ -621,6 +681,7 @@ async function main() {
   await seedTemplates();
   await seedCatalog();
   await seedImportedCatalog();
+  await seedCatalogQueue();
   await seedGuides();
   await seedDemo();
   console.log("Done.");

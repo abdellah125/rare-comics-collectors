@@ -106,6 +106,7 @@ export const settingDefaults = {
   "system.uploadMaxMb": 8,
   "system.jobsEnabled": true,
   "system.exchangeRatesAuto": true,
+  "catalog.releasePaused": false,
 };
 
 export type Settings = typeof settingDefaults;

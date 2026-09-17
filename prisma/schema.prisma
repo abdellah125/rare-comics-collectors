@@ -363,6 +363,10 @@ model Product {
   viewCount               Int            @default(0)
   soldCount               Int            @default(0)
   publishedAt             DateTime?
+  /// Release queue (prisma/data/catalog-queue): the import it came from, its CSV file, and the day the draft goes live
+  importSource            String?
+  importFile              String?
+  releaseAt               DateTime?
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
   deletedAt               DateTime?
@@ -375,6 +379,7 @@ model Product {
   wishlistItems WishlistItem[]
 
   @@index([status, publishedAt])
+  @@index([importSource, releaseAt])
   @@index([sellerId])
   @@index([categoryId])
   @@index([era])

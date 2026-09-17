@@ -7,7 +7,7 @@ import { guidesForPublisher } from "@/lib/guides/data";
 import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
-import { getPublisher, listCollections, listPublishers, publisherProducts } from "@/lib/catalog/collections";
+import { getPublisher, listCollections, listPublishers, lowestPrice, publisherProducts, publisherSpan } from "@/lib/catalog/collections";
 import { formatPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
@@ -36,11 +36,10 @@ export default async function PublisherPage({ params }: PageProps<"/publishers/[
   const publisher = await getPublisher(slug);
   if (!publisher) notFound();
 
-  const [products, collections, publishers, settings, guides] = await Promise.all([publisherProducts(publisher.name), listCollections(), listPublishers(), getSettings(), guidesForPublisher(publisher.name)]);
-  const years = products.map((p) => p.year);
-  const span = years.length > 0 ? `${Math.min(...years)}–${Math.max(...years)}` : null;
-  const lowest = products.reduce((min, p) => Math.min(min, p.price), Number.POSITIVE_INFINITY);
-  const eras = [...new Set(products.map((p) => p.era))];
+  const [products, collections, publishers, settings, guides, years, lowestForPublisher] = await Promise.all([publisherProducts(publisher.name), listCollections(), listPublishers(), getSettings(), guidesForPublisher(publisher.name), publisherSpan(publisher.name), lowestPrice({ publisher: publisher.name })]);
+  const span = years.minYear !== null && years.maxYear !== null ? `${years.minYear}–${years.maxYear}` : null;
+  const lowest = lowestForPublisher ?? Number.POSITIVE_INFINITY;
+  const eras = years.eras;
 
   const crumbs: Crumb[] = [
     { name: "Home", href: "/" },
@@ -71,7 +70,7 @@ export default async function PublisherPage({ params }: PageProps<"/publishers/[
           <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
             <SectionHeading
               as="h1"
-              eyebrow={`Publisher · ${products.length} listing${products.length === 1 ? "" : "s"}`}
+              eyebrow={`Publisher · ${publisher.count.toLocaleString("en-US")} listing${publisher.count === 1 ? "" : "s"}`}
               title={publisherLabel(publisher.name)}
               lead={`Graded and raw ${publisher.name} books${span ? ` from ${span}` : ""}${eras.length > 0 ? `, spanning the ${eras.join(", ")}` : ""}. Every slab is cert-verified before listing and every raw copy is graded in-house with its defects disclosed.`}
             />
@@ -95,6 +94,16 @@ export default async function PublisherPage({ params }: PageProps<"/publishers/[
             <ProductCard key={p.slug} product={p} priority={i < 2} deferPaint={i >= 4} />
           ))}
         </div>
+
+        {publisher.count > products.length && (
+          <p className="mt-8 text-sm text-ink-500">
+            Showing {products.length} of {publisher.count.toLocaleString("en-US")} listings.{" "}
+            <Link href="/store" className="font-semibold text-brand-700 underline-offset-4 hover:underline">
+              Browse and filter all of them in the store
+            </Link>
+            .
+          </p>
+        )}
 
         <p className="mt-8 text-sm text-ink-500">
           Looking for a specific {publisher.name} issue we don&apos;t have listed?{" "}

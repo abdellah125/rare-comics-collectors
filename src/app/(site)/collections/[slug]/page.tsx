@@ -8,7 +8,7 @@ import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
 import { collectionCopy } from "@/lib/catalog/collection-copy";
-import { collectionProducts, getCollection, listCollections, listPublishers } from "@/lib/catalog/collections";
+import { collectionProducts, getCollection, listCollections, listPublishers, lowestPrice } from "@/lib/catalog/collections";
 import { formatPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
@@ -37,10 +37,10 @@ export default async function CollectionPage({ params }: PageProps<"/collections
   const collection = await getCollection(slug);
   if (!collection || collection.count === 0) notFound();
 
-  const [products, collections, publishers, settings, guides] = await Promise.all([collectionProducts(collection.id), listCollections(), listPublishers(), getSettings(), listGuides({ tag: collection.shortName, take: 4 })]);
+  const [products, collections, publishers, settings, guides, lowestInCollection] = await Promise.all([collectionProducts(collection.id), listCollections(), listPublishers(), getSettings(), listGuides({ tag: collection.shortName, take: 4 }), lowestPrice({ categoryId: collection.id })]);
   const copy = collectionCopy(collection);
   const publishersHere = publishers.filter((p) => products.some((x) => x.publisher === p.name));
-  const lowest = products.reduce((min, p) => Math.min(min, p.price), Number.POSITIVE_INFINITY);
+  const lowest = lowestInCollection ?? Number.POSITIVE_INFINITY;
 
   const crumbs: Crumb[] = [
     { name: "Home", href: "/" },
@@ -69,7 +69,7 @@ export default async function CollectionPage({ params }: PageProps<"/collections
         <Container className="py-10 lg:py-14">
           <Breadcrumbs items={crumbs} />
           <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
-            <SectionHeading as="h1" eyebrow={`Collection · ${products.length} listing${products.length === 1 ? "" : "s"}`} title={collection.name} lead={copy.summary} />
+            <SectionHeading as="h1" eyebrow={`Collection · ${collection.count.toLocaleString("en-US")} listing${collection.count === 1 ? "" : "s"}`} title={collection.name} lead={copy.summary} />
             <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
               <div>
                 <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">From</dt>
@@ -92,6 +92,7 @@ export default async function CollectionPage({ params }: PageProps<"/collections
         </div>
 
         <p className="mt-8 text-sm text-ink-500">
+          {collection.count > products.length && `Showing the newest ${products.length} of ${collection.count.toLocaleString("en-US")} listings. `}
           Want to filter by grade, grader or price?{" "}
           <Link href="/store" className="font-semibold text-brand-700 underline-offset-4 hover:underline">
             Use the full store browser

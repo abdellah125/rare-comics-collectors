@@ -42,9 +42,26 @@ export const getCollection = cache(async (slug: string): Promise<Collection | nu
   return r ? toCollection(r) : null;
 });
 
+/** Cards on a collection or publisher page. The store browser lists (and filters) everything; these hubs show the newest. */
+export const HUB_PAGE_SIZE = 96;
+
 export async function collectionProducts(categoryId: string): Promise<ProductSummary[]> {
-  const rows = await db.product.findMany({ where: { ...publishedWhere, categoryId }, include: summaryInclude, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }] });
+  const rows = await db.product.findMany({ where: { ...publishedWhere, categoryId }, include: summaryInclude, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }], take: HUB_PAGE_SIZE });
   return rows.map(toSummary);
+}
+
+/** Year span and eras of everything a publisher has on sale, not only the cards shown. */
+export async function publisherSpan(name: string): Promise<{ minYear: number | null; maxYear: number | null; eras: string[] }> {
+  const where = { ...publishedWhere, publisher: name };
+  const [years, eras] = await Promise.all([db.product.aggregate({ _min: { year: true }, _max: { year: true }, where }), db.product.groupBy({ by: ["era"], where })]);
+  const order = ["Golden Age", "Silver Age", "Bronze Age", "Copper Age", "Modern Age"];
+  return { minYear: years._min.year, maxYear: years._max.year, eras: eras.map((e) => e.era).sort((a, b) => order.indexOf(a) - order.indexOf(b)) };
+}
+
+/** Lowest asking price across a whole hub, not only the cards shown. */
+export async function lowestPrice(where: { categoryId: string } | { publisher: string }): Promise<number | null> {
+  const r = await db.product.aggregate({ _min: { price: true }, where: { ...publishedWhere, ...where } });
+  return r._min.price;
 }
 
 export const listPublishers = cache(async (): Promise<Publisher[]> => {
@@ -58,7 +75,7 @@ export const listPublishers = cache(async (): Promise<Publisher[]> => {
 export const getPublisher = cache(async (slug: string): Promise<Publisher | null> => (await listPublishers()).find((p) => p.slug === slug) ?? null);
 
 export async function publisherProducts(name: string): Promise<ProductSummary[]> {
-  const rows = await db.product.findMany({ where: { ...publishedWhere, publisher: name }, include: summaryInclude, orderBy: [{ featured: "desc" }, { year: "asc" }] });
+  const rows = await db.product.findMany({ where: { ...publishedWhere, publisher: name }, include: summaryInclude, orderBy: [{ featured: "desc" }, { year: "asc" }], take: HUB_PAGE_SIZE });
   return rows.map(toSummary);
 }
 

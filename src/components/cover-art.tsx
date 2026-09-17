@@ -7,7 +7,8 @@ import coverMap from "@/lib/gocovers-map.json";
  *
  * Source order: a local scan from `gocovers-map.json` (WebP under /public/covers
  * with 192/256/384/640 px WebP and AVIF siblings from scripts/optimize-covers.mjs),
- * then the product's own image (uploads, remote URLs) served as-is. The gradient
+ * then a release-queue photo (/covers/q/, WebP at full size plus a 256 px sibling from
+ * scripts/import-hipcomic-csv.mjs), then any other product image (uploads, remote URLs) served as-is. The gradient
  * palette sits underneath, so a missing or failed image still leaves a finished
  * plate with the title, issue and grade.
  */
@@ -15,6 +16,8 @@ const WIDTHS = [192, 256, 384, 640] as const;
 const isLocalScan = (src: string) => /^\/covers\/[^/]+\.webp$/.test(src);
 const variantUrl = (src: string, width: number, ext: "webp" | "avif") => (width === 640 ? src.replace(/\.webp$/, `.${ext}`) : src.replace(/\.webp$/, `-${width}.${ext}`));
 const srcSetFor = (src: string, ext: "webp" | "avif") => WIDTHS.map((w) => `${variantUrl(src, w, ext)} ${w}w`).join(", ");
+const isQueuePhoto = (src: string) => /^\/covers\/q\/[^/]+\.webp$/.test(src);
+const queueSrcSet = (src: string) => `${src.replace(/\.webp$/, "-256.webp")} 256w, ${src} 600w`;
 
 export const DEFAULT_COVER_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px";
 
@@ -58,6 +61,9 @@ export function CoverArt({
             <source type="image/avif" srcSet={srcSetFor(src, "avif")} sizes={sizes} />
             <img src={src} srcSet={srcSetFor(src, "webp")} sizes={sizes} alt="" {...imgProps} />
           </picture>
+        ) : isQueuePhoto(src) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} srcSet={queueSrcSet(src)} sizes={sizes} alt="" {...imgProps} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt="" {...imgProps} />

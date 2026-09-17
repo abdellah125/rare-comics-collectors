@@ -105,6 +105,7 @@ export const SETTING_GROUPS: SettingGroup[] = [
       { key: "system.uploadMaxMb", label: "Max upload size (MB)", kind: "number", min: 1, max: 50 },
       { key: "system.jobsEnabled", label: "Background job worker enabled", kind: "bool" },
       { key: "system.exchangeRatesAuto", label: "Refresh exchange rates automatically", kind: "bool" },
+      { key: "catalog.releasePaused", label: "Pause the catalogue release queue (no queued listings go live)", kind: "bool" },
     ],
   },
 ];

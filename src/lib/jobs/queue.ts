@@ -22,7 +22,8 @@ export type JobType =
   | "retry_webhook"
   | "recompute_seller_stats"
   | "indexnow_ping"
-  | "indexnow_sync";
+  | "indexnow_sync"
+  | "catalog_release";
 
 export type JobHandler = (payload: Record<string, unknown>, ctx: { jobId: string; attempt: number }) => Promise<void>;
 
