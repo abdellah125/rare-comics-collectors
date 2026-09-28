@@ -10,7 +10,7 @@ import { CaseThread } from "@/components/account/case-thread";
 import { ShipForm } from "@/components/seller/ship-form";
 import { ShipmentStatusButtons } from "@/components/seller/shipment-status-buttons";
 import { requireAdmin, can } from "@/lib/auth/session";
-import { addOrderNoteAction, adminShipAction, adminShipmentStatusAction, cancelOrderAdminAction, completeManualRefundAction, markPaidManuallyAction, resendConfirmationAction, setOrderStatusAction, setRiskAction } from "@/lib/admin/actions/orders";
+import { addOrderNoteAction, adminShipAction, adminShipmentStatusAction, cancelOrderAdminAction, completeManualRefundAction, markPaidManuallyAction, reconcilePaymentAction, resendConfirmationAction, setOrderStatusAction, setRiskAction } from "@/lib/admin/actions/orders";
 import { adminCaseMessageAction } from "@/lib/admin/actions/cases";
 import { db } from "@/lib/db";
 import { formatAddress } from "@/lib/commerce/pricing";
@@ -186,6 +186,11 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                             ))}
                           </ul>
                         )}
+                      </div>
+                    )}
+                    {["paypal", "stripe"].includes(pm.provider) && !["succeeded", "refunded", "partially_refunded"].includes(pm.status) && pm.providerRef && (
+                      <div className="mt-2">
+                        <ConfirmButton label={`Check with ${pm.provider === "paypal" ? "PayPal" : "Stripe"}`} message="Asks the gateway whether this payment went through. If it did, the order becomes paid (and is restored if it was cancelled while the stock is still available)." action={reconcilePaymentAction.bind(null, order.id)} size="sm" />
                       </div>
                     )}
                     {finance && pm.provider === "bank_transfer" && pm.status !== "succeeded" && order.status !== "cancelled" && (

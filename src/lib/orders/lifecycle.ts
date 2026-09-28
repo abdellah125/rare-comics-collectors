@@ -30,6 +30,22 @@ export async function releaseOrderStock(tx: Tx, orderId: string, reason: "releas
   }
 }
 
+/** Re-reserves a cancelled order's comics; false (and nothing taken) when any of them is gone. */
+async function reserveAgain(tx: Tx, order: { id: string; items: { kind: string; productId: string | null; qty: number }[] }, actorId: string | null): Promise<boolean> {
+  const taken: { productId: string; qty: number }[] = [];
+  for (const item of order.items) {
+    if (item.kind !== "comic" || !item.productId) continue;
+    const r = await tx.product.updateMany({ where: { id: item.productId, stock: { gte: item.qty }, status: "published" }, data: { stock: { decrement: item.qty } } });
+    if (r.count === 0) {
+      for (const t of taken) await tx.product.update({ where: { id: t.productId }, data: { stock: { increment: t.qty } } });
+      return false;
+    }
+    taken.push({ productId: item.productId, qty: item.qty });
+  }
+  for (const t of taken) await tx.inventoryAdjustment.create({ data: { productId: t.productId, delta: -t.qty, reason: "reservation", orderId: order.id, actorId } });
+  return true;
+}
+
 /**
  * Transition an order to paid: item statuses, seller ledger credits, seller
  * notifications and the buyer confirmation email. Idempotent — a second call
@@ -52,8 +68,15 @@ export async function markOrderPaid(orderId: string, payment: { id: string; prov
     const order = await tx.order.findUnique({ where: { id: orderId }, include: { items: true } });
     if (!order) return null;
     if (late) {
-      await addOrderEvent(tx, orderId, "payment.late", `Payment received via ${payment.provider} after the order was ${before.status} — refund required`, actor, { paymentId: payment.id });
-      return { ...order, late: true as const };
+      // Late money, stock still on the shelf: take it back and treat the order as paid. Only when
+      // somebody else bought it meanwhile does the order stay cancelled and finance has to refund.
+      if (await reserveAgain(tx, order, actor.id)) {
+        await tx.order.update({ where: { id: orderId }, data: { status: "paid", cancelledAt: null, cancelReason: null } });
+        await addOrderEvent(tx, orderId, "order.restored", `Payment received via ${payment.provider} after the order was ${before.status}; the stock was still available, so the order is restored`, actor, { paymentId: payment.id });
+      } else {
+        await addOrderEvent(tx, orderId, "payment.late", `Payment received via ${payment.provider} after the order was ${before.status} — refund required`, actor, { paymentId: payment.id });
+        return { ...order, late: true as const };
+      }
     }
     await tx.orderItem.updateMany({ where: { orderId }, data: { status: "paid" } });
     for (const item of order.items) await recordSaleForItem(tx, item, order.number);
@@ -169,10 +192,13 @@ export async function expireUnpaidOrders(): Promise<number> {
         { placedAt: { lt: onlineCutoff }, payments: { none: { provider: "bank_transfer" } } },
       ],
     },
-    select: { id: true, placedAt: true },
+    select: { id: true, placedAt: true, payments: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } } },
   });
+  const { reconcilePayment } = await import("@/lib/payments/reconcile");
   for (const o of stale) {
     try {
+      // A buyer who paid at the gateway but never came back must not lose the order: ask first.
+      if (o.payments[0] && (await reconcilePayment(o.payments[0].id, { id: null, type: "job" })) === "succeeded") continue;
       await cancelOrder(o.id, o.placedAt < offlineCutoff ? "Payment was not received in time" : "Payment was not completed and the reservation expired", { id: null, type: "job" });
     } catch (err) {
       console.error(`[jobs] could not expire order ${o.id}`, err);

@@ -104,6 +104,13 @@ export function registerJobHandlers() {
     await enqueueJob("catalog_release", {}, { runAt: nextReleaseRun(), dedupe: true });
   });
 
+  // Every 30 minutes: book gateway payments that the return leg or a webhook missed (PayPal captures, Stripe intents).
+  registerJobHandler("reconcile_payments", async () => {
+    const { reconcileRecentPayments } = await import("@/lib/payments/reconcile");
+    await reconcileRecentPayments();
+    await enqueueJob("reconcile_payments", {}, { runAt: new Date(Date.now() + 30 * 60_000), dedupe: true });
+  });
+
   registerJobHandler("retry_webhook", async (payload) => {
     const id = typeof payload.webhookEventId === "string" ? payload.webhookEventId : null;
     if (!id) return;
@@ -123,4 +130,5 @@ export async function ensureRecurringJobs() {
   await enqueueJob("fetch_exchange_rates", {}, { dedupe: true });
   await enqueueJob("indexnow_sync", {}, { dedupe: true });
   await enqueueJob("catalog_release", {}, { dedupe: true });
+  await enqueueJob("reconcile_payments", {}, { dedupe: true });
 }

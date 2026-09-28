@@ -23,7 +23,8 @@ export type JobType =
   | "recompute_seller_stats"
   | "indexnow_ping"
   | "indexnow_sync"
-  | "catalog_release";
+  | "catalog_release"
+  | "reconcile_payments";
 
 export type JobHandler = (payload: Record<string, unknown>, ctx: { jobId: string; attempt: number }) => Promise<void>;
 

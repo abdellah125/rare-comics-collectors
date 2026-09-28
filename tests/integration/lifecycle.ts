@@ -96,18 +96,35 @@ async function main() {
     check("failed order status", after.status === "failed" && after.paymentStatus === "failed", `${after.status}/${after.paymentStatus}`);
   }
 
-  // 3. Money arriving after cancellation is recorded without reselling released stock.
+  // 3a. Money arriving after cancellation restores the order when the stock is still there.
   {
     const before = await stockNow();
     const o = await makeOrder(1);
-    await cancelOrder(o.id, "buyer changed mind", { id: buyer.id, type: "buyer" }, { notify: false });
+    await cancelOrder(o.id, "reservation expired", { id: null, type: "job" }, { notify: false });
     check("cancel releases stock", (await stockNow()) === before, "");
     const ok = await markOrderPaid(o.id, { id: o.payments[0].id, provider: "test" });
     const after = await db.order.findUniqueOrThrow({ where: { id: o.id } });
     const events = await db.orderEvent.findMany({ where: { orderId: o.id }, select: { type: true } });
-    check("late payment keeps the order cancelled", ok && after.status === "cancelled" && after.paymentStatus === "paid", `${after.status}/${after.paymentStatus}`);
+    check("late payment restores the order when stock is available", ok && after.status === "paid" && after.paymentStatus === "paid" && after.cancelledAt === null, `${after.status}/${after.paymentStatus}`);
+    check("restored order is recorded as such", events.some((e) => e.type === "order.restored") && !events.some((e) => e.type === "payment.late"), events.map((e) => e.type).join(","));
+    check("restored order credits the seller ledger", (await db.ledgerEntry.count({ where: { orderId: o.id } })) > 0, "");
+    check("restored order takes the stock back", (await stockNow()) === before - 1, `stock=${await stockNow()} expected=${before - 1}`);
+    await db.product.update({ where: { id: product.id }, data: { stock: { increment: 1 } } });
+  }
+
+  // 3b. Money arriving after cancellation when the stock is gone is recorded without reselling it.
+  {
+    const before = await stockNow();
+    const o = await makeOrder(1);
+    await cancelOrder(o.id, "buyer changed mind", { id: buyer.id, type: "buyer" }, { notify: false });
+    await db.product.update({ where: { id: product.id }, data: { stock: 0 } });
+    const ok = await markOrderPaid(o.id, { id: o.payments[0].id, provider: "test" });
+    const after = await db.order.findUniqueOrThrow({ where: { id: o.id } });
+    const events = await db.orderEvent.findMany({ where: { orderId: o.id }, select: { type: true } });
+    check("late payment keeps the order cancelled when the stock is gone", ok && after.status === "cancelled" && after.paymentStatus === "paid", `${after.status}/${after.paymentStatus}`);
     check("late payment is flagged for a refund", events.some((e) => e.type === "payment.late"), events.map((e) => e.type).join(","));
     check("late payment credits no seller ledger", (await db.ledgerEntry.count({ where: { orderId: o.id } })) === 0, "");
+    await db.product.update({ where: { id: product.id }, data: { stock: before } });
     check("stock stays released after the late payment", (await stockNow()) === before, "");
   }
 

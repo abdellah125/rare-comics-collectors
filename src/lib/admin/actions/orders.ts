@@ -29,6 +29,25 @@ export async function markPaidManuallyAction(orderId: string, reference?: string
   });
 }
 
+/** Asks PayPal / Stripe whether an unpaid order's payment actually went through and books it if so. */
+export async function reconcilePaymentAction(orderId: string): Promise<ActionState> {
+  return runAdmin("orders.manage", async (admin) => {
+    const order = await db.order.findUnique({ where: { id: orderId }, include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } } });
+    if (!order) return failState("Order not found.");
+    const payment = order.payments[0];
+    if (!payment) return failState("This order has no payment record.");
+    const { reconcilePayment } = await import("@/lib/payments/reconcile");
+    const outcome = await reconcilePayment(payment.id, { id: admin.id, type: "admin" });
+    await audit({ actor: actorOf(admin), action: "order.reconcile_payment", targetType: "order", targetId: orderId, summary: `${order.number}: ${payment.provider} says ${outcome}` });
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
+    if (outcome === "succeeded") return okState(undefined, order.paymentStatus === "paid" ? "This order is already paid." : "The gateway confirms the payment. The order is now paid.");
+    if (outcome === "pending") return okState(undefined, "The gateway has not completed this payment yet (or could not be reached). Try again in a few minutes.");
+    if (outcome === "failed") return okState(undefined, "The gateway reports no completed payment for this order.");
+    return failState("This payment method cannot be checked automatically.");
+  });
+}
+
 export async function cancelOrderAdminAction(orderId: string, reason?: string): Promise<ActionState> {
   return runAdmin("orders.manage", async (admin) => {
     if (!reason?.trim()) return failState("A reason is required.");

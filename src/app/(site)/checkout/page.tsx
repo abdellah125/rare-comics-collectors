@@ -8,6 +8,9 @@ import { pageMetadata } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
 import { site } from "@/lib/site";
 
+// The place-order action creates the gateway order (PayPal token + order) before answering.
+export const maxDuration = 60;
+
 export const metadata: Metadata = pageMetadata({
   title: "Secure Checkout",
   description: `Complete your ${site.name} order securely.`,

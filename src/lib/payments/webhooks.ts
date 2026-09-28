@@ -4,6 +4,7 @@ import { getProvider } from "@/lib/payments/registry";
 import { stripeApi } from "@/lib/payments/providers/stripe";
 import { markOrderPaid, markOrderPaymentFailed, addOrderEvent } from "@/lib/orders/lifecycle";
 import { applyPaymentSuccess, applyProviderRefund, openChargeback, closeChargeback } from "@/lib/payments/payment-service";
+import { reconcilePayment } from "@/lib/payments/reconcile";
 import type { WebhookEventEnvelope } from "@/lib/payments/types";
 
 const WEBHOOK_ACTOR = { id: null, type: "webhook" as const };
@@ -117,22 +118,40 @@ async function processStripe(event: WebhookEventEnvelope) {
   }
 }
 
-type PayPalResource = { id: string; status?: string; custom_id?: string; supplementary_data?: { related_ids?: { order_id?: string } }; amount?: { value?: string; currency_code?: string }; reason?: string; disputed_transactions?: { seller_transaction_id?: string }[]; dispute_outcome?: { outcome_code?: string } };
+type PayPalResource = { id: string; status?: string; custom_id?: string; purchase_units?: { custom_id?: string; reference_id?: string }[]; supplementary_data?: { related_ids?: { order_id?: string } }; amount?: { value?: string; currency_code?: string }; reason?: string; disputed_transactions?: { seller_transaction_id?: string }[]; dispute_outcome?: { outcome_code?: string } };
+
+/** The Payment row for a PayPal capture event: by the PayPal order id, else by our order number (custom_id). */
+async function paypalCapturePayment(res: PayPalResource) {
+  const orderId = res.supplementary_data?.related_ids?.order_id;
+  if (orderId) {
+    const byRef = await paymentByRef("paypal", orderId);
+    if (byRef) return byRef;
+  }
+  const number = res.custom_id ?? res.purchase_units?.[0]?.custom_id;
+  if (!number) return null;
+  return db.payment.findFirst({ where: { provider: "paypal", order: { number } }, orderBy: { createdAt: "desc" }, include: { order: { select: { id: true, number: true } } } });
+}
 
 async function processPaypal(event: WebhookEventEnvelope) {
   const res = event.data as PayPalResource;
   switch (event.type) {
+    // The buyer approved at PayPal. Normally /checkout/return captures; if the buyer never came back, capture here.
+    case "CHECKOUT.ORDER.APPROVED":
+    case "CHECKOUT.ORDER.COMPLETED": {
+      const payment = (await paymentByRef("paypal", res.id)) ?? (await paypalCapturePayment(res));
+      if (!payment) return;
+      await reconcilePayment(payment.id, WEBHOOK_ACTOR);
+      return;
+    }
     case "PAYMENT.CAPTURE.COMPLETED": {
-      const orderId = res.supplementary_data?.related_ids?.order_id;
-      const payment = orderId ? await paymentByRef("paypal", orderId) : null;
+      const payment = await paypalCapturePayment(res);
       if (!payment) return;
       await applyPaymentSuccess(payment.id, { raw: { captureId: res.id } }, WEBHOOK_ACTOR);
       return;
     }
     case "PAYMENT.CAPTURE.DENIED":
     case "PAYMENT.CAPTURE.DECLINED": {
-      const orderId = res.supplementary_data?.related_ids?.order_id;
-      const payment = orderId ? await paymentByRef("paypal", orderId) : null;
+      const payment = await paypalCapturePayment(res);
       if (!payment) return;
       await db.payment.update({ where: { id: payment.id }, data: { status: "failed", failureMessage: event.type } });
       await markOrderPaymentFailed(payment.orderId, event.type, WEBHOOK_ACTOR);

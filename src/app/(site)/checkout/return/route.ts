@@ -7,6 +7,8 @@ import { cancelOrder } from "@/lib/orders/lifecycle";
 import { ensureInstanceSecrets } from "@/lib/secrets";
 
 export const dynamic = "force-dynamic";
+// Token + order lookup + capture at the gateway, then the paid transition and emails: never cut this short.
+export const maxDuration = 60;
 
 /**
  * Buyers land here after Stripe / PayPal. The payment is verified with the
