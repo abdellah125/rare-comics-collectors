@@ -91,7 +91,39 @@ export async function markOrderPaid(orderId: string, payment: { id: string; prov
     await notifyAdmins("orders.refund", { type: "payment.late", title: `Payment received for ${result.status} order ${result.number}`, body: "The stock was already released. Refund the buyer from the order page.", href: `/admin/orders/${result.id}` });
     return true;
   }
+  await notifyOrderPaid(result);
+  return true;
+}
 
+type PaidOrder = { id: string; number: string; userId: string | null; email: string; total: number; items: { title: string; qty: number; subtotal: number; sellerId: string | null }[] };
+
+/**
+ * A cancelled or failed order whose payment was recorded as late ("refund required"): when the
+ * copies are still on the shelf, take them back and make it a normal paid order — ledger credit,
+ * confirmation and seller alert included. Used by the reconciliation sweep and the admin button
+ * for orders that were stamped as late before the restore logic existed, or whose stock came back.
+ */
+export async function restoreLatePaidOrder(orderId: string, actor: ActorRef): Promise<"restored" | "unavailable" | "skipped"> {
+  const result = await db.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId }, include: { items: true, payments: { select: { id: true, provider: true }, orderBy: { createdAt: "desc" }, take: 1 }, refunds: { select: { id: true }, take: 1 } } });
+    if (!order || !["cancelled", "failed"].includes(order.status) || order.paymentStatus !== "paid" || !order.payments[0] || order.refunds.length > 0) return "skipped" as const;
+    if (!(await reserveAgain(tx, order, actor.id))) return "unavailable" as const;
+    await tx.order.update({ where: { id: orderId }, data: { status: "paid", cancelledAt: null, cancelReason: null } });
+    await tx.orderItem.updateMany({ where: { orderId }, data: { status: "paid" } });
+    if ((await tx.ledgerEntry.count({ where: { orderId } })) === 0) for (const item of order.items) await recordSaleForItem(tx, item, order.number);
+    for (const item of order.items) {
+      if (item.productId) await tx.product.update({ where: { id: item.productId }, data: { soldCount: { increment: item.qty } } });
+    }
+    await addOrderEvent(tx, orderId, "order.restored", `The ${order.payments[0].provider} payment recorded after the order was ${order.status} is confirmed and the stock was still available, so the order is restored`, actor, { paymentId: order.payments[0].id });
+    return order;
+  });
+  if (typeof result === "string") return result;
+  await notifyOrderPaid(result);
+  return "restored";
+}
+
+/** Buyer confirmation and seller "new sale" alerts for an order that just became paid. */
+async function notifyOrderPaid(result: PaidOrder) {
   const settings = await getSettings();
   const itemsList = result.items.map((i) => `• ${i.title} × ${i.qty} — ${formatMoney(i.subtotal)}`).join("\n");
   if (settings["notifications.orderConfirmation"]) {
@@ -123,7 +155,6 @@ export async function markOrderPaid(orderId: string, payment: { id: string; prov
       });
     }
   }
-  return true;
 }
 
 export async function markOrderPaymentFailed(orderId: string, reason: string, actor: ActorRef = SYSTEM_ACTOR) {

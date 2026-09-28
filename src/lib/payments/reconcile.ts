@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import type { ActorRef } from "@/lib/orders/lifecycle";
+import { restoreLatePaidOrder, type ActorRef } from "@/lib/orders/lifecycle";
 import { applyPaymentSuccess } from "@/lib/payments/payment-service";
 import { getProvider } from "@/lib/payments/registry";
 
@@ -39,7 +39,7 @@ export async function reconcilePayment(paymentId: string, actor: ActorRef): Prom
 }
 
 /** Recent gateway payments still open on our side, checked against the gateway (job, every 30 minutes). */
-export async function reconcileRecentPayments(days = 7): Promise<{ checked: number; booked: number }> {
+export async function reconcileRecentPayments(days = 7): Promise<{ checked: number; booked: number; restored: number }> {
   const since = new Date(Date.now() - days * 86_400_000);
   const payments = await db.payment.findMany({
     where: {
@@ -57,6 +57,12 @@ export async function reconcileRecentPayments(days = 7): Promise<{ checked: numb
   for (const p of payments) {
     if ((await reconcilePayment(p.id, { id: null, type: "job" })) === "succeeded") booked += 1;
   }
-  if (payments.length > 0) console.log(`[reconcile] ${payments.length} open payment(s) checked, ${booked} booked`);
-  return { checked: payments.length, booked };
+  // Orders that were cancelled before their (confirmed) payment was recorded: back to paid while the stock lasts.
+  const late = await db.order.findMany({ where: { status: { in: ["cancelled", "failed"] }, paymentStatus: "paid", placedAt: { gte: since }, refunds: { none: {} } }, select: { id: true }, take: 100 });
+  let restored = 0;
+  for (const o of late) {
+    if ((await restoreLatePaidOrder(o.id, { id: null, type: "job" })) === "restored") restored += 1;
+  }
+  if (payments.length > 0 || late.length > 0) console.log(`[reconcile] ${payments.length} open payment(s) checked, ${booked} booked; ${late.length} late-paid order(s) checked, ${restored} restored`);
+  return { checked: payments.length, booked, restored };
 }

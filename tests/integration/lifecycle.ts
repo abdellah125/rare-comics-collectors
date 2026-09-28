@@ -19,7 +19,7 @@ const check = (name: string, ok: boolean, detail = "") => {
 
 async function main() {
   const db = new PrismaClient();
-  const { markOrderPaid, markOrderPaymentFailed, cancelOrder, expireUnpaidOrders } = await import("@/lib/orders/lifecycle");
+  const { markOrderPaid, markOrderPaymentFailed, cancelOrder, expireUnpaidOrders, restoreLatePaidOrder } = await import("@/lib/orders/lifecycle");
   const { issueRefund, RefundError } = await import("@/lib/payments/payment-service");
   const { createPayoutForSeller } = await import("@/lib/finance/ledger");
   const { shippingOptionsFor } = await import("@/lib/commerce/pricing");
@@ -126,6 +126,13 @@ async function main() {
     check("late payment credits no seller ledger", (await db.ledgerEntry.count({ where: { orderId: o.id } })) === 0, "");
     await db.product.update({ where: { id: product.id }, data: { stock: before } });
     check("stock stays released after the late payment", (await stockNow()) === before, "");
+    // 3c. Once the stock is back, the late-paid order can be restored.
+    const restored = await restoreLatePaidOrder(o.id, { id: null, type: "job" });
+    const again = await db.order.findUniqueOrThrow({ where: { id: o.id } });
+    check("late-paid cancelled order is restored when stock returns", restored === "restored" && again.status === "paid" && again.cancelledAt === null, `${restored} ${again.status}`);
+    check("restored late-paid order credits the ledger once", (await db.ledgerEntry.count({ where: { orderId: o.id } })) > 0 && (await restoreLatePaidOrder(o.id, { id: null, type: "job" })) === "skipped", "");
+    check("restored late-paid order takes the stock back", (await stockNow()) === before - 1, `stock=${await stockNow()}`);
+    await db.product.update({ where: { id: product.id }, data: { stock: { increment: 1 } } });
   }
 
   // 4. Cancelling an unpaid coupon order returns the coupon use.

@@ -10,7 +10,7 @@ import { REFUND_REASONS } from "@/lib/domain";
 import { queueTemplateEmail } from "@/lib/mail";
 import { formatMoney } from "@/lib/money";
 import { createShipment, updateShipmentStatus } from "@/lib/orders/fulfillment";
-import { addOrderEvent, cancelOrder, syncOrderStatus } from "@/lib/orders/lifecycle";
+import { addOrderEvent, cancelOrder, restoreLatePaidOrder, syncOrderStatus } from "@/lib/orders/lifecycle";
 import { applyPaymentSuccess, finalizeRefund, issueRefund } from "@/lib/payments/payment-service";
 import { failState, fieldErrors, formToObject, okState, zId, zOptionalTrimmed, zTrimmed, type ActionState } from "@/lib/validation";
 
@@ -38,9 +38,14 @@ export async function reconcilePaymentAction(orderId: string): Promise<ActionSta
     if (!payment) return failState("This order has no payment record.");
     const { reconcilePayment } = await import("@/lib/payments/reconcile");
     const outcome = await reconcilePayment(payment.id, { id: admin.id, type: "admin" });
-    await audit({ actor: actorOf(admin), action: "order.reconcile_payment", targetType: "order", targetId: orderId, summary: `${order.number}: ${payment.provider} says ${outcome}` });
+    const fresh = await db.order.findUniqueOrThrow({ where: { id: orderId }, select: { status: true, paymentStatus: true } });
+    // Paid but still cancelled (late money, or stamped before restores existed): try to take the stock back now.
+    const restore = fresh.paymentStatus === "paid" && ["cancelled", "failed"].includes(fresh.status) ? await restoreLatePaidOrder(orderId, { id: admin.id, type: "admin" }) : null;
+    await audit({ actor: actorOf(admin), action: "order.reconcile_payment", targetType: "order", targetId: orderId, summary: `${order.number}: ${payment.provider} says ${outcome}${restore ? `, restore ${restore}` : ""}` });
     revalidatePath(`/admin/orders/${orderId}`);
     revalidatePath("/admin/orders");
+    if (restore === "restored") return okState(undefined, "The payment is confirmed and the stock was still available: the order is restored and now paid.");
+    if (restore === "unavailable") return failState("The payment is confirmed, but the copy has since been sold to someone else. The order stays cancelled: refund the buyer below.");
     if (outcome === "succeeded") return okState(undefined, order.paymentStatus === "paid" ? "This order is already paid." : "The gateway confirms the payment. The order is now paid.");
     if (outcome === "pending") return okState(undefined, "The gateway has not completed this payment yet (or could not be reached). Try again in a few minutes.");
     if (outcome === "failed") return okState(undefined, "The gateway reports no completed payment for this order.");

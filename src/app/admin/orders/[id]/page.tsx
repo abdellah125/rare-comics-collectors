@@ -188,7 +188,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                         )}
                       </div>
                     )}
-                    {["paypal", "stripe"].includes(pm.provider) && !["succeeded", "refunded", "partially_refunded"].includes(pm.status) && pm.providerRef && (
+                    {["paypal", "stripe"].includes(pm.provider) && pm.providerRef && (!["succeeded", "refunded", "partially_refunded"].includes(pm.status) || (pm.status === "succeeded" && ["cancelled", "failed"].includes(order.status) && order.refunds.length === 0)) && (
                       <div className="mt-2">
                         <ConfirmButton label={`Check with ${pm.provider === "paypal" ? "PayPal" : "Stripe"}`} message="Asks the gateway whether this payment went through. If it did, the order becomes paid (and is restored if it was cancelled while the stock is still available)." action={reconcilePaymentAction.bind(null, order.id)} size="sm" />
                       </div>
