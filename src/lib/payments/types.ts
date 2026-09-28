@@ -54,6 +54,20 @@ export type RefundResult = { status: "succeeded" | "pending" | "failed"; provide
 
 export type WebhookEventEnvelope = { eventId: string; type: string; data: unknown };
 
+/** What the gateway holds for a payment, read without changing anything. */
+export type GatewayRecord = {
+  /** the gateway's own status word, e.g. COMPLETED / APPROVED / CREATED */
+  status: string;
+  captured: boolean;
+  captureId?: string;
+  /** presentment amount and currency as the gateway states them */
+  amount?: string;
+  currency?: string;
+  /** our order number as the gateway echoes it back (PayPal custom_id) */
+  reference?: string;
+  refunded: boolean;
+};
+
 export interface PaymentProvider {
   id: PaymentProviderId;
   displayName: string;
@@ -64,6 +78,8 @@ export interface PaymentProvider {
   /** Called when the buyer returns from the gateway or the client reports completion. */
   confirmPayment?(providerRef: string, params: Record<string, string>): Promise<ConfirmResult>;
   refund(input: RefundInput): Promise<RefundResult>;
+  /** Read-only: the gateway's record of the payment, for the admin verification panel. */
+  inspectPayment?(providerRef: string): Promise<GatewayRecord>;
   /** Verifies the signature and parses the event; returns null when it should be rejected. */
   verifyWebhook?(req: Request, rawBody: string): Promise<WebhookEventEnvelope | null>;
 }

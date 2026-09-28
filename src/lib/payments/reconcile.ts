@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { restoreLatePaidOrder, type ActorRef } from "@/lib/orders/lifecycle";
 import { applyPaymentSuccess } from "@/lib/payments/payment-service";
 import { getProvider } from "@/lib/payments/registry";
+import type { GatewayRecord } from "@/lib/payments/types";
 
 export type ReconcileOutcome = "succeeded" | "pending" | "failed" | "skipped";
 
@@ -36,6 +37,52 @@ export async function reconcilePayment(paymentId: string, actor: ActorRef): Prom
     return "succeeded";
   }
   return result.status;
+}
+
+export type PaymentCheck = { label: string; ok: boolean | null; detail: string };
+
+/**
+ * Everything an admin wants to see before (or after) a restore, on one order: what the gateway
+ * says, whether it is the same order and money, refunds, stock, ledger. Read-only.
+ */
+export async function verifyOrderPayment(orderId: string): Promise<{ checks: PaymentCheck[]; canRestore: boolean }> {
+  const order = await db.order.findUnique({
+    where: { id: orderId },
+    include: { items: { include: { product: { select: { stock: true, status: true, title: true, issue: true } } } }, payments: { orderBy: { createdAt: "desc" }, take: 1 }, refunds: { select: { status: true, amount: true } } },
+  });
+  if (!order) return { checks: [], canRestore: false };
+  const payment = order.payments[0];
+  const checks: PaymentCheck[] = [];
+  if (!payment) return { checks: [{ label: "Payment record", ok: false, detail: "No payment attempt on this order" }], canRestore: false };
+  const provider = getProvider(payment.provider);
+  let gateway: GatewayRecord | null = null;
+  if (provider?.inspectPayment && payment.providerRef) {
+    try {
+      gateway = await provider.inspectPayment(payment.providerRef);
+    } catch (err) {
+      checks.push({ label: `${provider.displayName} record`, ok: null, detail: `Could not be read: ${err instanceof Error ? err.message : err}` });
+    }
+  }
+  if (gateway) {
+    checks.push({ label: `${provider!.displayName} record`, ok: gateway.captured, detail: `${gateway.status}${gateway.captureId ? ` · capture ${gateway.captureId}` : ""} · ref ${payment.providerRef}` });
+    checks.push({ label: "Belongs to this order", ok: gateway.reference ? gateway.reference === order.number : null, detail: gateway.reference ? `gateway reference ${gateway.reference}` : "the gateway did not echo an order number" });
+    const ours = (payment.presentmentAmount / 100).toFixed(2);
+    checks.push({ label: "Amount matches", ok: gateway.amount ? gateway.amount === ours && (gateway.currency ?? payment.currency) === payment.currency : null, detail: `gateway ${gateway.amount ?? "?"} ${gateway.currency ?? ""} · order ${ours} ${payment.currency}` });
+    checks.push({ label: "Not refunded at the gateway", ok: !gateway.refunded, detail: gateway.refunded ? "the gateway shows a refund" : "no refund" });
+  } else if (!provider?.inspectPayment) {
+    checks.push({ label: "Gateway record", ok: null, detail: `${payment.provider} cannot be queried automatically` });
+  }
+  checks.push({ label: "Recorded on the order", ok: payment.status === "succeeded" && order.paymentStatus === "paid", detail: `payment ${payment.status}${payment.capturedAt ? ` · captured ${payment.capturedAt.toISOString().slice(0, 16).replace("T", " ")} UTC` : ""} · order payment status ${order.paymentStatus}` });
+  checks.push({ label: "Not refunded here", ok: order.refunds.length === 0 && payment.refundedAmount === 0, detail: order.refunds.length ? `${order.refunds.length} refund record(s)` : "no refunds" });
+  const comics = order.items.filter((i) => i.kind === "comic");
+  const stockOk = comics.every((i) => !i.productId || (i.product && i.product.status === "published" && i.product.stock >= i.qty));
+  checks.push({ label: order.status === "paid" || order.status === "processing" ? "Stock reserved" : "Item still in stock", ok: order.status === "paid" || order.status === "processing" ? true : stockOk, detail: comics.map((i) => `${i.title}: ${i.product ? `${i.product.stock} in stock, ${i.product.status}` : "listing removed"}`).join("; ") || "no comics" });
+  const ledger = await db.ledgerEntry.count({ where: { orderId } });
+  const restored = order.status === "paid" || order.status === "processing";
+  checks.push({ label: restored ? "Seller ledger credited once" : "Seller ledger not yet credited", ok: restored ? ledger > 0 : ledger === 0, detail: `${ledger} ledger entr${ledger === 1 ? "y" : "ies"}` });
+  checks.push({ label: "Order status", ok: restored, detail: `${order.status}${order.cancelReason ? ` (${order.cancelReason})` : ""}` });
+  const canRestore = ["cancelled", "failed"].includes(order.status) && order.paymentStatus === "paid" && order.refunds.length === 0 && payment.refundedAmount === 0 && stockOk && (!gateway || (gateway.captured && !gateway.refunded && (!gateway.reference || gateway.reference === order.number)));
+  return { checks, canRestore };
 }
 
 /** Recent gateway payments still open on our side, checked against the gateway (job, every 30 minutes). */

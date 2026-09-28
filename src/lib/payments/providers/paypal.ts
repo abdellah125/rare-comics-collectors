@@ -44,7 +44,7 @@ type PayPalOrder = {
   id: string;
   status: string;
   links?: { rel: string; href: string }[];
-  purchase_units?: { payments?: { captures?: { id: string; status: string; seller_receivable_breakdown?: { paypal_fee?: { value: string } } }[] } }[];
+  purchase_units?: { custom_id?: string; amount?: { value?: string; currency_code?: string }; payments?: { captures?: { id: string; status: string; amount?: { value?: string; currency_code?: string }; seller_receivable_breakdown?: { paypal_fee?: { value: string } } }[]; refunds?: { id: string; status: string }[] } }[];
 };
 
 export const paypalProvider: PaymentProvider = {
@@ -93,6 +93,22 @@ export const paypalProvider: PaymentProvider = {
     }
     if (capture?.status === "PENDING" || order.status === "APPROVED") return { status: "pending", providerRef };
     return { status: "failed", providerRef, message: `PayPal order ${order.status.toLowerCase()}` };
+  },
+
+  async inspectPayment(providerRef) {
+    const order = await api<PayPalOrder>(`/v2/checkout/orders/${encodeURIComponent(providerRef)}`);
+    const unit = order.purchase_units?.[0];
+    const capture = unit?.payments?.captures?.[0];
+    const refunds = unit?.payments?.refunds ?? [];
+    return {
+      status: capture ? `${order.status} / capture ${capture.status}` : order.status,
+      captured: order.status === "COMPLETED" && capture?.status === "COMPLETED",
+      captureId: capture?.id,
+      amount: capture?.amount?.value ?? unit?.amount?.value,
+      currency: capture?.amount?.currency_code ?? unit?.amount?.currency_code,
+      reference: unit?.custom_id,
+      refunded: refunds.some((r) => r.status === "COMPLETED") || ["REFUNDED", "PARTIALLY_REFUNDED"].includes(capture?.status ?? ""),
+    };
   },
 
   async refund(input) {

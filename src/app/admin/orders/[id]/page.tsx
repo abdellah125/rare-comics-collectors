@@ -20,6 +20,7 @@ import { parseJsonArray, isString } from "@/lib/json";
 import { formatMoney } from "@/lib/money";
 import { caseMessages, getOrderById, orderAddress } from "@/lib/orders/queries";
 import { bankTransferDetails } from "@/lib/payments/bank-details";
+import { verifyOrderPayment } from "@/lib/payments/reconcile";
 import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Order" };
@@ -41,6 +42,8 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
     ...order.returns.map(async (r) => ({ kind: "return" as const, id: r.id, title: `Return — ${statusLabel(r.reason)} (qty ${r.qty})`, status: r.status, messages: await caseMessages("return", r.id, { includeInternal: true }) })),
   ]);
   const wire = order.payments.some((p) => p.provider === "bank_transfer") ? bankTransferDetails(await getSettings(), order.number) : null;
+  const gatewayOrder = order.payments.some((p) => ["paypal", "stripe"].includes(p.provider));
+  const verification = gatewayOrder && (order.status !== "paid" || order.paymentStatus !== "paid") ? await verifyOrderPayment(order.id) : null;
   const manage = can(admin, "orders.manage");
   const canRefund = can(admin, "orders.refund");
   const finance = can(admin, "finance.manage");
@@ -148,6 +151,19 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
             </Card>
           )}
 
+          {verification && (
+            <Card title="Payment verification" description={verification.canRestore ? "Every condition for a safe restore holds. \"Check with PayPal / Stripe\" below restores the order to paid: stock re-reserved, seller ledger credited once, buyer and seller notified once." : "Read straight from the gateway and this database; nothing is changed by viewing this."}>
+              <ul className="grid gap-1.5 text-[13px]">
+                {verification.checks.map((c) => (
+                  <li key={c.label} className="flex flex-wrap items-baseline gap-x-2">
+                    <Tone tone={c.ok === true ? "success" : c.ok === false ? "danger" : "neutral"}>{c.ok === true ? "OK" : c.ok === false ? "No" : "?"}</Tone>
+                    <span className="font-medium text-ink-900">{c.label}</span>
+                    <span className="text-ink-600">{c.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
           <Card title="Payments & refunds">
             {order.payments.length === 0 ? (
               <EmptyState title="No payment attempts" />
