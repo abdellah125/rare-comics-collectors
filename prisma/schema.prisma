@@ -1355,6 +1355,52 @@ model Job {
   @@index([type])
 }
 
+/// Semrush keyword data, cached per phrase and regional database (see src/lib/seo/keyword-research.ts).
+model KeywordMetric {
+  id                 String    @id @default(cuid())
+  phrase             String
+  database           String
+  volume             Int?
+  cpc                Float?
+  competition        Float?
+  results            Float?
+  difficulty         Float?
+  intents            String?
+  trendJson          String?
+  /// JSON arrays of { phrase, volume, cpc, competition, difficulty }
+  relatedJson        String    @default("[]")
+  questionsJson      String    @default("[]")
+  relatedFetchedAt   DateTime?
+  questionsFetchedAt DateTime?
+  fetchedAt          DateTime  @default(now())
+  unitsSpent         Int       @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([phrase, database])
+  @@index([database, volume])
+}
+
+/// Every call to a metered third-party API (provider, report, cost), for budgets and the admin usage log.
+model ApiUsage {
+  id         String   @id @default(cuid())
+  provider   String
+  endpoint   String
+  /// human summary of the request, never a URL with credentials
+  params     String
+  lines      Int      @default(0)
+  units      Int      @default(0)
+  /// ok | empty | error | blocked
+  status     String
+  error      String?
+  durationMs Int?
+  actorId    String?
+  createdAt  DateTime @default(now())
+
+  @@index([provider, createdAt])
+  @@index([provider, endpoint])
+}
+
 model WebhookEvent {
   id          String    @id @default(cuid())
   provider    String

@@ -110,6 +110,18 @@ export const SETTING_GROUPS: SettingGroup[] = [
   },
 ];
 
+SETTING_GROUPS.push({
+  slug: "seo",
+  title: "SEO & keyword research",
+  description: "Semrush is metered per line returned. The key itself is the SEMRUSH_API_KEY environment variable on the server; these settings cap what the admin research page may spend.",
+  fields: [
+    { key: "seo.semrushDatabase", label: "Default Semrush region", kind: "text", hint: "us, uk, ca, au, de, fr, es, it or br" },
+    { key: "seo.semrushDailyUnits", label: "Daily unit budget", kind: "number", min: 0, max: 1_000_000, hint: "0 = no daily cap (the reserve still applies)" },
+    { key: "seo.semrushReserveUnits", label: "Units to keep in reserve", kind: "number", min: 0, max: 10_000_000 },
+    { key: "seo.semrushCacheDays", label: "Reuse cached keyword data for (days)", kind: "number", min: 1, max: 365 },
+  ],
+});
+
 export function settingGroup(slug: string): SettingGroup | undefined {
   return SETTING_GROUPS.find((g) => g.slug === slug);
 }

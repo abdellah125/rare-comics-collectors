@@ -107,6 +107,10 @@ export const settingDefaults = {
   "system.jobsEnabled": true,
   "system.exchangeRatesAuto": true,
   "catalog.releasePaused": false,
+  "seo.semrushDatabase": "us",
+  "seo.semrushDailyUnits": 2000,
+  "seo.semrushReserveUnits": 500,
+  "seo.semrushCacheDays": 30,
 };
 
 export type Settings = typeof settingDefaults;

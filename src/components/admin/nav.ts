@@ -29,6 +29,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { href: "/admin/catalog", label: "Categories & brands", perm: "catalog.manage" },
       { href: "/admin/guides", label: "Guides & articles", perm: "content.manage" },
       { href: "/admin/indexnow", label: "IndexNow (Bing)", perm: "content.manage" },
+      { href: "/admin/keywords", label: "Keyword research", perm: "content.manage" },
       { href: "/admin/reviews", label: "Reviews", perm: "reviews.manage" },
       { href: "/admin/promotions", label: "Promotions", perm: "promotions.manage" },
     ],

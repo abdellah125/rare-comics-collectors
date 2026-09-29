@@ -124,6 +124,15 @@ export const env = {
       return str("BING_SITE_VERIFICATION");
     },
   },
+  semrush: {
+    /** Server-only. Never sent to the browser, never logged, never stored. */
+    get apiKey() {
+      return str("SEMRUSH_API_KEY");
+    },
+    get configured() {
+      return Boolean(str("SEMRUSH_API_KEY"));
+    },
+  },
   indexNow: {
     /** Optional override for the built-in public key (8–128 chars of a-z, A-Z, 0-9, -). */
     get key() {
