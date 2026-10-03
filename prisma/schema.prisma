@@ -1355,6 +1355,205 @@ model Job {
   @@index([type])
 }
 
+// ───────────────────────────── SEO intelligence (src/lib/seo) ─────────────────────────────
+
+/// One search phrase with its metrics, classification, score, cluster and ranking state.
+model SeoKeyword {
+  id             String    @id @default(cuid())
+  phrase         String
+  /// normPhrase(phrase): the dedupe key
+  norm           String    @unique
+  volume         Int?
+  difficulty     Float?
+  cpc            Float?
+  competition    Float?
+  providerIntent String?
+  /// JSON array of SERP feature names (ai_overview, people_also_ask, popular_products…)
+  serpFeaturesJson String  @default("[]")
+  /// average main-domain rank (0–1000) and referring domains of the pages in the top results
+  serpDomainRank Float?
+  serpRefDomains Float?
+  metricsAt      DateTime?
+  /// transactional | commercial | informational | navigational
+  intent         String    @default("informational")
+  specificJson   String    @default("[]")
+  intentBasis    String?
+  relevance      Int       @default(0)
+  relevanceReason String?
+  entityType     String    @default("topic")
+  entityLabel    String?
+  clusterKey     String    @default("")
+  /// primary | secondary | supporting
+  clusterRole    String    @default("supporting")
+  score          Int?
+  /// JSON: the components the score was computed from
+  scoreJson      String    @default("{}")
+  /// high | medium | long_term | low
+  priority       String    @default("low")
+  priorityWhy    String?
+  /// JSON array: catalog | research:<seed> | gsc | ranked | competitor:<domain> | manual
+  sourcesJson    String    @default("[]")
+  /// discovered | analyzed | targeting | content_needed | optimizing | published | ranking | needs_improvement
+  status         String    @default("discovered")
+  statusManual   Boolean   @default(false)
+  position       Float?
+  prevPosition   Float?
+  /// gsc | serp | labs
+  positionSource String?
+  positionAt     DateTime?
+  currentUrl     String?
+  impressions    Int?
+  clicks         Int?
+  /// JSON array of { url, impressions, position } when several of the site's pages show for the query
+  pagesJson      String    @default("[]")
+  /// JSON array of { domain, position, url, title }
+  competitorsJson String   @default("[]")
+  serpAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  snapshots SeoRankSnapshot[]
+
+  @@index([priority, score])
+  @@index([clusterKey])
+  @@index([status])
+  @@index([intent])
+  @@index([metricsAt])
+}
+
+/// Keywords that should be served by the same page, with the page plan.
+model SeoCluster {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  label         String
+  entityType    String
+  bucket        String
+  intent        String
+  specificJson  String   @default("[]")
+  primaryPhrase String
+  /// JSON arrays of phrases
+  secondaryJson String   @default("[]")
+  supportingJson String  @default("[]")
+  keywordCount  Int      @default(0)
+  totalVolume   Int      @default(0)
+  volume        Int?
+  difficulty    Float?
+  score         Int?
+  priority      String   @default("low")
+  priorityWhy   String?
+  pageType      String
+  recommendedUrl String
+  urlExists     Boolean  @default(false)
+  currentUrl    String?
+  bestPosition  Float?
+  title         String
+  h1            String
+  topicsJson    String   @default("[]")
+  linksJson     String   @default("[]")
+  note          String?
+  status        String   @default("analyzed")
+  statusManual  Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+
+  @@index([priority, score])
+  @@index([pageType])
+}
+
+model SeoRankSnapshot {
+  id          String     @id @default(cuid())
+  keywordId   String
+  keyword     SeoKeyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  /// midnight UTC of the day the check covers
+  day         DateTime
+  position    Float?
+  url         String?
+  clicks      Int?
+  impressions Int?
+  source      String
+
+  @@unique([keywordId, day, source])
+  @@index([day])
+}
+
+model SeoCompetitor {
+  id               String    @id @default(cuid())
+  domain           String    @unique
+  /// keywords of ours in whose top results the domain appeared, and its average position there
+  keywordsSeen     Int       @default(0)
+  avgPosition      Float?
+  organicTraffic   Float?
+  organicKeywords  Int?
+  backlinks        Float?
+  referringDomains Float?
+  overviewAt       DateTime?
+  gapAt            DateTime?
+  gapKeywords      Int       @default(0)
+  /// marketplace | dealer | publisher | reference | video | social | other
+  kind             String    @default("other")
+  updatedAt        DateTime  @updatedAt
+}
+
+/// One crawled page of the site with what the audit found on it.
+model SeoPage {
+  id          String   @id @default(cuid())
+  url         String   @unique
+  kind        String
+  httpStatus  Int
+  title       String?
+  description String?
+  h1          String?
+  h1Count     Int      @default(0)
+  wordCount   Int      @default(0)
+  canonical   String?
+  noindex     Boolean  @default(false)
+  inlinks     Int      @default(0)
+  outlinks    Int      @default(0)
+  /// JSON array of { code, severity, message }
+  issuesJson  String   @default("[]")
+  clicks      Int?
+  impressions Int?
+  position    Float?
+  /// JSON array of { query, impressions, position }
+  topQueriesJson String @default("[]")
+  crawledAt   DateTime @default(now())
+
+  @@index([kind])
+}
+
+/// A detected opportunity or problem, rebuilt on every analysis.
+model SeoInsight {
+  id        String   @id @default(cuid())
+  /// striking_distance | low_competition | keyword_gap | cannibalization | wrong_page | commercial_gap
+  type      String
+  title     String
+  detail    String
+  action    String
+  phrase    String?
+  url       String?
+  /// sort weight: higher first
+  weight    Int      @default(0)
+  dataJson  String   @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([type, weight])
+}
+
+/// A pipeline step that was run, with what it did and what it cost.
+model SeoRun {
+  id         String    @id @default(cuid())
+  kind       String
+  /// running | ok | error | blocked
+  status     String    @default("running")
+  summary    String?
+  credits    Int       @default(0)
+  detailJson String    @default("{}")
+  actorId    String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([kind, startedAt])
+}
+
 /// Semrush keyword data, cached per phrase and regional database (see src/lib/seo/keyword-research.ts).
 model KeywordMetric {
   id                 String    @id @default(cuid())

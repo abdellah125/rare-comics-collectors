@@ -124,6 +124,21 @@ export const env = {
       return str("BING_SITE_VERIFICATION");
     },
   },
+  openseo: {
+    /** Server-only. Sent to app.openseo.so as a bearer token and nowhere else; never logged or stored. */
+    get apiKey() {
+      return str("OPENSEO_API_KEY");
+    },
+    get configured() {
+      return Boolean(str("OPENSEO_API_KEY"));
+    },
+  },
+  anthropic: {
+    /** Optional: enables the written analysis on the SEO dashboard. Server-only. */
+    get apiKey() {
+      return str("ANTHROPIC_API_KEY");
+    },
+  },
   semrush: {
     /** Server-only. Never sent to the browser, never logged, never stored. */
     get apiKey() {

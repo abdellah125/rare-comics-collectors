@@ -564,6 +564,22 @@ async function seedCatalogQueue() {
   }
 }
 
+/**
+ * Keyword data bought from OpenSEO during the first research run (prisma/data/seo/keywords.json).
+ * Loaded once, into an empty table, so those credits are not spent twice; the weekly seo_sync
+ * job then classifies, scores and clusters the rows against the live catalogue.
+ */
+async function seedSeoKeywords() {
+  const file = path.join(process.cwd(), "prisma", "data", "seo", "keywords.json");
+  if (!fs.existsSync(file) || (await db.seoKeyword.count()) > 0) return;
+  type Row = { phrase: string; norm: string; volume: number | null; difficulty: number | null; cpc: number | null; competition: number | null; providerIntent: string | null; serpFeaturesJson: string; serpDomainRank: number | null; serpRefDomains: number | null; metricsAt: string | null; sourcesJson: string; competitorsJson: string; serpAt: string | null };
+  const rows = JSON.parse(fs.readFileSync(file, "utf8")) as Row[];
+  for (let i = 0; i < rows.length; i += 500) {
+    await db.seoKeyword.createMany({ data: rows.slice(i, i + 500).map((r) => ({ ...r, metricsAt: r.metricsAt ? new Date(r.metricsAt) : null, serpAt: r.serpAt ? new Date(r.serpAt) : null })), skipDuplicates: true });
+  }
+  log(`seo keywords: ${rows.length} measured keywords loaded`);
+}
+
 type SeedGuide = {
   slug: string;
   title: string;
@@ -687,6 +703,7 @@ async function main() {
   await seedCatalog();
   await seedImportedCatalog();
   await seedCatalogQueue();
+  await seedSeoKeywords();
   await seedGuides();
   await seedDemo();
   console.log("Done.");

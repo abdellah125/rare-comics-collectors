@@ -111,6 +111,32 @@ export function registerJobHandlers() {
     await enqueueJob("reconcile_payments", {}, { runAt: new Date(Date.now() + 30 * 60_000), dedupe: true });
   });
 
+  // Weekly, free: Search Console positions (the rank snapshot), new catalogue candidates, and a full re-analysis.
+  // Two short phases so each fits in one serverless invocation: collect, then analyse.
+  registerJobHandler("seo_sync", async (payload) => {
+    const settings = await getSettings();
+    const { stepAnalyse, stepCandidates, stepSearchConsole } = await import("@/lib/seo/pipeline");
+    if (payload.phase === "analyse") {
+      await stepAnalyse();
+      await enqueueJob("seo_sync", {}, { runAt: new Date(Date.now() + 7 * 24 * 3_600_000), dedupe: true });
+      return;
+    }
+    if (!settings["seo.autoSync"]) {
+      await enqueueJob("seo_sync", {}, { runAt: new Date(Date.now() + 7 * 24 * 3_600_000), dedupe: true });
+      return;
+    }
+    const { openSeoConfigured } = await import("@/lib/seo/openseo");
+    await stepCandidates(null, { rebuild: false });
+    if (openSeoConfigured()) await stepSearchConsole(null, { rebuild: false });
+    await enqueueJob("seo_sync", { phase: "analyse" });
+  });
+
+  // One chunk of the site audit crawl; it re-queues itself until every page is in.
+  registerJobHandler("seo_audit", async (payload) => {
+    const { auditChunk } = await import("@/lib/seo/site-audit");
+    await auditChunk(typeof payload.offset === "number" ? payload.offset : 0);
+  });
+
   registerJobHandler("retry_webhook", async (payload) => {
     const id = typeof payload.webhookEventId === "string" ? payload.webhookEventId : null;
     if (!id) return;
@@ -131,4 +157,5 @@ export async function ensureRecurringJobs() {
   await enqueueJob("indexnow_sync", {}, { dedupe: true });
   await enqueueJob("catalog_release", {}, { dedupe: true });
   await enqueueJob("reconcile_payments", {}, { dedupe: true });
+  await enqueueJob("seo_sync", {}, { dedupe: true });
 }

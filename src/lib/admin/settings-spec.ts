@@ -115,6 +115,9 @@ SETTING_GROUPS.push({
   title: "SEO & keyword research",
   description: "Semrush is metered per line returned. The key itself is the SEMRUSH_API_KEY environment variable on the server; these settings cap what the admin research page may spend.",
   fields: [
+    { key: "seo.openseoReserveCredits", label: "OpenSEO credits to keep in reserve", kind: "number", min: 0, max: 1_000_000, hint: "A paid step is refused when it would take the balance below this." },
+    { key: "seo.autoSync", label: "Weekly Search Console sync and re-analysis (free, no credits)", kind: "bool" },
+    { key: "seo.openseoProjectId", label: "OpenSEO project id", kind: "text", hint: "Filled in automatically on the first call; clear it to pick the project again." },
     { key: "seo.semrushDatabase", label: "Default Semrush region", kind: "text", hint: "us, uk, ca, au, de, fr, es, it or br" },
     { key: "seo.semrushDailyUnits", label: "Daily unit budget", kind: "number", min: 0, max: 1_000_000, hint: "0 = no daily cap (the reserve still applies)" },
     { key: "seo.semrushReserveUnits", label: "Units to keep in reserve", kind: "number", min: 0, max: 10_000_000 },
