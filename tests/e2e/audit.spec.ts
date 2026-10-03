@@ -107,7 +107,7 @@ test("guest order tracking can be switched off", async ({ page }) => {
 });
 
 test("sitemap and robots cover the catalogue and hide private areas", async ({ request }) => {
-  const sm = await request.get("/sitemap.xml");
+  const sm = await request.get("/sitemaps/site.xml");
   const xml = await sm.text();
   expect(sm.status()).toBe(200);
   expect(xml).toContain(`/store/${E2E.productSlug}`);

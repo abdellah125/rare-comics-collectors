@@ -178,6 +178,32 @@ body {
     transform: none;
   }
 }
+@keyframes welcome-offer-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes welcome-offer-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.welcome-offer-panel {
+  animation: welcome-offer-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  /* room for the phone's home indicator when it sits at the bottom edge */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.welcome-offer-backdrop {
+  animation: welcome-offer-fade 0.35s ease-out both;
+}
 .animate-fade-up {
   animation: vc-fade-up 0.45s ease-out both;
 }

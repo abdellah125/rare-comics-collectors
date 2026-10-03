@@ -7,6 +7,8 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { GoogleTag } from "@/components/google-tag";
 import { JsonLd } from "@/components/json-ld";
+import { WelcomeOffer } from "@/components/welcome-offer";
+import { db } from "@/lib/db";
 import { getPresentmentCurrency, getEnabledCurrencies } from "@/lib/currency";
 import { organizationJsonLd } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
@@ -20,6 +22,8 @@ import { formatMoney } from "@/lib/money";
  */
 export async function SiteShell({ children, banner }: { children: ReactNode; banner?: ReactNode }) {
   const [currency, currencies, settings, collections, sessionUser] = await Promise.all([getPresentmentCurrency(), getEnabledCurrencies(), getSettings(), listCollections().catch(() => []), sessionDto()]);
+  // The welcome code is for first orders: a signed-in buyer with a paid order is never shown the offer.
+  const returningCustomer = sessionUser ? (await db.order.count({ where: { userId: sessionUser.id, paymentStatus: { in: ["paid", "partially_refunded", "refunded"] } } }).catch(() => 0)) > 0 : false;
   const brand = { name: settings["marketplace.name"], logoUrl: settings["marketplace.logoMediaId"] ? `/api/media/${settings["marketplace.logoMediaId"]}` : null };
   const threshold = settings["commerce.freeShippingThreshold"];
   const shippingNotice = threshold > 0 ? `Free insured shipping on ${settings["marketplace.defaultCountry"]} orders over ${formatMoney(threshold, "USD", "en-US", { compact: true })}` : "Insured shipping on every order";
@@ -47,6 +51,7 @@ export async function SiteShell({ children, banner }: { children: ReactNode; ban
               shopLinks={collections.map((c) => ({ name: c.shortName, href: `/collections/${c.slug}` }))}
             />
             <CartDrawer />
+            <WelcomeOffer returningCustomer={returningCustomer} />
           </CartProvider>
         </AuthProvider>
       </CurrencyProvider>
