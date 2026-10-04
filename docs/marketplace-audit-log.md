@@ -191,6 +191,8 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - New email templates `paypal_invoice_requested` and `paypal_invoice_sent` (created by the deploy seed). Other payment methods untouched.
 - Verified: 99 unit tests (5 new), 34 integration checks (5 new), 20 browser tests (2 new: coupon → PayPal → request → admin Pending → Sent → Paid, and admin cancel), lint and production build clean. Stored total in the browser test: $50.00 − 10% coupon + shipping + tax = $63.66, identical on checkout, confirmation, admin card and payment row.
 
+- Correction the same day: the buyer is **not** asked for a WhatsApp number. +1 418-506-6697 is the store’s own WhatsApp; the PayPal panel at checkout, the confirmation screen and the account order page link to it (wa.me with a first message already written, including the order number after checkout). The invoice form asks only for full name and PayPal email; the `whatsapp` column stays but is no longer filled.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml` (the index; it lists the store and guide sitemaps).

@@ -195,7 +195,7 @@ export const PlaceOrderSchema = z.object({
   couponCode: z.string().max(40).optional(),
   customerNote: z.string().trim().max(1000).optional(),
   /** PayPal invoice request details; required (and validated) when the provider is PayPal. */
-  invoice: z.object({ name: z.string().max(200), paypalEmail: z.string().max(300), whatsapp: z.string().max(60) }).optional(),
+  invoice: z.object({ name: z.string().max(200), paypalEmail: z.string().max(300) }).optional(),
   idempotencyKey: zId,
   simulate: z.string().max(20).optional(),
 });
@@ -319,8 +319,8 @@ export async function placeOrder(
           number,
           userId: ctx.userId,
           email: input.email,
-          phone: input.phone ?? invoice?.whatsapp ?? null,
-          ...(invoice ? { invoiceName: invoice.name, paypalEmail: invoice.paypalEmail, whatsapp: invoice.whatsapp, invoiceStatus: "requested" } : {}),
+          phone: input.phone ?? null,
+          ...(invoice ? { invoiceName: invoice.name, paypalEmail: invoice.paypalEmail, invoiceStatus: "requested" } : {}),
           currency: quote.currency.code,
           exchangeRate: quote.currency.rateToBase,
           subtotal: quote.subtotal,
@@ -458,7 +458,7 @@ export async function placeOrder(
           `Amount to invoice: ${amount}${discountNote}`,
           `Full name: ${invoice.name}`,
           `PayPal email: ${invoice.paypalEmail}`,
-          `WhatsApp: ${invoice.whatsapp}`,
+          ...(input.phone ? [`Phone: ${input.phone}`] : []),
           `Contact email: ${input.email}`,
           "Shipping address:",
           ...formatAddress(input.shippingAddress).map((l) => `  ${l}`),

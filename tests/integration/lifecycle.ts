@@ -212,7 +212,7 @@ async function main() {
     const { reconcilePayment } = await import("@/lib/payments/reconcile");
     const before = await stockNow();
     const asInvoice = async (id: string) => {
-      const o = await db.order.update({ where: { id }, data: { invoiceStatus: "requested", invoiceName: "Test Buyer", paypalEmail: "buyer-paypal@example.com", whatsapp: "+1 418 555 0100" }, include: { payments: true } });
+      const o = await db.order.update({ where: { id }, data: { invoiceStatus: "requested", invoiceName: "Test Buyer", paypalEmail: "buyer-paypal@example.com" }, include: { payments: true } });
       await db.payment.updateMany({ where: { orderId: id }, data: { providerRef: `invoice_${o.number}` } });
       return o;
     };

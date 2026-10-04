@@ -1,5 +1,6 @@
 "use client";
 
+import { INVOICE_WHATSAPP, whatsappChatUrl } from "@/lib/payments/paypal-invoice";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -57,7 +58,6 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
   // PayPal invoice request. null = not edited yet: the field follows the contact and shipping details above.
   const [invoiceName, setInvoiceName] = useState<string | null>(null);
   const [paypalEmail, setPaypalEmail] = useState<string | null>(null);
-  const [whatsapp, setWhatsapp] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
@@ -107,7 +107,6 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
   const invoice = {
     name: invoiceName ?? [shipping.firstName, shipping.lastName].filter(Boolean).join(" "),
     paypalEmail: paypalEmail ?? email,
-    whatsapp: whatsapp ?? phone,
   };
   const shippingSummary = [shipping.line1, shipping.line2, shipping.city, shipping.region, shipping.postalCode, country?.name ?? shipping.countryCode].filter(Boolean).join(", ");
 
@@ -358,14 +357,19 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <TextField label="Full name" name="invoice-name" required autoComplete="name" maxLength={120} value={invoice.name} onChange={(e) => setInvoiceName(e.target.value)} />
                 <TextField label="PayPal email address" name="invoice-paypal-email" type="email" required autoComplete="email" maxLength={254} value={invoice.paypalEmail} onChange={(e) => setPaypalEmail(e.target.value)} hint="The invoice is sent to this address." />
-                <TextField label="WhatsApp number" name="invoice-whatsapp" type="tel" required autoComplete="tel" maxLength={40} value={invoice.whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+1 418 555 0100" hint="Include the country code." />
-                <div>
+                <div className="sm:col-span-2">
                   <p className="text-sm font-medium text-ink-800">Shipping address</p>
                   <p className="mt-1.5 text-[13px] leading-relaxed text-ink-700" data-testid="invoice-shipping">
                     {shipping.line1 ? shippingSummary : "Enter it in the shipping section above."}
                   </p>
                 </div>
               </div>
+              <p className="mt-4 border-t border-ink-200 pt-3 text-[13px] text-ink-600">
+                Questions before you order?{" "}
+                <a href={whatsappChatUrl("Hello, I have a question about paying by PayPal invoice.")} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 underline-offset-2 hover:underline" data-testid="checkout-whatsapp">
+                  Message us on WhatsApp ({INVOICE_WHATSAPP.display})
+                </a>
+              </p>
             </div>
           )}
           {providerId === "bank_transfer" && quote?.bankTransfer && (

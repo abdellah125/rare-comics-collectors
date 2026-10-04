@@ -173,7 +173,10 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                   },
                   { label: "Full name", value: order.invoiceName ?? "—" },
                   { label: "PayPal email", value: order.paypalEmail ? <a href={`mailto:${order.paypalEmail}`} className="text-brand-700 hover:underline">{order.paypalEmail}</a> : "—" },
-                  { label: "WhatsApp", value: whatsappLink(order.whatsapp) ? <a href={whatsappLink(order.whatsapp)!} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">{order.whatsapp}</a> : (order.whatsapp ?? "—") },
+                  { label: "Contact email", value: order.email },
+                  // Buyers reach the store on its own WhatsApp; a number is only stored for requests made before that change.
+                  ...(order.whatsapp ? [{ label: "WhatsApp", value: whatsappLink(order.whatsapp) ? <a href={whatsappLink(order.whatsapp)!} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">{order.whatsapp}</a> : order.whatsapp }] : []),
+                  ...(order.phone ? [{ label: "Phone", value: order.phone }] : []),
                   { label: "Shipping address", value: <span className="whitespace-pre-line">{formatAddress(shipping).join("\n")}</span> },
                   ...(order.invoiceSentAt ? [{ label: "Invoice sent", value: `${formatDateTime(order.invoiceSentAt)}${order.invoiceRef ? ` · invoice ${order.invoiceRef}` : ""}` }] : []),
                 ]}

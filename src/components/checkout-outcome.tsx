@@ -10,7 +10,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { hasRecentOrderCookie } from "@/lib/commerce/recent-order";
 import { formatMoney } from "@/lib/money";
 import { bankTransferDetails } from "@/lib/payments/bank-details";
-import { INVOICE_WHATSAPP, holdLabel } from "@/lib/payments/paypal-invoice";
+import { INVOICE_WHATSAPP, holdLabel, whatsappChatUrl } from "@/lib/payments/paypal-invoice";
 import { getSettings } from "@/lib/settings";
 import { site } from "@/lib/site";
 
@@ -107,8 +107,9 @@ export async function CheckoutOutcome({ number, expect }: { number: string; expe
             <p className="mt-2 text-sm text-ink-800">
               WhatsApp: <strong className="font-semibold text-ink-950">{INVOICE_WHATSAPP.display}</strong>
             </p>
-            <a href={INVOICE_WHATSAPP.url} target="_blank" rel="noopener noreferrer" className={`${buttonStyles.primary} ${buttonSizes.md} mt-3 w-full justify-center`}>
-              Chat with us on WhatsApp
+            <p className="mt-1 text-[13px] text-ink-600">Send us a message directly. Your order number is added for you.</p>
+            <a href={whatsappChatUrl(`Hello, I have a question about my PayPal invoice for order ${order.number}.`)} target="_blank" rel="noopener noreferrer" className={`${buttonStyles.primary} ${buttonSizes.md} mt-3 w-full justify-center`}>
+              Message us on WhatsApp
             </a>
           </div>
         )}

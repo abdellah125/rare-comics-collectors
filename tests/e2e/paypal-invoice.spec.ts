@@ -50,13 +50,9 @@ test.describe("PayPal invoice request", () => {
     await expect(page.locator('[name="invoice-name"]')).toHaveValue("E2E Buyer");
     await page.locator('[name="invoice-paypal-email"]').fill("buyer-paypal@example.com");
 
-    // WhatsApp number is required: a bad one is refused and no order is created.
-    await page.locator('[name="invoice-whatsapp"]').fill("12");
-    await submit.click();
-    await expect(page.getByText(/whatsapp number with its country code/i)).toBeVisible();
-    expect(page.url()).not.toContain("/checkout/complete");
-
-    await page.locator('[name="invoice-whatsapp"]').fill("+1 418 555 0100");
+    // The buyer is not asked for a WhatsApp number; they get a link to message the store instead.
+    await expect(page.locator('[name="invoice-whatsapp"]')).toHaveCount(0);
+    await expect(page.getByTestId("checkout-whatsapp")).toHaveAttribute("href", /^https:\/\/wa\.me\/14185066697\?text=/);
     await expect(submit).toHaveText(/request paypal invoice/i);
     const invoiced = money(await submit.textContent());
     expect(invoiced).toBeLessThan(before);
@@ -75,7 +71,9 @@ test.describe("PayPal invoice request", () => {
     await expect(main).toContainText(invoiced.toFixed(2));
     const wa = page.getByTestId("invoice-whatsapp");
     await expect(wa).toContainText("+1 418-506-6697");
-    await expect(wa.getByRole("link", { name: /whatsapp/i })).toHaveAttribute("href", "https://wa.me/14185066697");
+    const waHref = await wa.getByRole("link", { name: /whatsapp/i }).getAttribute("href");
+    expect(waHref).toMatch(/^https:\/\/wa\.me\/14185066697\?text=/);
+    expect(decodeURIComponent(waHref!)).toContain(orderNumber);
     await page.goto(`/account/orders/${orderNumber}`);
     await expect(page.locator("body")).toContainText(/paypal invoice requested/i);
 
@@ -90,7 +88,6 @@ test.describe("PayPal invoice request", () => {
     const body = page.locator("body");
     await expect(body).toContainText(/paypal invoice requested/i);
     await expect(body).toContainText("buyer-paypal@example.com");
-    await expect(body).toContainText("+1 418 555 0100");
     await expect(body).toContainText(/amount to invoice/i);
     await expect(body).toContainText(invoiced.toFixed(2));
     await expect(body).toContainText(new RegExp(`after discount of .*code ${E2E.coupon}`, "i"));
@@ -141,7 +138,6 @@ test.describe("PayPal invoice request", () => {
     await expect(shipping).toBeVisible({ timeout: 20_000 });
     if (!(await shipping.isChecked())) await shipping.check();
     await page.locator('input[name="payment"][value="paypal"]').check();
-    await page.locator('[name="invoice-whatsapp"]').fill("+1 418 555 0100");
     await page.getByRole("button", { name: /request paypal invoice/i }).click();
     await page.waitForURL(/\/checkout\/complete\?order=RCC-/, { timeout: 45_000 });
     const orderNumber = new URL(page.url()).searchParams.get("order")!;

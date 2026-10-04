@@ -600,6 +600,7 @@ model Order {
   /// PayPal invoice request: who to invoice (the amount is `presentmentTotal`, after discounts)
   invoiceName         String?
   paypalEmail         String?
+  /// no longer collected (buyers message the store's WhatsApp instead); kept for early requests
   whatsapp            String?
   /// null (not an invoice order) | requested | pending | sent | paid | cancelled
   invoiceStatus       String?

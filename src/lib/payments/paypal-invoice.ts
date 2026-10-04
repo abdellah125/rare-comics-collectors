@@ -29,8 +29,11 @@ const known = (s: string): s is InvoiceStatus => (INVOICE_STATUSES as readonly s
 export const invoiceStatusLabel = (status: string): string => (known(status) ? LABELS[status] : status);
 export const invoiceStatusTone = (status: string) => (known(status) ? TONES[status] : ("warning" as const));
 
-/** Where buyers ask questions about their invoice. */
+/** The store's own WhatsApp: where buyers message us about their invoice. */
 export const INVOICE_WHATSAPP = { display: "+1 418-506-6697", url: "https://wa.me/14185066697" } as const;
+
+/** Opens a WhatsApp chat with the store, with the first message already written. */
+export const whatsappChatUrl = (message: string): string => `${INVOICE_WHATSAPP.url}?text=${encodeURIComponent(message)}`;
 
 /** "7 days" for 168, "36 hours" for 36. */
 export const holdLabel = (hours: number): string => (hours >= 48 && hours % 24 === 0 ? `${hours / 24} days` : `${hours} hours`);
@@ -41,17 +44,14 @@ export function whatsappLink(number: string | null | undefined): string | null {
   return digits.length >= 7 && digits.length <= 15 ? `https://wa.me/${digits}` : null;
 }
 
-export type InvoiceRequest = { name: string; paypalEmail: string; whatsapp: string };
+export type InvoiceRequest = { name: string; paypalEmail: string };
 type Parsed = { ok: true; value: InvoiceRequest } | { ok: false; message: string; field: string };
 
 /** Validates what the buyer entered in the PayPal invoice form. */
-export function parseInvoiceRequest(input: { name?: string; paypalEmail?: string; whatsapp?: string } | null | undefined): Parsed {
+export function parseInvoiceRequest(input: { name?: string; paypalEmail?: string } | null | undefined): Parsed {
   const name = (input?.name ?? "").replace(/\s+/g, " ").trim();
   const paypalEmail = (input?.paypalEmail ?? "").trim().toLowerCase();
-  const whatsapp = (input?.whatsapp ?? "").replace(/\s+/g, " ").trim();
   if (name.length < 2 || name.length > 120) return { ok: false, message: "Enter your full name for the PayPal invoice.", field: "invoice.name" };
   if (paypalEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(paypalEmail)) return { ok: false, message: "Enter the email address of your PayPal account.", field: "invoice.paypalEmail" };
-  const digits = whatsapp.replace(/\D/g, "");
-  if (whatsapp.length > 40 || !/^\+?[\d\s().-]+$/.test(whatsapp) || digits.length < 7 || digits.length > 15) return { ok: false, message: "Enter a WhatsApp number with its country code, for example +1 418 555 0100.", field: "invoice.whatsapp" };
-  return { ok: true, value: { name, paypalEmail, whatsapp } };
+  return { ok: true, value: { name, paypalEmail } };
 }

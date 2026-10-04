@@ -1,4 +1,4 @@
-import { INVOICE_WHATSAPP } from "@/lib/payments/paypal-invoice";
+import { INVOICE_WHATSAPP, whatsappChatUrl } from "@/lib/payments/paypal-invoice";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -68,8 +68,8 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
       {order.status === "pending_payment" && order.invoiceStatus && (
         <Panel tone="muted" title={order.invoiceStatus === "sent" ? "Your PayPal invoice has been sent" : "PayPal invoice requested"} description={order.invoiceStatus === "sent" ? `We sent a PayPal invoice for ${formatMoney(order.presentmentTotal, order.currency)} to ${order.paypalEmail}. The order is confirmed once it is paid.` : `We will contact you and send a PayPal invoice for ${formatMoney(order.presentmentTotal, order.currency)} to ${order.paypalEmail}. Nothing has been charged; the order is confirmed once the invoice is paid.`}>
           <p className="text-[13px] text-ink-700">
-            Questions about the invoice? WhatsApp{" "}
-            <a href={INVOICE_WHATSAPP.url} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 underline-offset-2 hover:underline">
+            Questions about the invoice? Message us on WhatsApp:{" "}
+            <a href={whatsappChatUrl(`Hello, I have a question about my PayPal invoice for order ${order.number}.`)} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 underline-offset-2 hover:underline">
               {INVOICE_WHATSAPP.display}
             </a>
           </p>
