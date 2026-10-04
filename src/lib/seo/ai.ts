@@ -31,15 +31,20 @@ export async function writeAnalysis(actorId?: string | null): Promise<{ ok: bool
       signal: AbortSignal.timeout(50_000),
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1800,
+        // Thinking is on by default for this model and its tokens count against max_tokens: with a large
+        // data payload it used the whole budget and returned no text. The task is a summary of figures
+        // already computed, so it runs without thinking and with room to finish.
+        max_tokens: 2500,
+        thinking: { type: "disabled" },
         system: "You are an SEO strategist for a small online comic-book shop. Answer the question: which keywords should this website target next to maximise realistic organic traffic and qualified sales? Use ONLY the data in the user's message: every figure you cite (volume, difficulty, position, score) must appear there, and you must never invent a number, a competitor, or a fact about a comic. Prefer relevant keywords with buyer intent that the site can realistically rank for over high-volume ones; say so when you skip a high-volume keyword and why. Prefer improving a page that exists over creating a new one. Output plain text: a two-sentence summary, then 'Do first' (up to 6 items), 'Do next' (up to 5), 'Not yet' (up to 4). Each item: the keyword or cluster, the page to work on, the action, and the data behind it in parentheses. No markdown tables, no headings other than those three labels.",
         messages: [{ role: "user", content: JSON.stringify(data) }],
       }),
     });
-    const json = (await res.json()) as { content?: { type: string; text?: string }[]; error?: { message?: string } };
+    const json = (await res.json()) as { content?: { type: string; text?: string }[]; stop_reason?: string; error?: { message?: string } };
     if (!res.ok) throw new Error(json.error?.message ?? `HTTP ${res.status}`);
-    const text = (json.content ?? []).filter((c) => c.type === "text").map((c) => c.text ?? "").join("\n").trim();
-    if (!text) throw new Error("The model returned no text.");
+    let text = (json.content ?? []).filter((c) => c.type === "text").map((c) => c.text ?? "").join("\n").trim();
+    if (!text) throw new Error(`The model returned no text (stop reason: ${json.stop_reason ?? "unknown"}).`);
+    if (json.stop_reason === "max_tokens") text += "\n\n[The analysis was cut off at the length limit.]";
     await db.seoRun.update({ where: { id: run.id }, data: { status: "ok", summary: "Written analysis updated.", detailJson: JSON.stringify({ text, model: MODEL, clusters: clusters.length }), finishedAt: new Date() } });
     return { ok: true, summary: "Written analysis updated from the stored data." };
   } catch (err) {
