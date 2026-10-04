@@ -597,6 +597,15 @@ model Order {
   coupon              Coupon?   @relation(fields: [couponId], references: [id], onDelete: SetNull)
   couponCode          String?
   customerNote        String?
+  /// PayPal invoice request: who to invoice (the amount is `presentmentTotal`, after discounts)
+  invoiceName         String?
+  paypalEmail         String?
+  whatsapp            String?
+  /// null (not an invoice order) | requested | pending | sent | paid | cancelled
+  invoiceStatus       String?
+  /// PayPal invoice number, entered by staff when the invoice is sent
+  invoiceRef          String?
+  invoiceSentAt       DateTime?
   ipAddress           String?
   userAgent           String?
   countryCode         String?
@@ -628,6 +637,7 @@ model Order {
   @@index([userId, placedAt])
   @@index([status])
   @@index([paymentStatus])
+  @@index([invoiceStatus])
   @@index([placedAt])
   @@index([email])
 }

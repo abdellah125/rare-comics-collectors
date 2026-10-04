@@ -1,9 +1,9 @@
 import "server-only";
 import { env } from "@/lib/env";
-import { getSettings } from "@/lib/settings";
 import { minorUnitDigits } from "@/lib/money";
 import { requestJson } from "@/lib/payments/http";
-import type { PaymentProvider } from "@/lib/payments/types";
+import { INVOICE_REF_PREFIX } from "@/lib/payments/paypal-invoice";
+import type { ConfirmResult, PaymentProvider } from "@/lib/payments/types";
 
 const base = () => (env.paypal.live ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com");
 
@@ -47,41 +47,8 @@ type PayPalOrder = {
   purchase_units?: { custom_id?: string; amount?: { value?: string; currency_code?: string }; payments?: { captures?: { id: string; status: string; amount?: { value?: string; currency_code?: string }; seller_receivable_breakdown?: { paypal_fee?: { value: string } } }[]; refunds?: { id: string; status: string }[] } }[];
 };
 
-export const paypalProvider: PaymentProvider = {
-  id: "paypal",
-  displayName: "PayPal",
-  method: "paypal",
-  isConfigured: () => env.paypal.configured,
-
-  async createPayment(input) {
-    const order = await api<PayPalOrder>("/v2/checkout/orders", {
-      method: "POST",
-      requestId: input.idempotencyKey,
-      body: JSON.stringify({
-        intent: "CAPTURE",
-        purchase_units: [
-          {
-            reference_id: input.orderId,
-            custom_id: input.orderNumber,
-            description: input.description.slice(0, 127),
-            amount: { currency_code: input.currency, value: value(input.amountMinor, input.currency) },
-          },
-        ],
-        application_context: {
-          brand_name: (await getSettings())["marketplace.name"].slice(0, 127),
-          user_action: "PAY_NOW",
-          shipping_preference: "NO_SHIPPING",
-          return_url: input.returnUrl,
-          cancel_url: input.cancelUrl,
-        },
-      }),
-    });
-    const approve = order.links?.find((l) => l.rel === "approve")?.href;
-    if (!approve) return { kind: "failed", providerRef: order.id, message: "PayPal did not return an approval link" };
-    return { kind: "redirect", providerRef: order.id, redirectUrl: approve };
-  },
-
-  async confirmPayment(providerRef) {
+/** Payments made through the former redirect flow: ask PayPal about the order and capture it when approved. */
+async function confirmDirect(providerRef: string): Promise<ConfirmResult> {
     let order = await api<PayPalOrder>(`/v2/checkout/orders/${encodeURIComponent(providerRef)}`);
     if (order.status === "APPROVED") {
       order = await api<PayPalOrder>(`/v2/checkout/orders/${encodeURIComponent(providerRef)}/capture`, { method: "POST", requestId: `capture_${providerRef}`, body: "{}" });
@@ -93,6 +60,33 @@ export const paypalProvider: PaymentProvider = {
     }
     if (capture?.status === "PENDING" || order.status === "APPROVED") return { status: "pending", providerRef };
     return { status: "failed", providerRef, message: `PayPal order ${order.status.toLowerCase()}` };
+}
+
+export const paypalProvider: PaymentProvider = {
+  id: "paypal",
+  displayName: "PayPal",
+  method: "paypal",
+  // Invoice requests need no API credentials: staff send the invoice from the PayPal account.
+  isConfigured: () => true,
+
+  /**
+   * PayPal invoice request: nothing is charged and PayPal is not called. The order waits for
+   * staff to send an invoice for its total; it becomes paid only when staff confirm the invoice
+   * was paid. The former redirect flow is gone; confirmDirect and inspectPayment remain for
+   * the orders it created.
+   */
+  async createPayment(input) {
+    return {
+      kind: "instructions",
+      providerRef: `${INVOICE_REF_PREFIX}${input.orderNumber}`,
+      instructions: "We will contact you and send a PayPal invoice for the order total. Nothing is charged until you pay that invoice.",
+    };
+  },
+
+  async confirmPayment(providerRef) {
+    // An invoice request has no PayPal order to look up; only staff can confirm it.
+    if (providerRef.startsWith(INVOICE_REF_PREFIX)) return { status: "pending", providerRef };
+    return confirmDirect(providerRef);
   },
 
   async inspectPayment(providerRef) {
@@ -112,7 +106,9 @@ export const paypalProvider: PaymentProvider = {
   },
 
   async refund(input) {
-    const raw = (input.paymentRaw ?? {}) as { captureId?: string };
+    const raw = (input.paymentRaw ?? {}) as { captureId?: string; invoice?: boolean };
+    // A paid invoice has no capture to refund through the API: staff refund it in PayPal.
+    if (raw.invoice) return { status: "pending", message: "Refund this PayPal invoice from the PayPal account, then mark the refund as completed here." };
     if (!raw.captureId) return { status: "failed", message: "No PayPal capture id recorded for this payment" };
     const refund = await api<{ id: string; status: string }>(`/v2/payments/captures/${encodeURIComponent(raw.captureId)}/refund`, {
       method: "POST",

@@ -65,6 +65,8 @@ export async function markOrderPaid(orderId: string, payment: { id: string; prov
       data: { paymentStatus: "paid", paidAt: new Date(), ...(late ? {} : { status: "paid" }) },
     });
     if (claimed.count === 0) return null;
+    // A PayPal invoice request is settled the moment its payment is recorded.
+    await tx.order.updateMany({ where: { id: orderId, invoiceStatus: { not: null } }, data: { invoiceStatus: "paid" } });
     const order = await tx.order.findUnique({ where: { id: orderId }, include: { items: true } });
     if (!order) return null;
     if (late) {
@@ -187,6 +189,7 @@ export async function cancelOrder(orderId: string, reason: string, actor: ActorR
     await releaseOrderStock(tx, orderId, "release", actor.id);
     if (order.paymentStatus !== "paid") await releaseCoupon(tx, orderId, order.couponId);
     await tx.order.update({ where: { id: orderId }, data: { status: "cancelled", cancelledAt: new Date(), cancelReason: reason } });
+    await tx.order.updateMany({ where: { id: orderId, invoiceStatus: { in: ["requested", "pending", "sent"] } }, data: { invoiceStatus: "cancelled" } });
     await tx.orderItem.updateMany({ where: { orderId }, data: { status: "cancelled" } });
     await addOrderEvent(tx, orderId, "order.cancelled", `Order cancelled: ${reason}`, actor);
     return order;
@@ -209,28 +212,31 @@ export async function cancelOrder(orderId: string, reason: string, actor: ActorR
 /**
  * Job: cancel unpaid orders and release their stock. Offline payments (bank
  * transfer) get commerce.autoCancelUnpaidHours; card / wallet payments the buyer
- * never completed only hold the stock for commerce.reservationMinutes.
+ * never completed only hold the stock for commerce.reservationMinutes. PayPal invoice
+ * requests wait for staff and the buyer, so they get payments.paypal.invoiceHoldHours.
  */
 export async function expireUnpaidOrders(): Promise<number> {
   const settings = await getSettings();
   const offlineCutoff = new Date(Date.now() - settings["commerce.autoCancelUnpaidHours"] * 3_600_000);
   const onlineCutoff = new Date(Date.now() - Math.max(5, settings["commerce.reservationMinutes"]) * 60_000);
+  const invoiceCutoff = new Date(Date.now() - Math.max(1, settings["payments.paypal.invoiceHoldHours"]) * 3_600_000);
   const stale = await db.order.findMany({
     where: {
       status: "pending_payment",
       OR: [
-        { placedAt: { lt: offlineCutoff } },
-        { placedAt: { lt: onlineCutoff }, payments: { none: { provider: "bank_transfer" } } },
+        { invoiceStatus: null, placedAt: { lt: offlineCutoff } },
+        { invoiceStatus: null, placedAt: { lt: onlineCutoff }, payments: { none: { provider: "bank_transfer" } } },
+        { invoiceStatus: { not: null }, placedAt: { lt: invoiceCutoff } },
       ],
     },
-    select: { id: true, placedAt: true, payments: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } } },
+    select: { id: true, placedAt: true, invoiceStatus: true, payments: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } } },
   });
   const { reconcilePayment } = await import("@/lib/payments/reconcile");
   for (const o of stale) {
     try {
       // A buyer who paid at the gateway but never came back must not lose the order: ask first.
       if (o.payments[0] && (await reconcilePayment(o.payments[0].id, { id: null, type: "job" })) === "succeeded") continue;
-      await cancelOrder(o.id, o.placedAt < offlineCutoff ? "Payment was not received in time" : "Payment was not completed and the reservation expired", { id: null, type: "job" });
+      await cancelOrder(o.id, o.invoiceStatus ? "The PayPal invoice was not paid in time" : o.placedAt < offlineCutoff ? "Payment was not received in time" : "Payment was not completed and the reservation expired", { id: null, type: "job" });
     } catch (err) {
       console.error(`[jobs] could not expire order ${o.id}`, err);
     }

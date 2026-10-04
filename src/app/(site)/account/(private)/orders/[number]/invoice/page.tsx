@@ -85,7 +85,7 @@ export default async function InvoicePage({ params }: PageProps<"/account/orders
         {payment && payment.refundedAmount > 0 && <div className="flex justify-between text-ink-600"><dt>Refunded</dt><dd className="tabular-nums">− {formatMoney(payment.refundedAmount)}</dd></div>}
       </dl>
       <p className="mt-8 text-[12px] text-ink-500">
-        Paid via {payment ? (payment.provider === "stripe" ? "card" : payment.provider === "paypal" ? "PayPal" : payment.provider === "bank_transfer" ? "bank transfer" : payment.provider) : "—"}
+        {["paid", "partially_refunded", "refunded"].includes(order.paymentStatus) ? "Paid" : "Payment not yet received,"} via {payment ? (payment.provider === "stripe" ? "card" : payment.provider === "paypal" ? "PayPal" : payment.provider === "bank_transfer" ? "bank transfer" : payment.provider) : "—"}
         {payment?.capturedAt ? ` on ${formatDateTime(payment.capturedAt, { dateOnly: true })}` : ""}. Thank you for your order.
       </p>
     </div>

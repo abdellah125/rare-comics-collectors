@@ -10,13 +10,14 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { hasRecentOrderCookie } from "@/lib/commerce/recent-order";
 import { formatMoney } from "@/lib/money";
 import { bankTransferDetails } from "@/lib/payments/bank-details";
+import { INVOICE_WHATSAPP, holdLabel } from "@/lib/payments/paypal-invoice";
 import { getSettings } from "@/lib/settings";
 import { site } from "@/lib/site";
 
 /**
  * Order outcome shown after checkout. Two URLs share it so analytics can count
  * a page visit as a purchase without ambiguity:
- *   /checkout/complete?order=… — placed orders (paid, awaiting a wire, or awaiting the provider)
+ *   /checkout/complete?order=… — placed orders (paid, awaiting a wire or a PayPal invoice, or awaiting the provider)
  *   /checkout/failed?order=…   — declined or cancelled payments
  * Each page redirects to the other when the order's state does not match its URL.
  */
@@ -42,15 +43,23 @@ export async function CheckoutOutcome({ number, expect }: { number: string; expe
   // The failure reason comes from the payment record, never from the URL.
   const message = payment?.failureMessage?.trim() ? `The payment provider said: ${payment.failureMessage.trim()}` : null;
   const bank = payment?.provider === "bank_transfer";
+  // PayPal invoice request: never described as paid until staff record the invoice as paid.
+  const invoice = order.invoiceStatus != null;
+  const invoiceSent = order.invoiceStatus === "sent";
+  const invoiceAmount = formatMoney(order.presentmentTotal, order.currency);
 
   let title = "Payment processing";
-  if (failed) title = "Payment didn’t go through";
+  if (failed) title = invoice && !paid ? "Order request cancelled" : "Payment didn’t go through";
   else if (paid) title = "Order placed";
+  else if (invoice) title = invoiceSent ? "Your PayPal invoice has been sent" : "Request received — your PayPal invoice is on its way";
   else if (bank) title = "Order reserved — awaiting your transfer";
 
   let body: string;
-  if (failed) body = message ?? "Your card wasn’t charged and the items have been returned to stock. You can try again from your cart.";
+  if (failed && invoice && !paid) body = `This PayPal invoice request was cancelled${order.cancelReason ? ` (${order.cancelReason})` : ""}. Nothing was charged and the items have been returned to stock.`;
+  else if (failed) body = message ?? "Your card wasn’t charged and the items have been returned to stock. You can try again from your cart.";
   else if (paid) body = `Thank you. A confirmation is on its way to ${order.email}. Books are pulled, photographed and double-boxed within one business day.`;
+  else if (invoice && invoiceSent) body = `We sent a PayPal invoice for ${invoiceAmount} to ${order.paypalEmail}. Open it from PayPal’s email or from your PayPal account to pay. Your order is confirmed once the invoice is paid.`;
+  else if (invoice) body = `We have received your order and payment request. We will contact you and send a PayPal invoice for ${invoiceAmount} to ${order.paypalEmail}. Nothing has been charged: your order is confirmed once that invoice is paid. Your books are reserved for ${holdLabel(settings["payments.paypal.invoiceHoldHours"])}.`;
   else if (bank) body = `Your books are reserved for ${settings["commerce.autoCancelUnpaidHours"]} hours. Wire the order total using the details below — they are also in your confirmation email.`;
   else body = "We’re waiting for the payment provider to confirm. This page updates once it clears — you’ll also get an email.";
 
@@ -59,7 +68,15 @@ export async function CheckoutOutcome({ number, expect }: { number: string; expe
     : payment.provider === "stripe"
       ? `Card${payment.cardLast4 ? ` •••• ${payment.cardLast4}` : ""}`
       : payment.provider === "paypal"
-        ? "PayPal"
+        ? invoice
+          ? paid
+            ? "PayPal invoice — paid"
+            : failed
+              ? "PayPal invoice — cancelled"
+              : invoiceSent
+                ? "PayPal invoice — sent, awaiting payment"
+                : "PayPal invoice — not yet paid"
+          : "PayPal"
         : payment.provider === "bank_transfer"
           ? "Bank transfer"
           : "Test payment";
@@ -84,6 +101,17 @@ export async function CheckoutOutcome({ number, expect }: { number: string; expe
         </span>
         <h1 className="mt-6 font-display text-2xl font-semibold text-ink-950 sm:text-3xl">{title}</h1>
         <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-ink-700">{body}</p>
+        {invoice && !paid && !failed && (
+          <div className="mx-auto mt-6 max-w-md rounded-xl border border-gold-400/50 bg-gold-400/10 p-5 text-left" data-testid="invoice-whatsapp">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold-800">Questions about your invoice?</p>
+            <p className="mt-2 text-sm text-ink-800">
+              WhatsApp: <strong className="font-semibold text-ink-950">{INVOICE_WHATSAPP.display}</strong>
+            </p>
+            <a href={INVOICE_WHATSAPP.url} target="_blank" rel="noopener noreferrer" className={`${buttonStyles.primary} ${buttonSizes.md} mt-3 w-full justify-center`}>
+              Chat with us on WhatsApp
+            </a>
+          </div>
+        )}
         {bank && awaiting && (
           <div className="mx-auto mt-6 max-w-md rounded-xl border border-gold-400/50 bg-gold-400/10 p-5 text-left">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold-800">Wire details</p>
@@ -99,7 +127,7 @@ export async function CheckoutOutcome({ number, expect }: { number: string; expe
             <dd className="font-mono font-semibold text-ink-950">{order.number}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-ink-600">Total</dt>
+            <dt className="text-ink-600">{invoice && !paid ? "Invoice amount" : "Total"}</dt>
             <dd className="font-semibold tabular-nums text-ink-950">{formatMoney(order.presentmentTotal, order.currency)}</dd>
           </div>
           <div className="flex justify-between gap-4">

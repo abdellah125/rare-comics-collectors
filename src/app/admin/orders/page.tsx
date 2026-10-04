@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BulkActionsBar, BulkProvider, RowCheckbox, SelectAllCheckbox } from "@/components/admin/bulk";
 import { Pagination, SortLink } from "@/components/admin/pagination";
+import { INVOICE_STATUSES, invoiceStatusLabel, invoiceStatusTone } from "@/lib/payments/paypal-invoice";
 import { AdminPageHeader, EmptyState, FilterBar, Field, StatusBadge, Table, Td, Th, Tone, adminButton, adminInput, adminSelect, DownloadLink } from "@/components/admin/ui";
 import { requireAdmin, can } from "@/lib/auth/session";
 import { bulkOrdersAction } from "@/lib/admin/actions/orders";
@@ -24,6 +25,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const payment = p.get("payment");
   const fulfillment = p.get("fulfillment");
   const provider = p.get("provider");
+  const invoice = p.get("invoice");
   const from = p.get("from") ? parseDate(p.get("from"), new Date(0)) : null;
   const to = p.get("to") ? parseDate(p.get("to"), new Date()) : null;
   if (to) to.setUTCHours(23, 59, 59, 999);
@@ -32,6 +34,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
     ...(payment ? { paymentStatus: payment } : {}),
     ...(fulfillment ? { fulfillmentStatus: fulfillment } : {}),
     ...(provider ? { payments: { some: { provider } } } : {}),
+    ...(invoice ? { invoiceStatus: invoice === "any" ? { not: null } : invoice } : {}),
     ...(p.get("risk") ? { riskScore: { gte: 40 } } : {}),
     ...(from || to ? { placedAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
     ...(p.q ? { OR: [{ number: { contains: p.q.toUpperCase(), mode: "insensitive" as const } }, { email: { contains: p.q, mode: "insensitive" as const } }, { user: { name: { contains: p.q, mode: "insensitive" as const } } }, { items: { some: { title: { contains: p.q, mode: "insensitive" as const } } } }] } : {}),
@@ -91,6 +94,17 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
             <option value="paypal">PayPal</option>
             <option value="bank_transfer">Bank transfer</option>
             <option value="test">Test</option>
+          </select>
+        </Field>
+        <Field label="PayPal invoice">
+          <select name="invoice" defaultValue={invoice} className={adminSelect}>
+            <option value="">Any</option>
+            <option value="any">All invoice requests</option>
+            {INVOICE_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {invoiceStatusLabel(s)}
+              </option>
+            ))}
           </select>
         </Field>
         <Field label="From">
@@ -161,6 +175,11 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                   <Td>
                     <StatusBadge status={o.paymentStatus} />
                     <span className="block text-[11px] text-ink-500">{o.payments[0]?.provider ?? "—"}</span>
+                    {o.invoiceStatus && (
+                      <span className="mt-1 block">
+                        <Tone tone={invoiceStatusTone(o.invoiceStatus)}>{invoiceStatusLabel(o.invoiceStatus)}</Tone>
+                      </span>
+                    )}
                   </Td>
                   <Td>
                     <StatusBadge status={o.fulfillmentStatus} />

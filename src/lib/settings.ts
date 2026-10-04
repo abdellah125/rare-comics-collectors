@@ -73,6 +73,8 @@ export const settingDefaults = {
   "payments.test.enabled": false,
   "payments.stripe.enabled": true,
   "payments.paypal.enabled": true,
+  /** How long a PayPal invoice request holds the stock while the invoice is sent and paid. */
+  "payments.paypal.invoiceHoldHours": 168,
   "payments.bank_transfer.enabled": true,
   "payments.bank_transfer.minAmount": 500_000,
   // Bank wire details: entered under Finance › Payment providers; BANK_* environment

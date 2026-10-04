@@ -9,14 +9,16 @@ import { parseJsonArray, isString } from "@/lib/json";
 import { applyBps, convertFromBase, formatMoney } from "@/lib/money";
 import { getSettings, commissionBpsFor } from "@/lib/settings";
 import { services } from "@/lib/services";
-import { AddressSchema, productShipsTo, shippingOptionsFor, taxFor, validateAddressForCountry, type Address, type ShippingOption } from "@/lib/commerce/pricing";
+import { AddressSchema, formatAddress, productShipsTo, shippingOptionsFor, taxFor, validateAddressForCountry, type Address, type ShippingOption } from "@/lib/commerce/pricing";
 import { allocateDiscount, evaluateCoupon, type CouponLine } from "@/lib/commerce/coupons";
 import { availableProviders, getProvider, type ProviderStatus } from "@/lib/payments/registry";
 import { bankTransferDetails, type BankTransferLine } from "@/lib/payments/bank-details";
 import { applyPaymentSuccess } from "@/lib/payments/payment-service";
 import { addOrderEvent, cancelOrder } from "@/lib/orders/lifecycle";
 import type { PaymentIntentResult } from "@/lib/payments/types";
-import { queueTemplateEmail } from "@/lib/mail";
+import { queueRawEmail, queueTemplateEmail } from "@/lib/mail";
+import { notifyAdmins } from "@/lib/notifications";
+import { INVOICE_WHATSAPP, holdLabel, parseInvoiceRequest, type InvoiceRequest } from "@/lib/payments/paypal-invoice";
 import { zId } from "@/lib/validation";
 
 export const CartLineSchema = z.object({
@@ -192,6 +194,8 @@ export const PlaceOrderSchema = z.object({
   providerId: z.string().min(1).max(32),
   couponCode: z.string().max(40).optional(),
   customerNote: z.string().trim().max(1000).optional(),
+  /** PayPal invoice request details; required (and validated) when the provider is PayPal. */
+  invoice: z.object({ name: z.string().max(200), paypalEmail: z.string().max(300), whatsapp: z.string().max(60) }).optional(),
   idempotencyKey: zId,
   simulate: z.string().max(20).optional(),
 });
@@ -286,6 +290,13 @@ export async function placeOrder(
     const provider = providerStatus ? getProvider(input.providerId) : null;
     if (!provider) return fail("That payment method isn't available for this order.", "providerId");
     if (input.couponCode && !quote.couponCode) return fail(quote.couponMessage ?? "That coupon isn't valid.", "couponCode");
+    // PayPal is an invoice request: nothing is charged, so we need the details to invoice the buyer.
+    let invoice: InvoiceRequest | null = null;
+    if (provider.id === "paypal") {
+      const parsed = parseInvoiceRequest(input.invoice);
+      if (!parsed.ok) return fail(parsed.message, parsed.field);
+      invoice = parsed.value;
+    }
 
     const [priorOrders, recentFailures] = await Promise.all([
       ctx.userId ? db.order.count({ where: { userId: ctx.userId, paymentStatus: "paid" } }) : db.order.count({ where: { email: input.email, paymentStatus: "paid" } }),
@@ -308,7 +319,8 @@ export async function placeOrder(
           number,
           userId: ctx.userId,
           email: input.email,
-          phone: input.phone ?? null,
+          phone: input.phone ?? invoice?.whatsapp ?? null,
+          ...(invoice ? { invoiceName: invoice.name, paypalEmail: invoice.paypalEmail, whatsapp: invoice.whatsapp, invoiceStatus: "requested" } : {}),
           currency: quote.currency.code,
           exchangeRate: quote.currency.rateToBase,
           subtotal: quote.subtotal,
@@ -429,7 +441,34 @@ export async function placeOrder(
     if (intent.kind === "succeeded") {
       await applyPaymentSuccess(payment.id, intent.details, { id: ctx.userId, type: ctx.userId ? "buyer" : "system" });
     }
-    if (intent.kind === "instructions") {
+    if (intent.kind === "instructions" && invoice) {
+      // The amount to invoice is the order total after the discount, in the currency the buyer saw.
+      const amount = formatMoney(quote.presentmentTotal, quote.currency.code);
+      const discountNote = quote.discount > 0 ? ` (after a discount of ${formatMoney(quote.discount)}${quote.couponCode ? `, code ${quote.couponCode}` : ""})` : "";
+      const hours = settings["payments.paypal.invoiceHoldHours"];
+      await addOrderEvent(db, order.id, "invoice.requested", `PayPal invoice requested: ${amount}${discountNote} to ${invoice.paypalEmail}`, { id: ctx.userId, type: ctx.userId ? "buyer" : "system" });
+      await queueTemplateEmail("paypal_invoice_requested", input.email, { name: invoice.name, orderNumber: order.number, total: `${amount}${discountNote}`, paypalEmail: invoice.paypalEmail, hold: holdLabel(hours), whatsapp: INVOICE_WHATSAPP.display, whatsappUrl: INVOICE_WHATSAPP.url }, { userId: ctx.userId });
+      await notifyAdmins("orders.manage", { type: "order.invoice_requested", title: `PayPal Invoice Requested: ${order.number}`, body: `${invoice.name} · ${amount} · ${invoice.paypalEmail}`, href: `/admin/orders/${order.id}` });
+      await queueRawEmail({
+        to: settings["marketplace.supportEmail"],
+        subject: `PayPal Invoice Requested: order ${order.number} (${amount})`,
+        body: [
+          `A customer asked to pay order ${order.number} by PayPal invoice. Nothing has been charged.`,
+          "",
+          `Amount to invoice: ${amount}${discountNote}`,
+          `Full name: ${invoice.name}`,
+          `PayPal email: ${invoice.paypalEmail}`,
+          `WhatsApp: ${invoice.whatsapp}`,
+          `Contact email: ${input.email}`,
+          "Shipping address:",
+          ...formatAddress(input.shippingAddress).map((l) => `  ${l}`),
+          "",
+          `Send the invoice from PayPal, then update the order: ${env.siteUrl}/admin/orders/${order.id}`,
+          `The stock is held for ${holdLabel(hours)}.`,
+        ].join("\n"),
+        meta: { orderId: order.id, kind: "invoice_request" },
+      });
+    } else if (intent.kind === "instructions") {
       await addOrderEvent(db, order.id, "payment.awaiting", `Awaiting ${provider.displayName}`);
       await queueTemplateEmail("order_awaiting_payment", input.email, {
         name: input.shippingAddress.firstName,

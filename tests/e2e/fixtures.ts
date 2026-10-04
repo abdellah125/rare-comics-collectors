@@ -8,4 +8,5 @@ export const E2E = {
   seller: "e2e-seller@example.com",
   productSlug: "e2e-test-comic-1",
   productSku: "E2E-001",
+  coupon: "E2E10",
 };

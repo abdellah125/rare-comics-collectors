@@ -207,6 +207,32 @@ async function main() {
     check("stock restored after both cancellations", (await stockNow()) === before, "");
   }
 
+  // 7b. PayPal invoice requests: long hold, never settled by the gateway sweep, status follows paid / cancelled.
+  {
+    const { reconcilePayment } = await import("@/lib/payments/reconcile");
+    const before = await stockNow();
+    const asInvoice = async (id: string) => {
+      const o = await db.order.update({ where: { id }, data: { invoiceStatus: "requested", invoiceName: "Test Buyer", paypalEmail: "buyer-paypal@example.com", whatsapp: "+1 418 555 0100" }, include: { payments: true } });
+      await db.payment.updateMany({ where: { orderId: id }, data: { providerRef: `invoice_${o.number}` } });
+      return o;
+    };
+    const kept = await asInvoice((await makeOrder(1, { provider: "paypal" })).id);
+    const old = await asInvoice((await makeOrder(1, { provider: "paypal" })).id);
+    await db.order.update({ where: { id: kept.id }, data: { placedAt: new Date(Date.now() - 72 * 3_600_000) } });
+    await db.order.update({ where: { id: old.id }, data: { placedAt: new Date(Date.now() - 200 * 3_600_000) } });
+    check("an invoice request is never settled by asking the gateway", (await reconcilePayment(kept.payments[0].id, { id: null, type: "job" })) === "skipped", "");
+    await expireUnpaidOrders();
+    const keptAfter = await db.order.findUniqueOrThrow({ where: { id: kept.id } });
+    const oldAfter = await db.order.findUniqueOrThrow({ where: { id: old.id } });
+    check("an invoice request three days old is still held, unpaid", keptAfter.status === "pending_payment" && keptAfter.paymentStatus === "unpaid" && keptAfter.invoiceStatus === "requested", `${keptAfter.status}/${keptAfter.paymentStatus}/${keptAfter.invoiceStatus}`);
+    check("an invoice request past its hold is cancelled", oldAfter.status === "cancelled" && oldAfter.invoiceStatus === "cancelled" && oldAfter.paymentStatus === "unpaid", `${oldAfter.status}/${oldAfter.invoiceStatus}`);
+    await markOrderPaid(kept.id, { id: kept.payments[0].id, provider: "paypal" });
+    const paidAfter = await db.order.findUniqueOrThrow({ where: { id: kept.id } });
+    check("marking the invoice order paid sets the invoice status to paid", paidAfter.status === "paid" && paidAfter.paymentStatus === "paid" && paidAfter.invoiceStatus === "paid", `${paidAfter.status}/${paidAfter.invoiceStatus}`);
+    check("invoice orders hold and release stock like any order", (await stockNow()) === before - 1, `stock=${await stockNow()} expected=${before - 1}`);
+    await db.product.update({ where: { id: product.id }, data: { stock: { increment: 1 }, soldCount: { decrement: 1 } } });
+  }
+
   // 8. The marketplace-wide free-shipping threshold really applies at checkout.
   {
     const previous = (await db.setting.findUnique({ where: { key: "commerce.freeShippingThreshold" } }))?.value ?? null;

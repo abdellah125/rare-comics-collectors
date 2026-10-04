@@ -54,6 +54,10 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
   const [couponInput, setCouponInput] = useState("");
   const [couponCode, setCouponCode] = useState<string | undefined>(undefined);
   const [note, setNote] = useState("");
+  // PayPal invoice request. null = not edited yet: the field follows the contact and shipping details above.
+  const [invoiceName, setInvoiceName] = useState<string | null>(null);
+  const [paypalEmail, setPaypalEmail] = useState<string | null>(null);
+  const [whatsapp, setWhatsapp] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
@@ -99,6 +103,14 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
   const setShip = (patch: Partial<Address>) => setShipping((s) => ({ ...s, ...patch }));
   const setBill = (patch: Partial<Address>) => setBilling((s) => ({ ...s, ...patch }));
 
+  const byInvoice = providerId === "paypal";
+  const invoice = {
+    name: invoiceName ?? [shipping.firstName, shipping.lastName].filter(Boolean).join(" "),
+    paypalEmail: paypalEmail ?? email,
+    whatsapp: whatsapp ?? phone,
+  };
+  const shippingSummary = [shipping.line1, shipping.line2, shipping.city, shipping.region, shipping.postalCode, country?.name ?? shipping.countryCode].filter(Boolean).join(", ");
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!quote || submitting) return;
@@ -117,6 +129,7 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
         providerId,
         couponCode,
         customerNote: note || undefined,
+        invoice: byInvoice ? invoice : undefined,
         idempotencyKey: idemKey.current,
       });
     } catch {
@@ -319,13 +332,40 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
                     <span className="block text-sm font-semibold text-ink-950">{p.displayName}</span>
                     <span className="mt-0.5 block text-[13px] text-ink-600">
                       {p.id === "stripe" && "Visa, Mastercard, Amex and more. You'll enter card details on the next step."}
-                      {p.id === "paypal" && "You'll be redirected to PayPal to approve the payment."}
+                      {p.id === "paypal" && "Pay by PayPal invoice. Nothing is charged now: submit your details and we'll send you a PayPal invoice for the order total."}
                       {p.id === "bank_transfer" && `Your books are reserved for ${quote?.bankTransfer?.reserveHours ?? 48} hours while the wire arrives. Details below and in your confirmation email.`}
                       {p.id === "test" && "Sandbox: no money moves."}
                     </span>
                   </span>
                 </label>
               ))}
+            </div>
+          )}
+          {byInvoice && (
+            <div className="mt-4 rounded-lg border border-ink-200 bg-ink-50 p-4" data-testid="paypal-invoice-form">
+              <p className="text-sm font-semibold text-ink-950">PayPal invoice request</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-ink-600">
+                You will not be charged now. After you submit this request we will contact you and send a <strong className="font-semibold text-ink-900">PayPal invoice</strong>
+                {quote ? (
+                  <>
+                    {" "}
+                    for <strong className="font-semibold text-ink-900">{formatMoney(quote.presentmentTotal, quote.currency.code)}</strong>
+                    {quote.discount > 0 ? `, with your discount of ${formatExact(quote.discount)} already applied` : ""}
+                  </>
+                ) : null}
+                . Your order is confirmed once the invoice is paid.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <TextField label="Full name" name="invoice-name" required autoComplete="name" maxLength={120} value={invoice.name} onChange={(e) => setInvoiceName(e.target.value)} />
+                <TextField label="PayPal email address" name="invoice-paypal-email" type="email" required autoComplete="email" maxLength={254} value={invoice.paypalEmail} onChange={(e) => setPaypalEmail(e.target.value)} hint="The invoice is sent to this address." />
+                <TextField label="WhatsApp number" name="invoice-whatsapp" type="tel" required autoComplete="tel" maxLength={40} value={invoice.whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+1 418 555 0100" hint="Include the country code." />
+                <div>
+                  <p className="text-sm font-medium text-ink-800">Shipping address</p>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-ink-700" data-testid="invoice-shipping">
+                    {shipping.line1 ? shippingSummary : "Enter it in the shipping section above."}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
           {providerId === "bank_transfer" && quote?.bankTransfer && (
@@ -407,7 +447,17 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
             {quoteError && <p className="mt-3 text-sm text-rose-700">{quoteError}</p>}
 
             <button type="submit" disabled={!canSubmit || submitting} className={`${buttonStyles.primary} ${buttonSizes.lg} mt-6 w-full`}>
-              {submitting ? "Placing order…" : quote ? `Place order — ${formatMoney(quote.presentmentTotal, quote.currency.code)}` : "Place order"}
+              {byInvoice
+                ? submitting
+                  ? "Sending request…"
+                  : quote
+                    ? `Request PayPal invoice — ${formatMoney(quote.presentmentTotal, quote.currency.code)}`
+                    : "Request PayPal invoice"
+                : submitting
+                  ? "Placing order…"
+                  : quote
+                    ? `Place order — ${formatMoney(quote.presentmentTotal, quote.currency.code)}`
+                    : "Place order"}
             </button>
 
             <ul className="mt-5 grid gap-2.5 text-[13px] text-ink-600">

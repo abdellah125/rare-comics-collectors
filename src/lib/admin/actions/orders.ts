@@ -12,9 +12,10 @@ import { formatMoney } from "@/lib/money";
 import { createShipment, updateShipmentStatus } from "@/lib/orders/fulfillment";
 import { addOrderEvent, cancelOrder, restoreLatePaidOrder, syncOrderStatus } from "@/lib/orders/lifecycle";
 import { applyPaymentSuccess, finalizeRefund, issueRefund } from "@/lib/payments/payment-service";
+import { INVOICE_WHATSAPP, invoiceStatusLabel } from "@/lib/payments/paypal-invoice";
 import { failState, fieldErrors, formToObject, okState, zId, zOptionalTrimmed, zTrimmed, type ActionState } from "@/lib/validation";
 
-/** Finance confirms an offline (bank transfer) payment arrived. */
+/** Finance confirms an offline payment arrived: a bank transfer, or a PayPal invoice the buyer paid. */
 export async function markPaidManuallyAction(orderId: string, reference?: string): Promise<ActionState> {
   return runAdmin("finance.manage", async (admin) => {
     const order = await db.order.findUnique({ where: { id: orderId }, include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } } });
@@ -22,10 +23,37 @@ export async function markPaidManuallyAction(orderId: string, reference?: string
     if (order.paymentStatus === "paid") return failState("Already paid.");
     if (order.status === "cancelled") return failState("Order is cancelled — the stock was released. Ask the buyer to reorder.");
     const payment = order.payments[0] ?? (await db.payment.create({ data: { orderId, provider: "bank_transfer", method: "bank_transfer", status: "pending", amount: order.total, currency: order.currency, presentmentAmount: order.presentmentTotal } }));
-    await applyPaymentSuccess(payment.id, { raw: { reference: reference ?? "manual", confirmedBy: admin.email } }, { id: admin.id, type: "admin" });
+    await applyPaymentSuccess(payment.id, { raw: { reference: reference ?? "manual", confirmedBy: admin.email, ...(order.invoiceStatus ? { invoice: true } : {}) } }, { id: admin.id, type: "admin" });
     await audit({ actor: actorOf(admin), action: "order.mark_paid", targetType: "order", targetId: orderId, summary: `${order.number} marked paid manually${reference ? ` (ref ${reference})` : ""}` });
     revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
     return okState(undefined, "Order marked as paid.");
+  });
+}
+
+/**
+ * Moves a PayPal invoice request between "Invoice Pending" and "Invoice Sent". Paid and Cancelled
+ * are not set here: they go through markPaidManuallyAction and cancelOrderAdminAction, so the
+ * stock, the ledger and the buyer emails follow the same path as every other order.
+ */
+export async function setInvoiceStatusAction(orderId: string, status: "pending" | "sent", reference?: string): Promise<ActionState> {
+  return runAdmin("orders.manage", async (admin) => {
+    const order = await db.order.findUnique({ where: { id: orderId } });
+    if (!order) return failState("Order not found.");
+    if (!order.invoiceStatus) return failState("This order is not a PayPal invoice request.");
+    if (order.status !== "pending_payment" || order.paymentStatus === "paid") return failState(`This order is ${order.paymentStatus === "paid" ? "already paid" : order.status}; its invoice status can no longer change.`);
+    if (order.invoiceStatus === status) return failState(`Already marked "${invoiceStatusLabel(status)}".`);
+    const ref = reference?.trim().slice(0, 80) || null;
+    await db.order.update({ where: { id: orderId }, data: status === "sent" ? { invoiceStatus: "sent", invoiceSentAt: new Date(), invoiceRef: ref } : { invoiceStatus: "pending" } });
+    const amount = formatMoney(order.presentmentTotal, order.currency);
+    await addOrderEvent(db, orderId, `invoice.${status}`, status === "sent" ? `PayPal invoice sent to ${order.paypalEmail} for ${amount}${ref ? ` (invoice ${ref})` : ""}` : "PayPal invoice marked as pending", { id: admin.id, type: "admin" });
+    if (status === "sent" && order.paypalEmail) {
+      await queueTemplateEmail("paypal_invoice_sent", order.email, { name: order.invoiceName ?? "there", orderNumber: order.number, total: amount, paypalEmail: order.paypalEmail, whatsapp: INVOICE_WHATSAPP.display, whatsappUrl: INVOICE_WHATSAPP.url }, { userId: order.userId });
+    }
+    await audit({ actor: actorOf(admin), action: `order.invoice_${status}`, targetType: "order", targetId: orderId, summary: `${order.number}: PayPal invoice ${status}${ref ? ` (${ref})` : ""}` });
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
+    return okState(undefined, status === "sent" ? "Marked as Invoice Sent. The buyer has been emailed." : "Marked as Invoice Pending.");
   });
 }
 

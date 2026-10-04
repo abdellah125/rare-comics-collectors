@@ -10,7 +10,7 @@ import { CaseThread } from "@/components/account/case-thread";
 import { ShipForm } from "@/components/seller/ship-form";
 import { ShipmentStatusButtons } from "@/components/seller/shipment-status-buttons";
 import { requireAdmin, can } from "@/lib/auth/session";
-import { addOrderNoteAction, adminShipAction, adminShipmentStatusAction, cancelOrderAdminAction, completeManualRefundAction, markPaidManuallyAction, reconcilePaymentAction, resendConfirmationAction, setOrderStatusAction, setRiskAction } from "@/lib/admin/actions/orders";
+import { addOrderNoteAction, adminShipAction, adminShipmentStatusAction, cancelOrderAdminAction, completeManualRefundAction, markPaidManuallyAction, reconcilePaymentAction, resendConfirmationAction, setInvoiceStatusAction, setOrderStatusAction, setRiskAction } from "@/lib/admin/actions/orders";
 import { adminCaseMessageAction } from "@/lib/admin/actions/cases";
 import { db } from "@/lib/db";
 import { formatAddress } from "@/lib/commerce/pricing";
@@ -20,6 +20,7 @@ import { parseJsonArray, isString } from "@/lib/json";
 import { formatMoney } from "@/lib/money";
 import { caseMessages, getOrderById, orderAddress } from "@/lib/orders/queries";
 import { bankTransferDetails } from "@/lib/payments/bank-details";
+import { invoiceStatusLabel, invoiceStatusTone, isInvoiceRef, whatsappLink } from "@/lib/payments/paypal-invoice";
 import { verifyOrderPayment } from "@/lib/payments/reconcile";
 import { getSettings } from "@/lib/settings";
 
@@ -42,7 +43,8 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
     ...order.returns.map(async (r) => ({ kind: "return" as const, id: r.id, title: `Return — ${statusLabel(r.reason)} (qty ${r.qty})`, status: r.status, messages: await caseMessages("return", r.id, { includeInternal: true }) })),
   ]);
   const wire = order.payments.some((p) => p.provider === "bank_transfer") ? bankTransferDetails(await getSettings(), order.number) : null;
-  const gatewayOrder = order.payments.some((p) => ["paypal", "stripe"].includes(p.provider));
+  // Invoice requests have no gateway record to verify: staff settle them by hand.
+  const gatewayOrder = order.payments.some((p) => ["paypal", "stripe"].includes(p.provider) && !isInvoiceRef(p.providerRef));
   const verification = gatewayOrder && (order.status !== "paid" || order.paymentStatus !== "paid") ? await verifyOrderPayment(order.id) : null;
   const manage = can(admin, "orders.manage");
   const canRefund = can(admin, "orders.refund");
@@ -65,6 +67,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           <>
             <StatusBadge status={order.status} />
             <StatusBadge status={order.paymentStatus} label={`Payment: ${statusLabel(order.paymentStatus)}`} />
+            {order.invoiceStatus && <Tone tone={invoiceStatusTone(order.invoiceStatus)}>{invoiceStatusLabel(order.invoiceStatus)}</Tone>}
             <StatusBadge status={order.fulfillmentStatus} label={`Fulfilment: ${statusLabel(order.fulfillmentStatus)}`} />
             {order.riskScore >= 40 && <Tone tone={order.riskScore >= 70 ? "danger" : "warning"}>Risk {order.riskScore}</Tone>}
           </>
@@ -151,6 +154,41 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
             </Card>
           )}
 
+          {order.invoiceStatus && (
+            <Card title="PayPal invoice request" description="The buyer chose PayPal and was not charged. Send an invoice for the amount below from your PayPal account, then record each step here. The order becomes paid only when you mark the invoice as paid.">
+              <Kv
+                items={[
+                  { label: "Invoice status", value: <Tone tone={invoiceStatusTone(order.invoiceStatus)}>{invoiceStatusLabel(order.invoiceStatus)}</Tone> },
+                  {
+                    label: "Amount to invoice",
+                    value: (
+                      <span>
+                        <strong className="tabular-nums text-ink-950">{formatMoney(order.presentmentTotal, order.currency)}</strong>
+                        <span className="block text-[12px] text-ink-500">
+                          {order.discountTotal > 0 ? `After discount of ${formatMoney(order.discountTotal)}${order.couponCode ? ` (code ${order.couponCode})` : ""}. ` : "No discount on this order. "}
+                          Subtotal {formatMoney(order.subtotal)}, shipping {formatMoney(order.shippingTotal)}, tax {formatMoney(order.taxTotal)}.
+                        </span>
+                      </span>
+                    ),
+                  },
+                  { label: "Full name", value: order.invoiceName ?? "—" },
+                  { label: "PayPal email", value: order.paypalEmail ? <a href={`mailto:${order.paypalEmail}`} className="text-brand-700 hover:underline">{order.paypalEmail}</a> : "—" },
+                  { label: "WhatsApp", value: whatsappLink(order.whatsapp) ? <a href={whatsappLink(order.whatsapp)!} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">{order.whatsapp}</a> : (order.whatsapp ?? "—") },
+                  { label: "Shipping address", value: <span className="whitespace-pre-line">{formatAddress(shipping).join("\n")}</span> },
+                  ...(order.invoiceSentAt ? [{ label: "Invoice sent", value: `${formatDateTime(order.invoiceSentAt)}${order.invoiceRef ? ` · invoice ${order.invoiceRef}` : ""}` }] : []),
+                ]}
+              />
+              {order.status === "pending_payment" && order.paymentStatus !== "paid" && (manage || finance) && (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-ink-100 pt-4">
+                  {manage && order.invoiceStatus !== "pending" && <ConfirmButton label="Invoice Pending" message="Marks the invoice as being prepared. The buyer is not emailed." action={setInvoiceStatusAction.bind(null, order.id, "pending")} size="sm" />}
+                  {manage && order.invoiceStatus !== "sent" && <ConfirmButton label="Invoice Sent" message={`Records that the PayPal invoice for ${formatMoney(order.presentmentTotal, order.currency)} was sent to ${order.paypalEmail ?? "the buyer"}, and emails the buyer to tell them.`} action={setInvoiceStatusAction.bind(null, order.id, "sent")} withReason reasonLabel="PayPal invoice number" size="sm" />}
+                  {finance && <ConfirmButton label="Paid" message="Confirms the PayPal invoice was paid. The order becomes paid, sellers are notified and the buyer gets the order confirmation. Only do this once the money shows in PayPal." action={markPaidManuallyAction.bind(null, order.id)} withReason reasonLabel="PayPal transaction or invoice number" variant="primary" size="sm" />}
+                  {manage && <ConfirmButton label="Cancelled" message="Cancels the request and returns the books to stock. The buyer is emailed the reason." action={cancelOrderAdminAction.bind(null, order.id)} withReason variant="danger" size="sm" />}
+                </div>
+              )}
+            </Card>
+          )}
+
           {verification && (
             <Card title="Payment verification" description={verification.canRestore ? "Every condition for a safe restore holds. \"Check with PayPal / Stripe\" below restores the order to paid: stock re-reserved, seller ledger credited once, buyer and seller notified once." : "Read straight from the gateway and this database; nothing is changed by viewing this."}>
               <ul className="grid gap-1.5 text-[13px]">
@@ -204,7 +242,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                         )}
                       </div>
                     )}
-                    {["paypal", "stripe"].includes(pm.provider) && pm.providerRef && (!["succeeded", "refunded", "partially_refunded"].includes(pm.status) || (pm.status === "succeeded" && ["cancelled", "failed"].includes(order.status) && order.refunds.length === 0)) && (
+                    {["paypal", "stripe"].includes(pm.provider) && pm.providerRef && !isInvoiceRef(pm.providerRef) && (!["succeeded", "refunded", "partially_refunded"].includes(pm.status) || (pm.status === "succeeded" && ["cancelled", "failed"].includes(order.status) && order.refunds.length === 0)) && (
                       <div className="mt-2">
                         <ConfirmButton label={`Check with ${pm.provider === "paypal" ? "PayPal" : "Stripe"}`} message="Asks the gateway whether this payment went through. If it did, the order becomes paid (and is restored if it was cancelled while the stock is still available)." action={reconcilePaymentAction.bind(null, order.id)} size="sm" />
                       </div>

@@ -1,4 +1,5 @@
 import "server-only";
+import { INVOICE_REF_PREFIX, isInvoiceRef } from "@/lib/payments/paypal-invoice";
 import { db } from "@/lib/db";
 import { restoreLatePaidOrder, type ActorRef } from "@/lib/orders/lifecycle";
 import { applyPaymentSuccess } from "@/lib/payments/payment-service";
@@ -25,6 +26,8 @@ export async function reconcilePayment(paymentId: string, actor: ActorRef): Prom
   const provider = getProvider(payment.provider);
   // The test gateway answers "succeeded" to everything, which would stop test reservations from expiring.
   if (!provider?.confirmPayment || !payment.providerRef || provider.id === "test") return "skipped";
+  // PayPal invoice requests are settled by staff, never by asking the gateway.
+  if (isInvoiceRef(payment.providerRef)) return "skipped";
   let result;
   try {
     result = await provider.confirmPayment(payment.providerRef, {});
@@ -93,6 +96,7 @@ export async function reconcileRecentPayments(days = 7): Promise<{ checked: numb
       provider: { in: ["paypal", "stripe"] },
       status: { in: ["pending", "requires_action"] },
       providerRef: { not: null },
+      NOT: { providerRef: { startsWith: INVOICE_REF_PREFIX } },
       createdAt: { gte: since },
       order: { status: { in: ["pending_payment", "cancelled", "failed"] } },
     },

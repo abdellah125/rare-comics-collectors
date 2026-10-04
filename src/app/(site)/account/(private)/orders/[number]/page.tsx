@@ -1,3 +1,4 @@
+import { INVOICE_WHATSAPP } from "@/lib/payments/paypal-invoice";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -64,6 +65,16 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
         }
       />
 
+      {order.status === "pending_payment" && order.invoiceStatus && (
+        <Panel tone="muted" title={order.invoiceStatus === "sent" ? "Your PayPal invoice has been sent" : "PayPal invoice requested"} description={order.invoiceStatus === "sent" ? `We sent a PayPal invoice for ${formatMoney(order.presentmentTotal, order.currency)} to ${order.paypalEmail}. The order is confirmed once it is paid.` : `We will contact you and send a PayPal invoice for ${formatMoney(order.presentmentTotal, order.currency)} to ${order.paypalEmail}. Nothing has been charged; the order is confirmed once the invoice is paid.`}>
+          <p className="text-[13px] text-ink-700">
+            Questions about the invoice? WhatsApp{" "}
+            <a href={INVOICE_WHATSAPP.url} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 underline-offset-2 hover:underline">
+              {INVOICE_WHATSAPP.display}
+            </a>
+          </p>
+        </Panel>
+      )}
       {order.status === "pending_payment" && payment?.provider === "bank_transfer" && (
         <Panel tone="muted" title="Awaiting your bank transfer" description="Wire the order total using these details. The reservation is released if the funds don't arrive in time.">
           <BankDetails {...(({ lines, note }) => ({ lines, note }))(bankTransferDetails(settings, order.number))} compact />
@@ -148,7 +159,7 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
           <Panel title="Payment">
             <DescriptionList
               items={[
-                { label: "Method", value: payment ? (payment.provider === "stripe" ? `Card${payment.cardLast4 ? ` •••• ${payment.cardLast4}` : ""}` : payment.provider === "paypal" ? "PayPal" : payment.provider === "bank_transfer" ? "Bank transfer" : "Test") : "—" },
+                { label: "Method", value: payment ? (payment.provider === "stripe" ? `Card${payment.cardLast4 ? ` •••• ${payment.cardLast4}` : ""}` : payment.provider === "paypal" ? (order.invoiceStatus ? "PayPal invoice" : "PayPal") : payment.provider === "bank_transfer" ? "Bank transfer" : "Test") : "—" },
                 { label: "Status", value: statusLabel(order.paymentStatus) },
                 ...(payment?.refundedAmount ? [{ label: "Refunded", value: formatMoney(payment.refundedAmount) }] : []),
               ]}
