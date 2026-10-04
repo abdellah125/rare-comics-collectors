@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { CoverArt } from "@/components/cover-art";
 import { Badge, Stars } from "@/components/ui";
 import { useT } from "@/components/i18n-provider";
+import { gradeLabel, isKnown, joinKnown } from "@/lib/catalog/labels";
 import type { ProductSummary } from "@/lib/products";
 
 /**
@@ -49,7 +50,7 @@ export function ProductCardView({
           </div>
         )}
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500">
-          {product.publisher} · {product.era}
+          {joinKnown([product.publisher, product.era]) || "\u00a0"}
         </p>
 
         <h3 className="mt-1.5 font-display text-[17px] font-semibold leading-snug text-ink-950">
@@ -62,12 +63,14 @@ export function ProductCardView({
         <p className="mt-1 text-[13px] text-ink-600">
           {product.grader === "Raw" ? (
             <>{tr("Raw")} · {product.grade}</>
+          ) : !isKnown(product.grader) || !isKnown(product.grade) ? (
+            <>{gradeLabel(product.grader, product.grade)}</>
           ) : (
             <>
               <span className="font-semibold text-ink-900">
                 {product.grader} {product.grade}
               </span>{" "}
-              · {product.label.replace(/ \((Yellow|Purple|Green|Blue)\)$/, "")}
+              {isKnown(product.label) && <>· {product.label.replace(/ \((Yellow|Purple|Green|Blue)\)$/, "")}</>}
             </>
           )}
         </p>

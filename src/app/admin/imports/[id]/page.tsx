@@ -38,6 +38,8 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
   const secondary = parse<string[]>(item.secondaryKeywordsJson, []);
   const links = parse<{ href: string; label: string; why: string }[]>(item.internalLinksJson, []);
   const edited = parse<string[]>(item.editedJson, []);
+  const fromKnowledge = parse<string[]>(item.knowledgeJson, []);
+  const unknown = [item.publisher === "Unknown" ? "publisher" : "", item.year === null ? "publication year" : "", item.grade === "Unknown" ? "grade" : "", item.grader === "Unknown" ? "grading company" : "", item.label === "Unknown" ? "label" : ""].filter(Boolean);
   const margin = marginOf(item.sourcePrice, item.retailPrice);
   const formula = item.sourcePrice !== null ? retailPrice(item.sourcePrice, item.markupBps) : null;
   const released = item.status === "released";
@@ -59,6 +61,21 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
         }
       />
 
+      {!released && (fromKnowledge.length > 0 || unknown.length > 0) && (
+        <div className="mb-6 rounded-xl border border-ink-200 bg-ink-50 p-4 text-[13px] text-ink-800" role="note" data-testid="knowledge-note">
+          {fromKnowledge.includes("year:listings") && <p>The publication year is not in this listing: it was taken from the other listings of the same issue, which all state {item.year}.</p>}
+          {fromKnowledge.some((f) => !f.includes(":")) && (
+            <p className={fromKnowledge.includes("year:listings") ? "mt-1" : ""}>
+              <strong className="text-ink-950">Filled from reference knowledge (AI): {fromKnowledge.filter((f) => !f.includes(":")).map((f) => (f === "year" ? "publication year" : f)).join(", ")}.</strong> The listing itself does not state {fromKnowledge.filter((f) => !f.includes(":")).length === 1 ? "it" : "them"}, and the lookup can be wrong: check against the photo or the label before approving.
+            </p>
+          )}
+          {unknown.length > 0 && (
+            <p className={fromKnowledge.length > 0 ? "mt-1" : ""}>
+              Not known, stored as Unknown: {unknown.join(", ")}. The product can be released as it is (Merchant Center does not require {unknown.length === 1 ? "it" : "them"}); fill {unknown.length === 1 ? "it" : "them"} in below if you know.
+            </p>
+          )}
+        </div>
+      )}
       {item.auction && item.priceBasis && (
         <div className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 text-[13px] text-ink-800" role="note" data-testid="price-basis">
           <p className="font-semibold text-ink-950">Suggested price</p>
@@ -111,9 +128,9 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
                         <input name="issue" defaultValue={item.issue} required maxLength={20} className={adminInput} />
                       </Field>
                       <Field label="Publisher">
-                        <input name="publisher" defaultValue={item.publisher} required maxLength={120} className={adminInput} />
+                        <input name="publisher" defaultValue={item.publisher} required maxLength={120} className={adminInput} placeholder="Unknown" />
                       </Field>
-                      <Field label="Year" hint={(item.era ? item.era : "sets the era")}>
+                      <Field label="Year" hint={item.year === null ? "leave empty when it is not known" : item.era || "sets the era"}>
                         <input name="year" type="number" min={1900} max={2100} defaultValue={item.year ?? ""} className={adminInput} />
                       </Field>
                       <Field label="Variant (optional)">

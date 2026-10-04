@@ -2,23 +2,27 @@
  * SEO defaults and checks for an imported product. Pure. Everything is built from the product's
  * own facts — no keyword is added that the listing does not actually match.
  */
+import { NOT_GRADED, gradeLabel as gradeLabelOf, isKnown } from "@/lib/catalog/labels";
+
 export type SeoFacts = { title: string; issue: string; publisher: string; year: number | null; grader: string; grade: string; label: string; keyIssue: string | null; slug: string };
 
-const gradeLabel = (f: SeoFacts) => (f.grader === "Raw" ? `Raw ${f.grade}` : `${f.grader} ${f.grade}`).trim();
-const issueNumber = (issue: string) => issue.replace(/^#/, "").trim();
+const gradeLabel = (f: SeoFacts) => gradeLabelOf(f.grader, f.grade);
+const issueNumber = (issue: string) => (issue.trim() === "nn" ? "" : issue.replace(/^#/, "").trim());
+const bookName = (f: Pick<SeoFacts, "title" | "issue">) => (issueNumber(f.issue) ? `${f.title} ${f.issue}` : f.title).trim();
 
 /** The same shape the product page builds on its own, so a default changes nothing that is already indexed. */
 export function defaultSeoTitle(f: SeoFacts): string {
-  return `${f.title} ${f.issue} — ${gradeLabel(f)}${f.year ? ` (${f.year})` : ""} for Sale`.replace(/\s+/g, " ").trim();
+  return `${bookName(f)} — ${gradeLabel(f)}${f.year ? ` (${f.year})` : ""} for Sale`.replace(/\s+/g, " ").trim();
 }
 
 export function defaultSeoDescription(f: SeoFacts, returnWindowDays: number): string {
   const key = f.keyIssue ? ` — ${f.keyIssue.replace(/\.$/, "")}` : "";
-  const start = `${f.title} ${f.issue}, ${f.publisher}${f.year ? ` ${f.year}` : ""}. ${gradeLabel(f)}${key}.`;
+  const origin = [isKnown(f.publisher) ? f.publisher : "", f.year ? String(f.year) : ""].filter(Boolean).join(" ");
+  const start = `${bookName(f)}${origin ? `, ${origin}` : ""}. ${gradeLabel(f)}${key}.`;
   const end = ` Cert-verified, insured shipping and a ${returnWindowDays}-day return window.`;
   const text = start + end;
   // Keep the facts; drop the key-issue note first when the whole thing runs long.
-  return text.length <= 165 ? text : `${f.title} ${f.issue}, ${f.publisher}${f.year ? ` ${f.year}` : ""}. ${gradeLabel(f)}.${end}`;
+  return text.length <= 165 ? text : `${bookName(f)}${origin ? `, ${origin}` : ""}. ${gradeLabel(f)}.${end}`;
 }
 
 export const h1Of = (f: Pick<SeoFacts, "title" | "issue">) => `${f.title} ${f.issue}`.trim();
@@ -26,9 +30,11 @@ export const h1Of = (f: Pick<SeoFacts, "title" | "issue">) => `${f.title} ${f.is
 /** Phrases a buyer of this exact book could search, most specific last. All lower case. */
 export function candidateKeywords(f: SeoFacts): string[] {
   const base = `${f.title} ${issueNumber(f.issue)}`.toLowerCase().replace(/\s+/g, " ").trim();
-  if (!f.title.trim() || !issueNumber(f.issue)) return [];
-  const grader = f.grader.toLowerCase();
-  const list = [base, `${base} ${grader}`, `${base} ${grader} ${f.grade}`, `${base} for sale`, `${base} value`, f.year ? `${base} ${f.year}` : ""];
+  if (!f.title.trim()) return [];
+  // Only facts the listing has: an unknown grading company or grade is never turned into a keyword.
+  const grader = isKnown(f.grader) && f.grader !== "Raw" ? f.grader.toLowerCase() : "";
+  const grade = grader && isKnown(f.grade) ? f.grade : "";
+  const list = [base, grader ? `${base} ${grader}` : "", grade ? `${base} ${grader} ${grade}` : "", `${base} for sale`, `${base} value`, f.year ? `${base} ${f.year}` : ""];
   return [...new Set(list.map((s) => s.trim()).filter(Boolean))];
 }
 
@@ -45,7 +51,7 @@ export function seoChecks(seo: { seoTitle: string; seoDescription: string; slug:
     if (title.length > 70) notes.push(`SEO title is ${title.length} characters; search results show about 60.`);
     if (title.length < 20) notes.push("SEO title is very short.");
     if (issue && !new RegExp(`(^|[^0-9])${issue.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}([^0-9]|$)`).test(title)) notes.push("SEO title does not state the issue number.");
-    if (f.grade && !title.includes(f.grade)) notes.push("SEO title does not state the grade.");
+    if (isKnown(f.grade) && f.grade !== NOT_GRADED && !title.includes(f.grade)) notes.push("SEO title does not state the grade.");
     if (f.title && !title.toLowerCase().includes(f.title.toLowerCase())) notes.push("SEO title does not name the comic.");
     if (count(title, f.title) > 1) notes.push("SEO title repeats the comic's name (keyword stuffing).");
   }

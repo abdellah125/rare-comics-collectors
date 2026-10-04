@@ -50,7 +50,7 @@ export function CoverArt({
       className={`relative isolate overflow-hidden rounded-md ${className}`}
       style={{ background: `linear-gradient(150deg, ${from} 0%, ${to} 100%)` }}
       role="img"
-      aria-label={`${product.title} ${product.issue} — ${product.publisher}, ${product.year}, ${
+      aria-label={`${product.title} ${product.issue} — ${[product.publisher, product.year > 0 ? String(product.year) : ""].filter((v) => v && v !== "Unknown").join(", ")}${product.publisher !== "Unknown" || product.year > 0 ? ", " : ""}${
         slabbed ? `${product.grader} ${product.grade}` : `raw, graded ${product.grade}`
       }`}
     >
@@ -114,7 +114,7 @@ export function CoverArt({
             {product.title}
           </p>
           <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/85">
-            {product.issue} · {product.year}
+            {product.issue}{product.year > 0 ? ` · ${product.year}` : ""}
           </p>
         </div>
       </div>

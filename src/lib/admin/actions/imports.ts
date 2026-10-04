@@ -102,17 +102,21 @@ export async function crawlTickAction(): Promise<CrawlProgress | null> {
 
 /**
  * Re-checks the products in Error: auctions get a suggested Buy It Now price, raw books are
- * accepted with the condition their listing states, a publisher the rest of the series agrees on
- * is filled in. What can be fixed moves to Pending Review; the rest keeps its reasons.
+ * accepted with the condition their listing states, and details that no sales channel requires
+ * (publisher, year, grade, label, issue number) become Unknown instead of holding the product
+ * back. Unknown publishers and years are then looked up from reference knowledge in the
+ * background. Only a product without a title, price or photo, or one that is unavailable or
+ * flagged as adult content, stays in Error.
  */
 export async function fixErrorsAction(): Promise<ActionState> {
   return runAdmin("products.manage", async (admin) => {
     const first = await reprocessErrors(IMPORT_SOURCE, { limit: 300 });
-    if (first.nextCursor) await enqueueJob("import_fix", { cursor: first.nextCursor }, { maxAttempts: 3 });
+    // More than one batch continues in the background; either way the knowledge pass follows.
+    await enqueueJob("import_fix", first.nextCursor ? { cursor: first.nextCursor } : { phase: "knowledge" }, { maxAttempts: 3 });
     await audit({ actor: actorOf(admin), action: "import.fix_errors", targetType: "import", summary: `Import errors re-checked: ${first.fixed} fixed, ${first.duplicates} duplicates, ${first.still} still need a person${first.nextCursor ? " (more in the background)" : ""}` });
     refresh();
     if (first.checked === 0) return okState(undefined, "No products in Error to re-check (products you edited or already reviewed are left alone).");
-    return okState(undefined, `${first.fixed} moved to Pending Review, ${first.duplicates} are duplicates, ${first.still} still need a person.${first.nextCursor ? " The rest is being checked in the background; refresh in a minute." : ""}`);
+    return okState(undefined, `${first.fixed} moved to Pending Review, ${first.duplicates} are duplicates, ${first.still} cannot be queued (no title, price or photo, unavailable, or adult content).${first.nextCursor ? " The rest is being checked in the background." : ""} Unknown publishers and years are now being looked up in the background.`);
   });
 }
 

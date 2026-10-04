@@ -60,16 +60,24 @@ export function bookKey(p: { title: string; issue: string; grader: string }): st
   return title && issue && p.grader.trim() ? [title, issue, squash(p.grader)].join("|") : "";
 }
 
+/** One issue of one series, whatever the copy: title + issue number. */
+export function issueKey(p: { title: string; issue: string }): string {
+  const title = squash(p.title).replace(/^the /, "");
+  const issue = squash(p.issue.replace(/^#/, ""));
+  return title && issue && issue !== "nn" ? `${title}|${issue}` : "";
+}
+
 /** What must be true of an item before it may be released; mirrors what makes a listing a valid page. */
 export function releaseProblems(p: { title: string; issue: string; publisher: string; year: number | null; era: string; grader: string; grade: string; retailPrice: number | null; summary: string; description: string; slug: string; hasImage: boolean; available: boolean }): string[] {
   const problems: string[] = [];
   if (!p.title.trim()) problems.push("no comic title");
   if (!p.issue.trim()) problems.push("no issue number");
-  if (!p.publisher.trim()) problems.push("no publisher");
-  if (p.year === null || !Number.isInteger(p.year) || p.year < 1900 || p.year > new Date().getFullYear() + 1) problems.push("no publication year");
-  if (!p.era.trim()) problems.push("no era");
-  if (!p.grader.trim()) problems.push("no grading company");
-  if (!p.grade.trim()) problems.push("no grade");
+  // Publisher, year, era, grading company and grade may be "Unknown" (year: none): no sales channel
+  // requires them. They only have to be filled with something, so a page never prints a blank.
+  if (!p.publisher.trim()) problems.push("no publisher (use Unknown when it is not known)");
+  if (p.year !== null && (!Number.isInteger(p.year) || p.year < 1900 || p.year > new Date().getFullYear() + 1)) problems.push("publication year is not a valid year");
+  if (!p.grader.trim()) problems.push("no grading company (use Raw or Unknown)");
+  if (!p.grade.trim()) problems.push("no grade (use Unknown when it is not stated)");
   if (p.retailPrice === null || !Number.isInteger(p.retailPrice) || p.retailPrice <= 0) problems.push("no price");
   if (!p.summary.trim() || !p.description.trim()) problems.push("no description");
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug)) problems.push("no valid URL slug");

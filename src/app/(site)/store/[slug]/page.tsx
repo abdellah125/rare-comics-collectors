@@ -1,3 +1,4 @@
+import { NOT_GRADED, UNKNOWN, gradeLabel as gradeLabelOf, isKnown, joinKnown, yearKnown, yearText } from "@/lib/catalog/labels";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -30,12 +31,12 @@ export async function generateMetadata({ params }: PageProps<"/store/[slug]">): 
   if (!product) return pageMetadata({ title: "Comic not found", description: "This listing is no longer available.", path: `/store/${slug}`, noIndex: true });
   const settings = await getSettings();
 
-  const gradeLabel = product.grader === "Raw" ? `Raw ${product.grade}` : `${product.grader} ${product.grade}`;
-  const title = product.seoTitle?.trim() || `${product.title} ${product.issue} — ${gradeLabel} (${product.year}) for Sale`;
+  const gradeLabel = gradeLabelOf(product.grader, product.grade);
+  const title = product.seoTitle?.trim() || `${product.title} ${product.issue} — ${gradeLabel}${yearKnown(product.year) ? ` (${product.year})` : ""} for Sale`;
   return {
     ...pageMetadata({
       title,
-      description: product.seoDescription?.trim() || `${product.title} ${product.issue}, ${product.publisher} ${product.year}. ${gradeLabel}${product.keyIssue ? ` — ${product.keyIssue}` : ""}. ${formatMoney(product.price, "USD", "en-US", { compact: true })}, insured shipping and a ${settings["commerce.returnWindowDays"]}-day return window from ${site.name}.`,
+      description: product.seoDescription?.trim() || `${product.title} ${product.issue}${joinKnown([product.publisher, yearText(product.year)], " ") ? `, ${joinKnown([product.publisher, yearText(product.year)], " ")}` : ""}. ${gradeLabel}${product.keyIssue ? ` — ${product.keyIssue}` : ""}. ${formatMoney(product.price, "USD", "en-US", { compact: true })}, insured shipping and a ${settings["commerce.returnWindowDays"]}-day return window from ${site.name}.`,
       path: `/store/${product.slug}`,
       type: "article",
       keywords: [`${product.title} ${product.issue}`, `${product.title} ${product.issue} ${product.grader} ${product.grade}`, `${product.publisher} ${product.era}`, "graded comic for sale"],
@@ -80,7 +81,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
   });
 
   const onSale = product.compareAt !== undefined && product.compareAt > product.price;
-  const gradeLabel = product.grader === "Raw" ? `Raw · ${product.grade}` : `${product.grader} ${product.grade}`;
+  const gradeLabel = gradeLabelOf(product.grader, product.grade, " · ");
   const summary = detailToSummary(product);
   const priceValidUntil = rollingPriceValidUntil();
 
@@ -108,12 +109,13 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: product.rating, reviewCount: product.reviewCount, bestRating: 5, worstRating: 1 } }
       : {}),
     additionalProperty: [
-      { "@type": "PropertyValue", name: "Publisher", value: product.publisher },
-      { "@type": "PropertyValue", name: "Year", value: String(product.year) },
-      { "@type": "PropertyValue", name: "Age / Era", value: product.era },
-      { "@type": "PropertyValue", name: "Grading company", value: product.grader },
-      { "@type": "PropertyValue", name: "Grade", value: product.grade },
-      { "@type": "PropertyValue", name: "Label", value: product.label },
+      // Only what is actually known about the copy is put into the structured data.
+      ...(isKnown(product.publisher) ? [{ "@type": "PropertyValue", name: "Publisher", value: product.publisher }] : []),
+      ...(yearKnown(product.year) ? [{ "@type": "PropertyValue", name: "Year", value: String(product.year) }] : []),
+      ...(isKnown(product.era) ? [{ "@type": "PropertyValue", name: "Age / Era", value: product.era }] : []),
+      ...(isKnown(product.grader) ? [{ "@type": "PropertyValue", name: "Grading company", value: product.grader }] : []),
+      ...(isKnown(product.grade) ? [{ "@type": "PropertyValue", name: "Grade", value: product.grade }] : []),
+      ...(isKnown(product.label) ? [{ "@type": "PropertyValue", name: "Label", value: product.label }] : []),
       ...(product.certNumber ? [{ "@type": "PropertyValue", name: "Certification number", value: product.certNumber }] : []),
     ],
     offers: {
@@ -201,8 +203,9 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
             </h1>
 
             <p className="mt-2 text-[15px] text-ink-600">
-              {product.publisher} · {product.year} · <span className="font-semibold text-ink-900">{gradeLabel}</span>
-              {product.grader !== "Raw" && <> · {product.label}</>}
+              {joinKnown([product.publisher, yearText(product.year)]) && <>{joinKnown([product.publisher, yearText(product.year)])} · </>}
+              <span className="font-semibold text-ink-900">{gradeLabel}</span>
+              {product.grader !== "Raw" && isKnown(product.label) && <> · {product.label}</>}
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -306,13 +309,22 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
             <h2 className="mt-10 font-display text-2xl font-semibold text-ink-950">Grading &amp; condition</h2>
             <div className="prose-doc mt-4">
               <p>
-                {product.grader === "Raw" ? (
+                {product.grader === "Raw" && (product.imported || product.grade === NOT_GRADED) ? (
+                  <>
+                    This book is sold <strong>raw</strong>: it has not been graded or sealed by a grading company.{" "}
+                    {product.grade === NOT_GRADED ? "No grade is stated for it; the photo shows the actual copy." : <>The condition stated for it is <strong>{product.grade}</strong>, which is an assessment, not a certified grade.</>} If the book is not what you expected after inspecting it, return it within {settings["commerce.returnWindowDays"]} days for a full refund.
+                  </>
+                ) : !isKnown(product.grader) || !isKnown(product.grade) ? (
+                  <>
+                    {isKnown(product.grader) ? <>This copy is in a <strong>{product.grader}</strong> holder; the grade is not stated in the listing and can be read from the label in the photo.</> : <>The grading company is not stated for this copy{isKnown(product.grade) ? <>; the stated grade is <strong>{product.grade}</strong></> : null}. The photo shows the actual copy.</>} If the book is not what you expected after inspecting it, return it within {settings["commerce.returnWindowDays"]} days for a full refund.
+                  </>
+                ) : product.grader === "Raw" ? (
                   <>
                     This book is sold <strong>raw</strong> — unslabbed and graded in-house at <strong>{product.grade}</strong> using the standard 10-point scale. Every defect we can see is disclosed above and photographed. If you disagree with our assessment after inspecting the book, return it within {settings["commerce.returnWindowDays"]} days for a full refund.
                   </>
                 ) : (
                   <>
-                    This copy is encapsulated by <strong>{product.grader}</strong> at <strong>{product.grade}</strong> on a <strong>{product.label}</strong> label
+                    This copy is encapsulated by <strong>{product.grader}</strong> at <strong>{product.grade}</strong>{isKnown(product.label) ? <> on a <strong>{product.label}</strong> label</> : null}
                     {product.certNumber && (
                       <>
                         {" "}
@@ -362,7 +374,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
               {[
                 ["Title", `${product.title} ${product.issue}`],
                 ["Publisher", product.publisher],
-                ["Cover date", String(product.year)],
+                ["Cover date", yearText(product.year) || UNKNOWN],
                 ["Age / era", product.era],
                 ["Grading company", product.grader === "Raw" ? "Ungraded (raw)" : product.grader],
                 ["Grade", product.grade],

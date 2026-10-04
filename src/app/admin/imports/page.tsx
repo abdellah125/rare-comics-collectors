@@ -56,7 +56,7 @@ export default async function AdminImportsPage() {
             <Link href="/admin/imports/queue" className={adminButton.primary}>
               Review queue
             </Link>
-            {manage && stats.errors > 0 && <ConfirmButton label={`Fix ${stats.errors} errors`} title="Fix errors automatically" message="Re-checks every product in Error. Auctions get a suggested Buy It Now price, raw books are accepted with the condition their listing states, and a missing publisher is filled in when the rest of the series agrees. Fixed products move to Pending Review; nothing is published. Products you edited are left alone." action={fixErrorsAction} confirmLabel="Fix errors" />}
+            {manage && stats.errors > 0 && <ConfirmButton label={`Fix ${stats.errors} errors`} title="Fix errors automatically" message="Re-checks every product in Error. Auctions get a suggested Buy It Now price, raw books are accepted with the condition their listing states, and details Merchant Center does not require (publisher, year, grade, label, issue number) are set to Unknown, then looked up from reference knowledge where that is certain. Fixed products move to Pending Review; nothing is published. Products you edited are left alone." action={fixErrorsAction} confirmLabel="Fix errors" />}
             {manage && stats.ready > 0 && <ConfirmButton label={`Release ${stats.ready} ready`} title="Release" message={`Publishes the ${Math.min(stats.ready, 200)} product(s) that are Ready to Release. They become visible on the store, in the sitemap and in the Merchant Center feed.`} action={releaseAllReadyAction} confirmLabel="Release" />}
           </>
         }

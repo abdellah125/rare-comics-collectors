@@ -485,6 +485,9 @@ model ImportItem {
   auction               Boolean    @default(false)
   /// how a suggested price was arrived at (shown to the admin only)
   priceBasis            String?
+  /// JSON array of field names filled in from reference knowledge (an AI model), for the admin to verify
+  knowledgeJson         String     @default("[]")
+  knowledgeTriedAt      DateTime?
   available             Boolean    @default(true)
   lastSeenAt            DateTime   @default(now())
 

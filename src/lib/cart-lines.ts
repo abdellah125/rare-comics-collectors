@@ -1,3 +1,4 @@
+import { gradeLabel, isKnown, yearText } from "@/lib/catalog/labels";
 /**
  * Pure helpers that convert a Product or Service into a CartLine descriptor.
  * Lives in /lib (not a client component) so it can be imported from both
@@ -13,7 +14,7 @@ export function productToLine(product: ProductSummary): Omit<CartLine, "qty"> {
     kind: "comic",
     slug: product.slug,
     name: `${product.title} ${product.issue}`,
-    meta: `${product.grader === "Raw" ? "Raw" : `${product.grader} ${product.grade}`} · ${product.publisher} · ${product.year}`,
+    meta: [product.grader === "Raw" ? "Raw" : gradeLabel(product.grader, product.grade), isKnown(product.publisher) ? product.publisher : "", yearText(product.year)].filter(Boolean).join(" · "),
     price: product.price,
     maxQty: product.stock,
     href: `/store/${product.slug}`,

@@ -5,6 +5,8 @@ import { robotsAllows, robotsRules } from "@/lib/imports/robots";
 import { LOOKS_SLABBED, buildRawListing, rawCondition } from "@/lib/imports/raw";
 import { addComp, newCompIndex, numericGrade, suggestBuyNow } from "@/lib/imports/suggest";
 import { bookKey } from "@/lib/imports/status";
+import { buildPlainListing } from "@/lib/imports/plain";
+import { gradeLabel, joinKnown, yearText } from "@/lib/catalog/labels";
 import { candidateKeywords, defaultSeoDescription, defaultSeoTitle, seoChecks, type SeoFacts } from "@/lib/imports/seo-rules";
 import { availabilityOf, readSource, SourceFormatError } from "@/lib/imports/source";
 import { dedupeKey, itemStatusLabel, releaseProblems } from "@/lib/imports/status";
@@ -58,8 +60,11 @@ describe("duplicate key", () => {
 describe("release check", () => {
   const ok = { title: "X-Men", issue: "#1", publisher: "Marvel Comics", year: 1963, era: "Silver Age", grader: "CGC", grade: "9.0", retailPrice: 125_000, summary: "s", description: "d", slug: "x-men-1-cgc-9-0", hasImage: true, available: true };
   it("passes a complete product", () => expect(releaseProblems(ok)).toEqual([]));
-  it("names every missing fact", () => {
-    expect(releaseProblems({ ...ok, year: null, grade: "", hasImage: false, retailPrice: null, available: false })).toEqual(["no publication year", "no grade", "no price", "no photo stored yet", "marked unavailable at the source"]);
+  it("requires only what a listing page and Merchant Center need", () => {
+    // Unknown publisher, grade and grading company, and no year, are allowed.
+    expect(releaseProblems({ ...ok, year: null, publisher: "Unknown", grade: "Unknown", grader: "Unknown", era: "Unknown" })).toEqual([]);
+    expect(releaseProblems({ ...ok, grade: "", hasImage: false, retailPrice: null, available: false })).toEqual(["no grade (use Unknown when it is not stated)", "no price", "no photo stored yet", "marked unavailable at the source"]);
+    expect(releaseProblems({ ...ok, year: 123 })).toEqual(["publication year is not a valid year"]);
   });
   it("labels statuses the way the dashboard shows them", () => {
     expect(itemStatusLabel("pending_review")).toBe("Pending Review");
@@ -250,5 +255,71 @@ describe("raw books", () => {
     expect(stated.description).toMatch(/seller's own assessment, not a certified grade/);
     // A second copy of the same book gets its own address.
     expect(buildRawListing({ sourceId: "3", p, condition: null }, taken).slug).toBe("excalibur-4-raw-3");
+  });
+});
+
+describe("unknown details", () => {
+  it("words a listing only from what is known", () => {
+    const taken = new Set<string>();
+    const l = buildPlainListing({ sourceId: "9", p: { series: "Spider-Man Noir", issue: "#1", publisher: null, year: null, era: null, grader: "CGC", grade: "9.8", label: "Universal Blue", notes: "1st Spider-Man Noir" } }, taken);
+    expect(l).toMatchObject({ slug: "spider-man-noir-1-cgc-9-8", publisher: "Unknown", year: null, era: "Unknown", grader: "CGC", grade: "9.8", keyIssue: "1st Spider-Man Noir" });
+    expect(l.summary).toBe("Spider-Man Noir #1 — 1st Spider-Man Noir. CGC 9.8.");
+    expect(l.description).toMatch(/does not state the publisher or the publication year/);
+    expect(l.description).not.toMatch(/Unknown|null|undefined/);
+    expect(l.tags).toEqual(["Spider-Man Noir", "CGC"]);
+  });
+  it("handles a slab without a stated grade, an unnamed grading company and a lot", () => {
+    const taken = new Set<string>();
+    const noGrade = buildPlainListing({ sourceId: "1", p: { series: "Wizard", issue: "#1", publisher: "Wizard Press", year: 1991, era: "Copper Age", grader: "CGC", grade: null, label: null } }, taken);
+    expect(noGrade).toMatchObject({ grade: "Unknown", label: "Unknown", slug: "wizard-1-cgc" });
+    expect(noGrade.description).toMatch(/In a CGC holder; the grade is not stated/);
+    const noCompany = buildPlainListing({ sourceId: "2", p: { series: "Amazing Spider-Man", issue: "#300", publisher: "Marvel Comics", year: 1988, era: "Copper Age", grader: null, grade: "9.8", label: null } }, taken);
+    expect(noCompany.grader).toBe("Unknown");
+    expect(noCompany.description).toMatch(/does not name a grading company; the grade it states is 9\.8/);
+    const lot = buildPlainListing({ sourceId: "3", p: { series: "Lot of 12 Excalibur Comics", issue: "nn", publisher: "Marvel Comics", year: null, era: null, grader: "Raw", grade: null, label: null, lot: true } }, taken);
+    expect(lot).toMatchObject({ issue: "nn", grader: "Raw", grade: "Not graded", slug: "lot-of-12-excalibur-comics-nn-raw" });
+    expect(lot.description).toMatch(/more than one book sold together/);
+  });
+  it("prints unknown values without blanks or zeros", () => {
+    expect(yearText(0)).toBe("");
+    expect(yearText(1963)).toBe("1963");
+    expect(joinKnown(["Unknown", "1963"])).toBe("1963");
+    expect(joinKnown(["Unknown", ""])).toBe("");
+    expect(gradeLabel("CGC", "9.8")).toBe("CGC 9.8");
+    expect(gradeLabel("Raw", "VF+", " · ")).toBe("Raw · VF+");
+    expect(gradeLabel("Raw", "Not graded")).toBe("Raw, not graded");
+    expect(gradeLabel("CGC", "Unknown")).toBe("CGC (grade not stated)");
+    expect(gradeLabel("Unknown", "9.8")).toBe("Grade 9.8 (grading company not stated)");
+  });
+  it("builds SEO text without the unknown parts", () => {
+    const f: SeoFacts = { title: "Collected Skunkworks", issue: "nn", publisher: "Unknown", year: 2002, grader: "Raw", grade: "Not graded", label: "Raw", keyIssue: null, slug: "collected-skunkworks-nn-raw" };
+    expect(defaultSeoTitle(f)).toBe("Collected Skunkworks — Raw, not graded (2002) for Sale");
+    expect(defaultSeoDescription(f, 14)).toMatch(/^Collected Skunkworks, 2002\. Raw, not graded\./);
+    expect(candidateKeywords(f)).toEqual(["collected skunkworks", "collected skunkworks for sale", "collected skunkworks value", "collected skunkworks 2002"]);
+    expect(seoChecks({ seoTitle: defaultSeoTitle(f), seoDescription: defaultSeoDescription(f, 14), slug: f.slug, primaryKeyword: "collected skunkworks" }, f)).toEqual([]);
+  });
+});
+
+describe("reference-knowledge answers", () => {
+  const questions = [
+    { id: "a", listingTitle: "SPIDER-MAN NOIR #1 CGC 9.8", series: "Spider-Man Noir", issue: "#1", needPublisher: true, needYear: true },
+    { id: "b", listingTitle: "Wizard #1", series: "Wizard", issue: "#1", needPublisher: true, needYear: false },
+    { id: "c", listingTitle: "Avengers #1", series: "Avengers", issue: "#1", needPublisher: false, needYear: true },
+  ];
+  it("keeps only certain, well-formed answers to what was asked", async () => {
+    const { parseFactAnswers } = await import("@/lib/imports/enrich");
+    const text = 'Here you go:\n[{"id":"a","publisher":"Marvel Comics","year":2009,"certain":true},{"id":"b","publisher":"Wizard Press","year":1991,"certain":false},{"id":"c","publisher":"Marvel Comics","year":1963,"certain":true},{"id":"zzz","publisher":"X","year":2000,"certain":true}]';
+    const answers = parseFactAnswers(text, questions);
+    expect(answers.get("a")).toEqual({ publisher: "Marvel Comics", year: 2009 });
+    expect(answers.has("b")).toBe(false);
+    // Only the year was asked for.
+    expect(answers.get("c")).toEqual({ year: 1963 });
+    expect(answers.has("zzz")).toBe(false);
+  });
+  it("drops impossible years, placeholder publishers and broken output", async () => {
+    const { parseFactAnswers } = await import("@/lib/imports/enrich");
+    expect(parseFactAnswers('[{"id":"a","publisher":"Unknown","year":1066,"certain":true}]', questions).size).toBe(0);
+    expect(parseFactAnswers("I am not sure.", questions).size).toBe(0);
+    expect(parseFactAnswers('[{"id":"a","publisher":', questions).size).toBe(0);
   });
 });

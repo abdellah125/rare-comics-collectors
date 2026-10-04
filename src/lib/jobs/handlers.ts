@@ -158,8 +158,16 @@ export function registerJobHandlers() {
   registerJobHandler("import_fix", async (payload) => {
     const { reprocessErrors } = await import("@/lib/imports/pipeline");
     const { IMPORT_SOURCE } = await import("@/lib/imports/status");
+    // Second phase: details still Unknown are looked up from reference knowledge, a small batch at a time.
+    if (payload.phase === "knowledge") {
+      const { enrichUnknown } = await import("@/lib/imports/pipeline");
+      const done = await enrichUnknown(IMPORT_SOURCE, 25);
+      if (done.asked > 0 && done.remaining > 0) await enqueueJob("import_fix", { phase: "knowledge" }, { runAt: new Date(Date.now() + 3_000), maxAttempts: 3 });
+      return;
+    }
     const result = await reprocessErrors(IMPORT_SOURCE, { cursor: typeof payload.cursor === "string" ? payload.cursor : null, limit: 300 });
     if (result.nextCursor) await enqueueJob("import_fix", { cursor: result.nextCursor }, { runAt: new Date(Date.now() + 2_000), maxAttempts: 3 });
+    else await enqueueJob("import_fix", { phase: "knowledge" }, { runAt: new Date(Date.now() + 2_000), maxAttempts: 3 });
   });
 
   // SEO recommendations for queue items the seed created without one.

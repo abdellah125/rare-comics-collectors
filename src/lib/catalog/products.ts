@@ -56,6 +56,8 @@ export type ProductDetail = ProductSummary & {
   /** Edited page title / meta description, when an admin set one. */
   seoTitle: string | null;
   seoDescription: string | null;
+  /** came in through a catalogue import (its condition wording is the listing's, not an in-house grade) */
+  imported: boolean;
   status: string;
   seller: { id: string; slug: string; displayName: string; ratingAvg: number; ratingCount: number; handlingDays: number; shipsFromCountry: string | null; salesCount: number } | null;
   weightGrams: number | null;
@@ -86,6 +88,7 @@ function toDetail(p: Prisma.ProductGetPayload<{ include: typeof detailInclude }>
     categoryName: p.category?.name ?? null,
     seoTitle: p.seoTitle,
     seoDescription: p.seoDescription,
+    imported: p.importSource !== null,
     status: p.status,
     seller: p.seller && p.seller.status === "approved" ? p.seller : null,
     weightGrams: p.weightGrams,
@@ -156,7 +159,7 @@ export const storeFacets = cache(async () => {
   const rows = await db.product.findMany({ where: publishedWhere, select: { era: true, publisher: true, grader: true } });
   const order = ["Golden Age", "Silver Age", "Bronze Age", "Copper Age", "Modern Age"];
   const eras = order.filter((e) => rows.some((r) => r.era === e)) as ProductSummary["era"][];
-  const publishers = [...new Set(rows.map((r) => r.publisher))].sort();
+  const publishers = [...new Set(rows.map((r) => r.publisher))].filter((p) => p !== "Unknown").sort();
   const graders = ["CGC", "CBCS", "Raw"].filter((g) => rows.some((r) => r.grader === g)) as ProductSummary["grader"][];
   const lowestPrice = await db.product.aggregate({ _min: { price: true }, where: publishedWhere });
   return { eras, publishers, graders, count: rows.length, lowestPrice: lowestPrice._min.price ?? 0 };

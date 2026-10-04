@@ -12,6 +12,7 @@ import { formatDateTime } from "@/lib/i18n";
 import { marginOf } from "@/lib/imports/pricing";
 import { DUPLICATE_LABEL, IMPORT_SOURCE, ITEM_STATUSES, SEO_LABEL, itemStatusLabel, itemStatusTone } from "@/lib/imports/status";
 import { formatMoney } from "@/lib/money";
+import { gradeLabel } from "@/lib/catalog/labels";
 
 export const metadata: Metadata = { title: "Import review queue" };
 export const dynamic = "force-dynamic";
@@ -173,9 +174,10 @@ export default async function AdminImportQueuePage({ searchParams }: PageProps<"
                         {name}
                       </Link>
                       <span className="block text-[12px] text-ink-600">
-                        {[r.grader && `${r.grader} ${r.grade}`, r.publisher, r.year].filter(Boolean).join(" · ") || "facts incomplete"}
+                        {[r.grader && gradeLabel(r.grader, r.grade), r.publisher && r.publisher !== "Unknown" ? r.publisher : "publisher unknown", r.year ?? "year unknown"].filter(Boolean).join(" · ")}
                       </span>
                       {r.title && <span className="block truncate text-[11px] text-ink-400" title={r.sourceTitle}>{r.sourceTitle}</span>}
+                      {/"(year|publisher)"/.test(r.knowledgeJson) && <span className="mt-0.5 inline-block rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-800">AI-filled: verify</span>}
                     </Td>
                     <Td align="right" className="whitespace-nowrap">
                       <span className="font-semibold tabular-nums text-ink-950">{r.retailPrice !== null ? formatMoney(r.retailPrice) : "—"}</span>

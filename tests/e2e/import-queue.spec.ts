@@ -20,7 +20,7 @@ const csv = (price: string, availability = "available") =>
     "id,url,title,price,image,seller,series,publisher,year,availability",
     `${ID.good},https://www.hipcomic.com/listing/import-check/${ID.good},${SERIES} 12 CGC 9.4,${price},${PHOTO},seller-a,${SERIES},Marvel Comics,1975,${availability}`,
     `${ID.twin},https://www.hipcomic.com/listing/import-check/${ID.twin},${SERIES} 12 CGC 9.4,${price},${PHOTO},seller-a,${SERIES},Marvel Comics,1975,available`,
-    `${ID.bad},https://www.hipcomic.com/listing/import-check/${ID.bad},${SERIES} lot of old comics,$40.00,${PHOTO},seller-b,,,,available`,
+    `${ID.bad},https://www.hipcomic.com/listing/import-check/${ID.bad},${SERIES} lot of old comics,,${PHOTO},seller-b,,,,available`,
   ].join("\n");
 
 async function upload(page: Page, name: string, body: string) {
@@ -47,7 +47,7 @@ test.describe("HipComic import review queue", () => {
     for (const label of ["Products discovered", "Pending review", "Approved", "Waiting for release", "Released", "Duplicates", "Errors"]) await expect(page.locator("main")).toContainText(new RegExp(label, "i"));
     await expect(page.locator("main")).toContainText(/Last synchronisation/i);
 
-    // 1. Import: one good product, its twin (same seller, title and photo) and one without the facts.
+    // 1. Import: one good product, its twin (same seller, title and photo) and one without a price (a price is required, so it cannot be queued).
     await upload(page, `e2e-${stamp}.csv`, csv("$100.00"));
     await expect(page.locator('[role="status"]').first()).toContainText(/3 rows: 3 new/);
     await expect(page.locator('[role="status"]').first()).toContainText(/nothing was published/i);
