@@ -424,6 +424,41 @@ model ImportRun {
   @@index([source, startedAt])
 }
 
+/// A page-by-page import of the source's catalogue pages, with its progress.
+model ImportCrawl {
+  id           String    @id @default(cuid())
+  source       String
+  startPage    Int
+  endPage      Int
+  /// the page to fetch next
+  nextPage     Int
+  /// running | paused | blocked | completed
+  status       String    @default("running")
+  pagesDone    Int       @default(0)
+  found        Int       @default(0)
+  imported     Int       @default(0)
+  updated      Int       @default(0)
+  duplicates   Int       @default(0)
+  errors       Int       @default(0)
+  /// consecutive failed attempts on the current page
+  attempts     Int       @default(0)
+  /// JSON array of page numbers given up on after the retries
+  failedPagesJson String @default("[]")
+  /// seconds to wait between two page requests (never below the site's Crawl-delay)
+  delaySeconds Int       @default(6)
+  message      String?
+  /// JSON array of { at, level, text }
+  logJson      String    @default("[]")
+  notBefore    DateTime  @default(now())
+  lockedUntil  DateTime?
+  startedById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  finishedAt   DateTime?
+
+  @@index([source, status])
+}
+
 model ImportItem {
   id                    String     @id @default(cuid())
   source                String
@@ -439,9 +474,9 @@ model ImportItem {
   /// the source's price in the base currency (minor units). Private: never shown to customers.
   sourcePrice           Int?
   priceNote             String?
-  /// 2500 = 25 % over the source price
-  markupBps             Int        @default(2500)
-  /// our selling price: sourcePrice × (1 + markup), unless an admin set it by hand
+  /// Price adjustment against the source price in basis points, signed: -2500 = 25 % BELOW the source price
+  markupBps             Int        @default(-2500)
+  /// our selling price: sourcePrice × (1 + adjustment), unless an admin set it by hand
   retailPrice           Int?
   priceManual           Boolean    @default(false)
   /// set when the source price moved while a manual price was kept

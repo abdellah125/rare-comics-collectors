@@ -115,8 +115,8 @@ export const settingDefaults = {
   "catalog.releasePaused": false,
   /** Legacy scheduled publishing of queued imports. Off: imported products go live only when an admin releases them. */
   "catalog.autoRelease": false,
-  /** Imported products: selling price = source price × (1 + markup). 2500 = 25 %. */
-  "imports.markupBps": 2500,
+  /** Imported products: selling price = source price × (1 − discount). 2500 = 25 % below the source price. */
+  "imports.discountBps": 2500,
   /** When the source price changes, also replace a selling price an admin set by hand. */
   "imports.autoPriceSync": false,
   /** The authorised data feed (https address given by the source). Empty = sync by file upload only. */

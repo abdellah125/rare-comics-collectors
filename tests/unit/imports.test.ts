@@ -1,30 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { marginOf, reprice, retailPrice } from "@/lib/imports/pricing";
+import { adjustmentForDiscount, describeAdjustment, marginOf, reprice, retailPrice } from "@/lib/imports/pricing";
+import { listingToRow, PageFormatError, readPageState } from "@/lib/imports/catalog-page";
+import { robotsAllows, robotsRules } from "@/lib/imports/robots";
 import { candidateKeywords, defaultSeoDescription, defaultSeoTitle, seoChecks, type SeoFacts } from "@/lib/imports/seo-rules";
 import { availabilityOf, readSource, SourceFormatError } from "@/lib/imports/source";
 import { dedupeKey, itemStatusLabel, releaseProblems } from "@/lib/imports/status";
 
 describe("import pricing", () => {
-  it("adds 25% to the source price", () => {
-    expect(retailPrice(10_000)).toBe(12_500);
-    expect(retailPrice(20_000)).toBe(25_000);
-    expect(retailPrice(1_999)).toBe(2_499);
-    expect(retailPrice(10_000, 1000)).toBe(11_000);
-    expect(marginOf(10_000, 12_500)).toEqual({ amount: 2_500, bps: 2500 });
+  it("takes 25% off the source price and never raises it", () => {
+    expect(retailPrice(10_000)).toBe(7_500);
+    expect(retailPrice(20_000)).toBe(15_000);
+    expect(retailPrice(50_000)).toBe(37_500);
+    expect(retailPrice(1_999)).toBe(1_499);
+    expect(retailPrice(10_000, adjustmentForDiscount(1000))).toBe(9_000);
+    expect(adjustmentForDiscount(2500)).toBe(-2500);
+    expect(describeAdjustment(-2500)).toBe("25% discount");
+    for (const source of [100, 999, 12_345, 1_595_099]) expect(retailPrice(source)).toBeLessThan(source);
+    expect(marginOf(10_000, 7_500)).toEqual({ amount: -2_500, bps: -2500 });
     expect(marginOf(null, 12_500)).toBeNull();
   });
 
   it("follows a source price change when the price was never edited", () => {
-    expect(reprice({ newSource: 12_000, markupBps: 2500, currentRetail: 12_500, manual: false, autoSync: false })).toEqual({ retail: 15_000, manual: false, changed: true, note: null });
+    expect(reprice({ newSource: 12_000, markupBps: -2500, currentRetail: 7_500, manual: false, autoSync: false })).toEqual({ retail: 9_000, manual: false, changed: true, note: null });
   });
 
   it("keeps a hand-set price and says so, unless automatic price sync is on", () => {
-    const kept = reprice({ newSource: 12_000, markupBps: 2500, currentRetail: 13_900, manual: true, autoSync: false });
+    const kept = reprice({ newSource: 12_000, markupBps: -2500, currentRetail: 13_900, manual: true, autoSync: false });
     expect(kept.retail).toBe(13_900);
     expect(kept.manual).toBe(true);
     expect(kept.changed).toBe(false);
-    expect(kept.note).toMatch(/150\.00.*139\.00 was kept/);
-    expect(reprice({ newSource: 12_000, markupBps: 2500, currentRetail: 13_900, manual: true, autoSync: true })).toEqual({ retail: 15_000, manual: false, changed: true, note: null });
+    expect(kept.note).toMatch(/90\.00.*139\.00 was kept/);
+    expect(reprice({ newSource: 12_000, markupBps: -2500, currentRetail: 13_900, manual: true, autoSync: true })).toEqual({ retail: 9_000, manual: false, changed: true, note: null });
   });
 });
 
@@ -108,5 +114,59 @@ describe("reading source data", () => {
     expect(availabilityOf(0)).toBe(false);
     expect(availabilityOf("")).toBeNull();
     expect(availabilityOf("maybe")).toBeNull();
+  });
+});
+
+describe("robots.txt", () => {
+  const text = [
+    "User-agent: Googlebot", "Crawl-delay: 5", "Disallow: /search/", "",
+    "User-agent: *", "Crawl-delay: 5", "Disallow: /*?sort*", "Disallow: /*?limit*", "Disallow: /search/", "Disallow: /search*,*", "Disallow: /cart/", "Allow: /cart/help",
+  ].join("\n");
+  const rules = robotsRules(text, "RareComicsCollectors-Import/1.0 (+https://example.com)");
+  it("uses the generic group and its crawl delay for a client without its own group", () => {
+    expect(rules.crawlDelay).toBe(5);
+    expect(rules.disallow).toContain("/search/");
+  });
+  it("allows clean catalogue pages and refuses what is disallowed", () => {
+    expect(robotsAllows(rules, "/search?page=1")).toBe(true);
+    expect(robotsAllows(rules, "/search?page=208")).toBe(true);
+    expect(robotsAllows(rules, "/search/comics?page=2")).toBe(false);
+    expect(robotsAllows(rules, "/search?sort=price")).toBe(false);
+    expect(robotsAllows(rules, "/search?details_grade=a,b")).toBe(false);
+    expect(robotsAllows(rules, "/cart/")).toBe(false);
+    expect(robotsAllows(rules, "/cart/help")).toBe(true);
+  });
+  it("honours a group written for this client", () => {
+    const own = robotsRules("User-agent: *\nDisallow:\n\nUser-agent: RareComicsCollectors-Import\nDisallow: /", "RareComicsCollectors-Import/1.0");
+    expect(robotsAllows(own, "/search?page=1")).toBe(false);
+  });
+});
+
+describe("catalogue page", () => {
+  const page = (body: string) => "<html><script>window.__NUXT__=(function(a,b){return {data:[{searchListings:" + body + ",searchListingsCount:2,paginationExceeded:b}]}}(\"USD\",false));</script></html>";
+  const listing = '{id:77,name:"GHOST RIDER 1 CGC 9.2 MARVEL 1973",listing_type:"product",username:"SELLER",currency:a,quantity:1,current_price:2500,active:true,closed:b,deleted:b,images:["https://img.hipcomic.com/p/abc.jpg"],url:"https://www.hipcomic.com/listing/ghost-rider-1/77?sponsored=1",search:{open:true,sold:b,price_usd:2500,catalog_condition:{grade:"9.2",grader:"CGC",slabbed:true}},details:{series_name:"Ghost Rider (1973)",issue_number:"1",publisher:"Marvel"}}';
+  const canon = (n: string) => (n === "Marvel" ? "Marvel Comics" : n);
+  it("reads the listings out of the page data", () => {
+    const state = readPageState(page("[" + listing + "]"));
+    expect(state.listings).toHaveLength(1);
+    expect(state.total).toBe(2);
+    const row = listingToRow(state.listings[0], "page 1", 1, canon);
+    expect(row).toMatchObject({ sourceId: "77", url: "https://www.hipcomic.com/listing/ghost-rider-1/77", price: 250_000, currency: "USD", seller: "SELLER", auction: false, available: true, fillOnly: true, problems: [] });
+    // The series' start year is not taken as the publication year.
+    expect(row.extra).toMatchObject({ series: "Ghost Rider", issue: "1", publisher: "Marvel Comics", grade: "9.2", grader: "CGC", year: "" });
+  });
+  it("flags auctions, raw books and sold listings instead of guessing", () => {
+    const state = readPageState(page('[{id:1,name:"X 4",listing_type:"auction",currency:a,current_price:0.99,images:[],search:{open:true,sold:true,catalog_condition:{slabbed:b}}}]'));
+    const row = listingToRow(state.listings[0], "page 1", 1, canon);
+    expect(row.auction).toBe(true);
+    expect(row.available).toBe(false);
+    expect(row.note).toMatch(/raw book/);
+    expect(row.problems).toEqual(["no image"]);
+    expect(row.extra.grader).toBe("");
+  });
+  it("refuses a page without listing data, and page data cannot run code of its own making", () => {
+    expect(() => readPageState("<html>Just a moment...</html>")).toThrow(PageFormatError);
+    expect(() => readPageState('<script>window.__NUXT__=(function(){return {data:[{searchListings:[this.constructor.constructor("return process")()]}]}}());</script>')).toThrow(PageFormatError);
+    expect(() => readPageState("<script>window.__NUXT__=process.exit(1);</script>")).toThrow(PageFormatError);
   });
 });

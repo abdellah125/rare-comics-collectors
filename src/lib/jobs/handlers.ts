@@ -146,6 +146,14 @@ export function registerJobHandlers() {
     if (left > 0 && result.ready + result.errors + result.waiting > 0) await enqueueJob("import_prepare", {}, { runAt: new Date(Date.now() + (result.ready + result.errors > 0 ? 2_000 : 5 * 60_000)), maxAttempts: 3 });
   });
 
+  // The page-by-page catalogue import: one page per run, then the wait the source asks for.
+  registerJobHandler("import_crawl", async () => {
+    const { advanceCrawl } = await import("@/lib/imports/crawl");
+    const { IMPORT_SOURCE } = await import("@/lib/imports/status");
+    const crawl = await advanceCrawl(IMPORT_SOURCE);
+    if (crawl && crawl.status === "running") await enqueueJob("import_crawl", {}, { runAt: new Date(Math.max(Date.now() + 2_000, crawl.notBefore.getTime())), dedupe: true, maxAttempts: 3 });
+  });
+
   // SEO recommendations for queue items the seed created without one.
   registerJobHandler("import_seo", async () => {
     const { analyseSeoPending } = await import("@/lib/imports/pipeline");

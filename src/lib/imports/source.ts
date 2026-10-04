@@ -26,6 +26,10 @@ export type SourceRow = {
   extra: { publisher: string; year: string; series: string; issue: string; grade: string; grader: string; cert: string; description: string; variant: string };
   /** true / false when the data says so; null when it does not say */
   available: boolean | null;
+  /** structured details only fill what the title does not state (catalogue pages, where sellers' details can be wrong) */
+  fillOnly?: boolean;
+  /** a reason this row needs a person before it can be released */
+  note?: string;
 };
 
 const ALIASES: Record<string, string[]> = {

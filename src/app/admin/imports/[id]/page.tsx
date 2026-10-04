@@ -8,7 +8,7 @@ import { can, requireAdmin } from "@/lib/auth/session";
 import { bulkImportAction, saveImportItemAction } from "@/lib/admin/actions/imports";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/i18n";
-import { marginOf, retailPrice } from "@/lib/imports/pricing";
+import { describeAdjustment, marginOf, retailPrice } from "@/lib/imports/pricing";
 import { h1Of } from "@/lib/imports/seo-rules";
 import { DUPLICATE_LABEL, SEO_LABEL, itemStatusLabel, itemStatusTone } from "@/lib/imports/status";
 import { formatMoney } from "@/lib/money";
@@ -137,7 +137,7 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
 
                     <h3 className="mt-2 border-t border-ink-100 pt-4 text-sm font-semibold text-ink-950">Price</h3>
                     <div className="grid gap-4 sm:grid-cols-3">
-                      <Field label="Selling price (US$)" hint={(item.priceManual ? "Set by hand: the sync keeps it unless automatic price synchronisation is on." : "Follows source price × markup until you change it.")}>
+                      <Field label="Selling price (US$)" hint={(item.priceManual ? "Set by hand: the sync keeps it unless automatic price synchronisation is on." : "Follows the source price less the discount until you change it.")}>
                         <input name="price" inputMode="decimal" defaultValue={item.retailPrice !== null ? (item.retailPrice / 100).toFixed(2) : ""} required className={adminInput} />
                       </Field>
                       <div className="text-[13px] text-ink-700 sm:col-span-2">
@@ -243,9 +243,9 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
               items={[
                 { label: "Source price", value: item.sourcePrice !== null ? formatMoney(item.sourcePrice) : "—" },
                 ...(item.priceNote ? [{ label: "Note", value: item.priceNote }] : []),
-                { label: "Markup", value: `${item.markupBps / 100}%` },
+                { label: "Price rule", value: describeAdjustment(item.markupBps) },
                 { label: "Selling price", value: item.retailPrice !== null ? `${formatMoney(item.retailPrice)}${item.priceManual ? " (set by hand)" : ""}` : "—" },
-                { label: "Margin", value: margin ? `${formatMoney(margin.amount)} (${(margin.bps / 100).toFixed(1)}%)` : "—" },
+                { label: "Against the source price", value: margin ? `${margin.amount < 0 ? "−" : "+"}${formatMoney(Math.abs(margin.amount))} (${(margin.bps / 100).toFixed(1)}%)` : "—" },
               ]}
             />
           </Card>

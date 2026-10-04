@@ -1,19 +1,33 @@
 /**
  * Pricing of imported products. Pure.
  *
- *   retail price = source price × (1 + markup)        (25 % by default: $100 → $125)
+ *   selling price = source price × (1 − discount)        (25 % by default: $100 → $75)
  *
- * The source price and the markup are private to the admin and the database; the storefront only
- * ever reads the product's own price.
+ * The rule is stored per item as a signed adjustment in basis points (−2500 = 25 % below the
+ * source price), so an item keeps the rule it was imported with. The source price and the
+ * discount are private to the admin and the database; the storefront only ever reads the
+ * product's own price.
  */
-export const DEFAULT_MARKUP_BPS = 2500;
+export const DEFAULT_DISCOUNT_BPS = 2500;
+/** Signed adjustment for the default rule: −2500. */
+export const DEFAULT_ADJUSTMENT_BPS = -DEFAULT_DISCOUNT_BPS;
+
+/** Signed adjustment for a discount percentage held in basis points (2500 → −2500). */
+export const adjustmentForDiscount = (discountBps: number): number => -Math.max(0, Math.min(9_900, Math.round(discountBps)));
 
 /** Selling price in minor units for a source price in minor units. */
-export function retailPrice(sourceMinor: number, markupBps: number = DEFAULT_MARKUP_BPS): number {
-  return Math.round((sourceMinor * (10_000 + markupBps)) / 10_000);
+export function retailPrice(sourceMinor: number, adjustmentBps: number = DEFAULT_ADJUSTMENT_BPS): number {
+  return Math.round((sourceMinor * (10_000 + adjustmentBps)) / 10_000);
 }
 
-/** Margin over the source price, as an amount and in basis points of the source price. */
+/** "25% discount" / "10% markup" for a signed adjustment. */
+export function describeAdjustment(adjustmentBps: number): string {
+  const pct = Math.abs(adjustmentBps) / 100;
+  const text = Number.isInteger(pct) ? String(pct) : pct.toFixed(2);
+  return adjustmentBps < 0 ? `${text}% discount` : adjustmentBps > 0 ? `${text}% markup` : "no adjustment";
+}
+
+/** Difference to the source price, as an amount and in basis points of the source price (negative = below it). */
 export function marginOf(sourceMinor: number | null, retailMinor: number | null): { amount: number; bps: number } | null {
   if (!sourceMinor || retailMinor === null) return null;
   return { amount: retailMinor - sourceMinor, bps: Math.round(((retailMinor - sourceMinor) * 10_000) / sourceMinor) };

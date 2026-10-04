@@ -180,7 +180,7 @@ export default async function AdminImportQueuePage({ searchParams }: PageProps<"
                       <span className="font-semibold tabular-nums text-ink-950">{r.retailPrice !== null ? formatMoney(r.retailPrice) : "—"}</span>
                       <span className="block text-[11px] text-ink-500">
                         source {r.sourcePrice !== null ? formatMoney(r.sourcePrice) : "—"}
-                        {margin ? ` · +${(margin.bps / 100).toFixed(margin.bps % 100 === 0 ? 0 : 1)}%` : ""}
+                        {margin ? ` · ${margin.bps < 0 ? "−" : "+"}${(Math.abs(margin.bps) / 100).toFixed(margin.bps % 100 === 0 ? 0 : 1)}%` : ""}
                       </span>
                       {r.priceManual && <span className="block text-[11px] text-amber-700">set by hand</span>}
                       {r.priceChangeNote && <span className="block text-[11px] text-rose-700">source price changed</span>}

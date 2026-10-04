@@ -18,7 +18,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { products } from "../src/lib/products";
 import { DEFAULT_ROLES } from "../src/lib/permissions";
-import { DEFAULT_MARKUP_BPS, retailPrice } from "../src/lib/imports/pricing";
+import { DEFAULT_ADJUSTMENT_BPS, retailPrice } from "../src/lib/imports/pricing";
 import { dedupeKey } from "../src/lib/imports/status";
 import coverMap from "../src/lib/gocovers-map.json";
 
@@ -583,7 +583,7 @@ async function seedCatalogQueue() {
  *  - listing still a scheduled draft → item "pending_review", linked to the draft
  *  - listing not created yet         → item "pending_review" (the product is made on release)
  *
- * Pricing: the price in the file is the source price. The selling price becomes source × 1.25,
+ * Pricing: the price in the file is the source price. The selling price becomes source × 0.75,
  * on the item and on the linked product, unless the product's price was already changed by hand
  * (then that price is kept and marked manual).
  */
@@ -607,7 +607,7 @@ async function seedImportItems() {
     const items = fresh.map((l) => {
       const product = products.get(`IMP-${l.sourceId}`);
       const source = l.price;
-      const formula = retailPrice(source, DEFAULT_MARKUP_BPS);
+      const formula = retailPrice(source, DEFAULT_ADJUSTMENT_BPS);
       const priceManual = Boolean(product && product.price !== source && product.price !== formula);
       if (product && !priceManual && product.price !== formula) reprice.push({ id: product.id, price: formula });
       if (priceManual) manual += 1;
@@ -616,7 +616,7 @@ async function seedImportItems() {
       return {
         source: data.source, sourceId: String(l.sourceId), sourceUrl: l.sourceUrl ?? null, sourceSeller: l.sourceSeller ?? null, sourceTitle: l.sourceTitle ?? `${l.title} ${l.issue}`, sourceImage: l.sourceImage ?? null,
         sourceCurrency: l.sourceCurrency ?? "USD", sourceAmount: l.sourcePrice ?? source, sourcePrice: source, priceNote: l.priceNote ?? null,
-        markupBps: DEFAULT_MARKUP_BPS, retailPrice: priceManual ? product!.price : formula, priceManual,
+        markupBps: DEFAULT_ADJUSTMENT_BPS, retailPrice: priceManual ? product!.price : formula, priceManual,
         title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, era: l.era, grader: l.grader, grade: l.grade, label: l.label, certNumber: l.certNumber, keyIssue: l.keyIssue,
         summary: l.summary, description: l.description, highlightsJson: JSON.stringify(l.highlights), attributesJson: JSON.stringify(l.attributes), tagsJson: JSON.stringify(l.tags),
         slug: l.slug, imageUrl: l.image, dedupeKey: dedupeKey(l),
@@ -628,14 +628,26 @@ async function seedImportItems() {
     // One statement per thousand rows (a row-by-row update of thousands of listings takes minutes on a hosted database).
     // Every listing in `reprice` still carries the source price, so the same rounding as retailPrice() applies in SQL.
     for (let i = 0; i < reprice.length; i += 1000) {
-      await db.$executeRaw`UPDATE "Product" SET "price" = ROUND("price"::numeric * ${10_000 + DEFAULT_MARKUP_BPS} / 10000)::int, "updatedAt" = NOW() WHERE "id" IN (${Prisma.join(reprice.slice(i, i + 1000).map((r) => r.id))})`;
+      await db.$executeRaw`UPDATE "Product" SET "price" = ROUND("price"::numeric * ${10_000 + DEFAULT_ADJUSTMENT_BPS} / 10000)::int, "updatedAt" = NOW() WHERE "id" IN (${Prisma.join(reprice.slice(i, i + 1000).map((r) => r.id))})`;
     }
-    const message = `${items.length} listings moved to the review queue: ${released} already released, ${items.length - released} waiting for review. Selling price set to source × 1.25 on ${reprice.length} listing(s); ${manual} hand-set price(s) kept.`;
+    const message = `${items.length} listings moved to the review queue: ${released} already released, ${items.length - released} waiting for review. Selling price set to source × 0.75 on ${reprice.length} listing(s); ${manual} hand-set price(s) kept.`;
     await db.importRun.update({ where: { id: run.id }, data: { status: "completed", created: items.length, priceChanges: reprice.length, message, finishedAt: new Date() } });
     // SEO recommendations are worked out by the application once it is serving.
     await db.job.create({ data: { type: "import_seo", payloadJson: "{}", maxAttempts: 3 } });
     log(`review queue ${data.source}: ${message}`);
   }
+}
+
+/**
+ * The owner asked for catalogue pages 1–208 of the source to be imported into the review queue.
+ * This starts that import exactly once (never again if any page import exists); the application
+ * then works through the pages and shows the progress under HipComic import.
+ */
+async function seedCatalogueCrawl() {
+  if ((await db.importCrawl.count({ where: { source: "hipcomic" } })) > 0) return;
+  await db.importCrawl.create({ data: { source: "hipcomic", startPage: 1, endPage: 208, nextPage: 1, message: "Pages 1–208 queued.", logJson: JSON.stringify([{ at: new Date().toISOString(), level: "info", text: "Import of pages 1–208 started" }]) } });
+  await db.job.create({ data: { type: "import_crawl", payloadJson: "{}", maxAttempts: 3 } });
+  log("catalogue import: pages 1–208 queued");
 }
 
 /**
@@ -809,6 +821,7 @@ async function main() {
   await seedImportedCatalog();
   await seedCatalogQueue();
   await seedImportItems();
+  await seedCatalogueCrawl();
   await seedSeoKeywords();
   await seedGuides();
   await seedDemo();

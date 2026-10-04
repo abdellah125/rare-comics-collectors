@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { enqueueJob } from "@/lib/jobs/queue";
 import { saveUpload } from "@/lib/media";
 import { getSettings } from "@/lib/settings";
-import { reprice, retailPrice } from "@/lib/imports/pricing";
+import { adjustmentForDiscount, reprice, retailPrice } from "@/lib/imports/pricing";
 import { loadSeoContext, recommendSeo } from "@/lib/imports/seo";
 import { defaultSeoTitle, type SeoFacts } from "@/lib/imports/seo-rules";
 import { readSource, SourceFormatError, type SourceRow } from "@/lib/imports/source";
@@ -43,40 +43,42 @@ function classify(row: SourceRow): { p: Parsed; reasons: string[] } {
     holds = holds.filter((h) => !h.startsWith(prefix));
   };
   const x = row.extra;
-  if (x.series) {
+  const fillOnly = row.fillOnly === true;
+  if (x.series && !(fillOnly && p.series)) {
     p.series = tidyCase(x.series) as string;
     drop("series title could not be read");
   }
-  if (x.issue) {
+  if (x.issue && !(fillOnly && p.issue)) {
     const n = x.issue.replace(/^#/, "").trim();
     if (/^[\w./-]{1,12}$/.test(n)) {
       p.issue = /^nn$/i.test(n) ? "nn" : `#${n}`;
       drop("no issue number");
     }
   }
-  if (x.publisher) {
+  if (x.publisher && !(fillOnly && p.publisher)) {
     p.publisher = x.publisher;
     drop("publisher not stated");
     drop("more than one publisher");
   }
-  if (/^(19[3-9]\d|20[0-3]\d)$/.test(x.year)) {
+  if (/^(19[3-9]\d|20[0-3]\d)$/.test(x.year) && !(fillOnly && p.year !== null)) {
     p.year = Number(x.year);
     p.era = eraForYear(p.year) as string | null;
     drop("no publication year");
     drop("more than one year");
     if (p.era) drop("published before 1938");
   }
-  if (/^(CGC|CBCS|PGX)$/i.test(x.grader)) {
+  if (/^(CGC|CBCS|PGX)$/i.test(x.grader) && !(fillOnly && p.grader)) {
     p.grader = x.grader.toUpperCase();
     drop("no grading company");
   }
   const grade = x.grade === "10" ? "10.0" : x.grade;
-  if (grade && (CGC_GRADES as Record<string, string>)[grade]) {
+  if (grade && (CGC_GRADES as Record<string, string>)[grade] && !(fillOnly && p.grade)) {
     p.grade = grade;
     drop("no numeric grade");
     drop("more than one grade");
   }
   if (/^\d{7,12}(?:-\d{1,3})?$/.test(x.cert)) p.certNumber = x.cert;
+  if (row.note) holds.unshift(row.note);
   const reasons = [...row.problems];
   if (row.auction) reasons.push("auction listing (current bid, not a fixed price)");
   if (ADULT.test(row.title)) reasons.push("adult-variant wording (needs a manual look before Merchant Center)");
@@ -88,7 +90,7 @@ type ExistingItem = Pick<ImportItem, "id" | "sourceId" | "status" | "certNumber"
   product: { id: string; price: number; status: string; stock: number; slug: string } | null;
 };
 
-export type ImportInput = { source: string; kind: "csv_upload" | "feed"; fileName: string; text: string; snapshot?: boolean; startedById?: string | null };
+export type ImportInput = { source: string; kind: "csv_upload" | "feed" | "crawl"; fileName: string; text?: string; rows?: SourceRow[]; snapshot?: boolean; startedById?: string | null };
 
 export async function runImport(input: ImportInput): Promise<ImportRun> {
   const run = await db.importRun.create({ data: { source: input.source, kind: input.kind, fileName: input.fileName.slice(0, 200), startedById: input.startedById ?? null } });
@@ -98,10 +100,11 @@ export async function runImport(input: ImportInput): Promise<ImportRun> {
   };
   const counts = { rows: 0, created: 0, updated: 0, unchanged: 0, duplicates: 0, errors: 0, priceChanges: 0, unavailable: 0 };
   try {
-    const rows = readSource(input.text, input.fileName);
+    const rows = input.rows ?? readSource(input.text ?? "", input.fileName);
     counts.rows = rows.length;
     const settings = await getSettings();
-    const markupBps = settings["imports.markupBps"];
+    // Stored per item as a signed adjustment: a 25 % discount is −2500.
+    const markupBps = adjustmentForDiscount(settings["imports.discountBps"]);
     const autoSync = settings["imports.autoPriceSync"];
     const cadRate = cadRateOf(rows) as number | null;
 
@@ -620,7 +623,7 @@ export async function importStats(source: string) {
   const [byStatus, lastRun, lastSync, possible, priceNotes] = await Promise.all([
     db.importItem.groupBy({ by: ["status"], where: { source }, _count: { _all: true } }),
     db.importRun.findFirst({ where: { source }, orderBy: { startedAt: "desc" } }),
-    db.importRun.findFirst({ where: { source, status: "completed", kind: { in: ["csv_upload", "feed"] } }, orderBy: { finishedAt: "desc" }, select: { finishedAt: true, kind: true } }),
+    db.importRun.findFirst({ where: { source, status: "completed", kind: { in: ["csv_upload", "feed", "crawl"] } }, orderBy: { finishedAt: "desc" }, select: { finishedAt: true, kind: true } }),
     db.importItem.count({ where: { source, duplicateStatus: "possible", status: { in: ["pending_review", "approved", "ready"] } } }),
     db.importItem.count({ where: { source, priceChangeNote: { not: null } } }),
   ]);

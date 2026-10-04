@@ -40,7 +40,7 @@ async function confirm(page: Page, row: ReturnType<Page["locator"]>, button: str
 test.describe("HipComic import review queue", () => {
   test.setTimeout(240_000);
 
-  test("imports wait for review, release publishes at source × 1.25, and a sync updates price and availability", async ({ page }) => {
+  test("imports wait for review, release publishes at source × 0.75, and a sync updates price and availability", async ({ page }) => {
     await loginAdmin(page, E2E.superAdmin);
     await page.goto("/admin/imports");
     await expectHealthy(page);
@@ -58,7 +58,7 @@ test.describe("HipComic import review queue", () => {
     const twin = table.locator("tr", { hasText: `#${ID.twin}` });
     const bad = table.locator("tr", { hasText: `#${ID.bad}` });
     await expect(good).toContainText(/pending review/i);
-    await expect(good).toContainText("$125.00");
+    await expect(good).toContainText("$75.00");
     await expect(good).toContainText(/source \$100\.00/);
     await expect(good).toContainText(/unique/i);
     await expect(twin).toContainText(/duplicate/i);
@@ -93,7 +93,7 @@ test.describe("HipComic import review queue", () => {
     const res = await page.request.get(`/store/${SLUG}`);
     expect(res.status()).toBe(200);
     const html = await res.text();
-    expect(html).toContain("$125");
+    expect(html).toContain("$75");
     expect(html).not.toMatch(/\$100(\.00)?\b/);
     expect(html.toLowerCase()).not.toContain("hipcomic");
     expect(html).toContain(`${SERIES} #12 CGC 9.4 (1975) — Bronze Age Comic for Sale`);
@@ -104,8 +104,8 @@ test.describe("HipComic import review queue", () => {
     await expect(page.locator('[role="status"]').first()).toContainText(/0 new/);
     await expect(page.locator('[role="status"]').first()).toContainText(/price changes/);
     const html2 = await (await page.request.get(`/store/${SLUG}`)).text();
-    expect(html2).toContain("$150");
-    expect(html2).not.toContain("$125");
+    expect(html2).toContain("$90");
+    expect(html2).not.toContain("$75");
 
     // 6. Sync: sold at the source → our listing stops selling.
     await upload(page, `e2e-${stamp}-c.csv`, csv("$120.00", "sold"));

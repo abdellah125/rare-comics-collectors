@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm } from "@/components/admin/action-form";
 import { ConfirmButton } from "@/components/admin/confirm-button";
+import { ImportCrawlPanel } from "@/components/admin/import-crawl-panel";
 import { ImportUploadForm } from "@/components/admin/import-upload-form";
 import { AdminPageHeader, Card, EmptyState, Field, Table, Td, Th, Tone, adminButton, adminInput } from "@/components/admin/ui";
 import { can, requireAdmin } from "@/lib/auth/session";
 import { releaseAllReadyAction, saveImportSettingsAction, syncNowAction } from "@/lib/admin/actions/imports";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/i18n";
+import { activeCrawl, crawlProgress } from "@/lib/imports/crawl";
 import { importStats } from "@/lib/imports/pipeline";
 import { IMPORT_SOURCE } from "@/lib/imports/status";
 import { getSettings } from "@/lib/settings";
@@ -30,7 +32,7 @@ export default async function AdminImportsPage() {
   const admin = await requireAdmin("products.view");
   const manage = can(admin, "products.manage");
   const canSettings = can(admin, "settings.manage");
-  const [stats, runs, settings] = await Promise.all([importStats(IMPORT_SOURCE), db.importRun.findMany({ where: { source: IMPORT_SOURCE }, orderBy: { startedAt: "desc" }, take: 15 }), getSettings()]);
+  const [stats, runs, settings, crawl] = await Promise.all([importStats(IMPORT_SOURCE), db.importRun.findMany({ where: { source: IMPORT_SOURCE }, orderBy: { startedAt: "desc" }, take: 15 }), getSettings(), activeCrawl(IMPORT_SOURCE)]);
   const queue = (status?: string) => `/admin/imports/queue${status ? `?status=${status}` : ""}`;
   const tiles: { label: string; value: number; href: string; tone?: "warning" | "gold" | "success" | "danger" | "brand" | "neutral" }[] = [
     { label: "Products discovered", value: stats.discovered, href: queue("all") },
@@ -68,7 +70,7 @@ export default async function AdminImportsPage() {
         ))}
       </div>
       <p className="mt-3 text-[13px] text-ink-600">
-        Last synchronisation: <strong className="text-ink-900">{stats.lastSyncAt ? `${formatDateTime(stats.lastSyncAt)} (${stats.lastSyncKind === "feed" ? "feed" : "file upload"})` : "none yet"}</strong>
+        Last synchronisation: <strong className="text-ink-900">{stats.lastSyncAt ? `${formatDateTime(stats.lastSyncAt)} (${stats.lastSyncKind === "feed" ? "feed" : stats.lastSyncKind === "crawl" ? "catalogue page" : "file upload"})` : "none yet"}</strong>
         {stats.possibleDuplicates > 0 && (
           <>
             {" · "}
@@ -87,6 +89,13 @@ export default async function AdminImportsPage() {
         )}
       </p>
 
+      <div className="mt-6">
+        <Card title="Catalogue import, page by page" description="Reads the source's catalogue pages in order, one page at a time, at the pace its robots.txt asks for. Every product goes to the review queue. The importer identifies itself as RareComicsCollectors-Import. If the source refuses a page the import stops and says so.">
+          {/* Re-mounted when another import starts, so the panel never shows a previous run. */}
+          <ImportCrawlPanel key={crawl?.id ?? "none"} initial={crawl ? crawlProgress(crawl) : null} canManage={manage} />
+        </Card>
+      </div>
+
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         {manage && (
           <Card title="Import from a file" description="Use the data the agreement with the source covers. A product already in the queue is updated (price, availability), never added twice.">
@@ -96,14 +105,14 @@ export default async function AdminImportsPage() {
 
         <Card
           title="Pricing and synchronisation"
-          description="Selling price = source price × (1 + markup). The source price and the markup are stored for the admin only; customers see the selling price and nothing else."
+          description="Selling price = source price × (1 − discount). The source price and the discount are stored for the admin only; customers see the selling price and nothing else."
           actions={manage && feedUrl ? <ConfirmButton label="Sync now" message="Fetches the configured feed now. New products go to the review queue; prices and availability of known products are updated." action={syncNowAction} size="sm" /> : undefined}
         >
           {canSettings ? (
             <ActionForm action={saveImportSettingsAction} submitLabel="Save settings">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Markup over the source price (%)" hint="25 means $100 at the source sells for $125.">
-                  <input name="markupPercent" type="number" min={0} max={500} step="0.01" defaultValue={settings["imports.markupBps"] / 100} className={adminInput} />
+                <Field label="Discount off the source price (%)" hint="25 means $100 at the source sells for $75.">
+                  <input name="discountPercent" type="number" min={0} max={99} step="0.01" defaultValue={settings["imports.discountBps"] / 100} className={adminInput} />
                 </Field>
                 <Field label="Check the feed every (hours)">
                   <input name="syncHours" type="number" min={1} max={720} defaultValue={settings["imports.syncHours"]} className={adminInput} />
@@ -120,13 +129,13 @@ export default async function AdminImportsPage() {
                 <input type="checkbox" name="autoPriceSync" defaultChecked={settings["imports.autoPriceSync"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
                 <span>
                   Automatic price synchronisation
-                  <span className="block text-[12px] text-ink-500">Off: when the source price changes, a selling price you set by hand is kept and flagged. On: it is replaced by the new source price × markup. Prices nobody edited always follow the source.</span>
+                  <span className="block text-[12px] text-ink-500">Off: when the source price changes, a selling price you set by hand is kept and flagged. On: it is replaced by the new source price less the discount. Prices nobody edited always follow the source.</span>
                 </span>
               </label>
             </ActionForm>
           ) : (
             <p className="text-[13px] text-ink-600">
-              Markup {settings["imports.markupBps"] / 100}% · automatic price synchronisation {settings["imports.autoPriceSync"] ? "on" : "off"} · feed {feedUrl ? "configured" : "not configured"}.
+              Discount {settings["imports.discountBps"] / 100}% · automatic price synchronisation {settings["imports.autoPriceSync"] ? "on" : "off"} · feed {feedUrl ? "configured" : "not configured"}.
             </p>
           )}
         </Card>
@@ -158,7 +167,7 @@ export default async function AdminImportsPage() {
                     <tr key={r.id}>
                       <Td className="whitespace-nowrap">{formatDateTime(r.startedAt)}</Td>
                       <Td className="max-w-[220px] truncate">
-                        {r.kind === "feed" ? "Feed" : r.kind === "seed" ? "Migration" : "Upload"}
+                        {r.kind === "feed" ? "Feed" : r.kind === "seed" ? "Migration" : r.kind === "crawl" ? "Catalogue page" : "Upload"}
                         <span className="block truncate text-[11px] text-ink-500">{r.fileName ?? "—"}</span>
                       </Td>
                       <Td>
