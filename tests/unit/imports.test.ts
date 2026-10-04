@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { adjustmentForDiscount, describeAdjustment, marginOf, reprice, retailPrice } from "@/lib/imports/pricing";
 import { catalogPagePath, listingToRow, PageFormatError, readPageState } from "@/lib/imports/catalog-page";
 import { robotsAllows, robotsRules } from "@/lib/imports/robots";
+import { LOOKS_SLABBED, buildRawListing, rawCondition } from "@/lib/imports/raw";
+import { addComp, newCompIndex, numericGrade, suggestBuyNow } from "@/lib/imports/suggest";
+import { bookKey } from "@/lib/imports/status";
 import { candidateKeywords, defaultSeoDescription, defaultSeoTitle, seoChecks, type SeoFacts } from "@/lib/imports/seo-rules";
 import { availabilityOf, readSource, SourceFormatError } from "@/lib/imports/source";
 import { dedupeKey, itemStatusLabel, releaseProblems } from "@/lib/imports/status";
@@ -160,12 +163,14 @@ describe("catalogue page", () => {
     // The series' start year is not taken as the publication year.
     expect(row.extra).toMatchObject({ series: "Ghost Rider", issue: "1", publisher: "Marvel Comics", grade: "9.2", grader: "CGC", year: "" });
   });
-  it("flags auctions, raw books and sold listings instead of guessing", () => {
-    const state = readPageState(page('[{id:1,name:"X 4",listing_type:"auction",currency:a,current_price:0.99,images:[],search:{open:true,sold:true,catalog_condition:{slabbed:b}}}]'));
+  it("marks auctions, raw books and sold listings for what they are", () => {
+    const state = readPageState(page('[{id:1,name:"X 4",listing_type:"auction",currency:a,current_price:0.99,buyout_price:25,images:[],search:{open:true,sold:true,catalog_condition:{slabbed:b}},details:{grade:"8.5 VF+"}}]'));
     const row = listingToRow(state.listings[0], "page 1", 1, canon);
     expect(row.auction).toBe(true);
+    expect(row.buyNow).toBe(2_500);
     expect(row.available).toBe(false);
-    expect(row.note).toMatch(/raw book/);
+    expect(row.slabbed).toBe(false);
+    expect(row.extra.rawGrade).toBe("8.5 VF+");
     expect(row.problems).toEqual(["no image"]);
     expect(row.extra.grader).toBe("");
   });
@@ -173,5 +178,77 @@ describe("catalogue page", () => {
     expect(() => readPageState("<html>Just a moment...</html>")).toThrow(PageFormatError);
     expect(() => readPageState('<script>window.__NUXT__=(function(){return {data:[{searchListings:[this.constructor.constructor("return process")()]}]}}());</script>')).toThrow(PageFormatError);
     expect(() => readPageState("<script>window.__NUXT__=process.exit(1);</script>")).toThrow(PageFormatError);
+  });
+});
+
+describe("suggested Buy It Now price for auctions", () => {
+  const base = { buyNow: null, bid: 1_700, key: "dc|hawkman|3|8.0|cgc|universal blue|", bookKey: "hawkman|3|cgc", grade: "8.0", adjustmentBps: -2500, bidMultiplierPct: 200, minPrice: 499 };
+  it("uses the source's own Buy It Now price, less the discount, when the auction has one", () => {
+    const s = suggestBuyNow({ ...base, buyNow: 10_000, comps: newCompIndex() });
+    expect(s.price).toBe(7_500);
+    expect(s.estimated).toBe(false);
+    expect(s.basis).toMatch(/own Buy It Now price/);
+  });
+  it("then the median of the same book in the same grade", () => {
+    const comps = newCompIndex();
+    for (const price of [9_000, 12_000, 30_000]) addComp(comps, { key: base.key, bookKey: base.bookKey, grade: "8.0", price });
+    const s = suggestBuyNow({ ...base, comps });
+    expect(s.price).toBe(12_000);
+    expect(s.basis).toMatch(/3 other listings of the same book in the same grade/);
+  });
+  it("then the nearest grade within one point, and says it is an estimate", () => {
+    const comps = newCompIndex();
+    addComp(comps, { key: "other", bookKey: base.bookKey, grade: "7.5", price: 8_000 });
+    addComp(comps, { key: "far", bookKey: base.bookKey, grade: "4.0", price: 2_000 });
+    const s = suggestBuyNow({ ...base, comps });
+    expect(s.price).toBe(8_000);
+    expect(s.estimated).toBe(true);
+    expect(s.basis).toMatch(/nearest grade \(7\.5\); this copy is 8\.0/);
+  });
+  it("falls back to the bid rule with a minimum, and never goes below the current bid", () => {
+    expect(suggestBuyNow({ ...base, comps: newCompIndex() }).price).toBe(3_400);
+    const cheap = suggestBuyNow({ ...base, bid: 99, comps: newCompIndex() });
+    expect(cheap.price).toBe(499);
+    expect(cheap.basis).toMatch(/fallback rule, not a market price/);
+    const comps = newCompIndex();
+    addComp(comps, { key: base.key, bookKey: base.bookKey, grade: "8.0", price: 1_000 });
+    expect(suggestBuyNow({ ...base, comps }).price).toBe(1_700);
+  });
+  it("reads numeric grades and builds the book key", () => {
+    expect(numericGrade("VF+ 8.5")).toBe(8.5);
+    expect(numericGrade("Not graded")).toBeNull();
+    expect(bookKey({ title: "The Avengers", issue: "#57", grader: "Raw" })).toBe("avengers|57|raw");
+  });
+});
+
+describe("raw books", () => {
+  it("takes the condition only from what the listing states", () => {
+    expect(rawCondition("AMAZING SPIDER-MAN 44 VF+ 8.5 2nd LIZARD")).toBe("VF+ 8.5");
+    expect(rawCondition("Avengers 4 NM- Captain America returns")).toBe("NM-");
+    expect(rawCondition("Batman #232 Very Fine copy")).toBe("VF");
+    expect(rawCondition("Excalibur #4 (2004) Excalibur")).toBeNull();
+    // Words that only look like grades are not grades.
+    expect(rawCondition("The Good Guys #3 (1993) Fine Art issue")).toBeNull();
+    expect(rawCondition("Hawkman #3 (1964) $1.50 cover")).toBeNull();
+  });
+  it("recognises slab wording without a grading company", () => {
+    expect(LOOKS_SLABBED.test("Amazing Spider-Man 300 9.8 White Pages")).toBe(true);
+    expect(LOOKS_SLABBED.test("Excalibur #4 (2004) Excalibur")).toBe(false);
+  });
+  it("describes a raw book without claiming a grade it does not have", () => {
+    const p = { series: "Excalibur", issue: "#4", publisher: "Marvel Comics", year: 2004, era: "Modern Age", notes: "Excalibur" };
+    const taken = new Set<string>();
+    const unstated = buildRawListing({ sourceId: "1", p, condition: null }, taken);
+    expect(unstated).toMatchObject({ slug: "excalibur-4-raw", grader: "Raw", grade: "Not graded", label: "Raw", certNumber: null, keyIssue: null });
+    expect(unstated.description).toMatch(/has not been graded or sealed by a grading company/);
+    expect(unstated.description).toMatch(/does not state a grade/);
+    expect(unstated.summary).not.toMatch(/— Excalibur/);
+    const stated = buildRawListing({ sourceId: "2", p: { ...p, notes: "1st Vision" }, condition: "VF+" }, taken);
+    expect(stated.slug).toBe("excalibur-4-raw-vf-plus");
+    expect(stated.grade).toBe("VF+");
+    expect(stated.keyIssue).toBe("1st Vision");
+    expect(stated.description).toMatch(/seller's own assessment, not a certified grade/);
+    // A second copy of the same book gets its own address.
+    expect(buildRawListing({ sourceId: "3", p, condition: null }, taken).slug).toBe("excalibur-4-raw-3");
   });
 });

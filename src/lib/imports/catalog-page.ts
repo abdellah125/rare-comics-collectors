@@ -20,6 +20,7 @@ type Listing = {
   currency?: string;
   quantity?: number;
   current_price?: number;
+  buyout_price?: number;
   active?: boolean;
   closed?: boolean;
   deleted?: boolean;
@@ -27,7 +28,7 @@ type Listing = {
   images?: string[];
   url?: string;
   search?: { open?: boolean; sold?: boolean; price_usd?: number; catalog_condition?: { grade?: string; grader?: string; slabbed?: boolean; label_type?: string } };
-  details?: { series_name?: string; issue_number?: string; publisher?: string };
+  details?: { series_name?: string; issue_number?: string; publisher?: string; grade?: string };
 };
 
 /**
@@ -77,9 +78,10 @@ export function listingToRow(l: Listing, file: string, line: number, canonicalPu
   const open = l.search?.open !== false && l.search?.sold !== true && l.active !== false && l.closed !== true && l.deleted !== true && (l.quantity ?? 1) > 0;
   const series = (l.details?.series_name ?? "").replace(/\s*\((?:19|20)\d\d\)\s*$/, "").trim();
   const publisher = (l.details?.publisher ?? "").trim();
-  let note: string | undefined;
-  if (l.nsfw === true) note = "flagged as adult content at the source (needs a manual look before Merchant Center)";
-  else if (condition.slabbed === false) note = "raw book (not graded by CGC, CBCS or PGX): the grade and description need a person";
+  const note = l.nsfw === true ? "flagged as adult content at the source (needs a manual look before Merchant Center)" : undefined;
+  const auction = l.listing_type === "auction";
+  const buyNow = auction && currency === "USD" ? cents(l.buyout_price) : null;
+  const rawGrade = condition.slabbed === false ? (l.details?.grade ?? "").trim() : "";
   return {
     file,
     line,
@@ -93,7 +95,7 @@ export function listingToRow(l: Listing, file: string, line: number, canonicalPu
     // The page states the US$ figure itself; used when the listing is priced in another currency.
     approxUsd: currency && currency !== "USD" ? usd : null,
     seller: (l.username ?? "").trim(),
-    auction: l.listing_type === "auction",
+    auction,
     problems,
     extra: {
       publisher: publisher && !/^not specified$/i.test(publisher) ? canonicalPublisher(publisher) : "",
@@ -105,9 +107,12 @@ export function listingToRow(l: Listing, file: string, line: number, canonicalPu
       cert: "",
       description: "",
       variant: "",
+      rawGrade: /^not specified$/i.test(rawGrade) ? "" : rawGrade,
     },
     available: open,
     fillOnly: true,
     note,
+    slabbed: typeof condition.slabbed === "boolean" ? condition.slabbed : null,
+    buyNow: buyNow !== null && buyNow > 0 ? buyNow : null,
   };
 }

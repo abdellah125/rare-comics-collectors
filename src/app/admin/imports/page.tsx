@@ -6,7 +6,7 @@ import { ImportCrawlPanel } from "@/components/admin/import-crawl-panel";
 import { ImportUploadForm } from "@/components/admin/import-upload-form";
 import { AdminPageHeader, Card, EmptyState, Field, Table, Td, Th, Tone, adminButton, adminInput } from "@/components/admin/ui";
 import { can, requireAdmin } from "@/lib/auth/session";
-import { releaseAllReadyAction, saveImportSettingsAction, syncNowAction } from "@/lib/admin/actions/imports";
+import { fixErrorsAction, releaseAllReadyAction, saveImportSettingsAction, syncNowAction } from "@/lib/admin/actions/imports";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/i18n";
 import { activeCrawl, crawlProgress } from "@/lib/imports/crawl";
@@ -56,6 +56,7 @@ export default async function AdminImportsPage() {
             <Link href="/admin/imports/queue" className={adminButton.primary}>
               Review queue
             </Link>
+            {manage && stats.errors > 0 && <ConfirmButton label={`Fix ${stats.errors} errors`} title="Fix errors automatically" message="Re-checks every product in Error. Auctions get a suggested Buy It Now price, raw books are accepted with the condition their listing states, and a missing publisher is filled in when the rest of the series agrees. Fixed products move to Pending Review; nothing is published. Products you edited are left alone." action={fixErrorsAction} confirmLabel="Fix errors" />}
             {manage && stats.ready > 0 && <ConfirmButton label={`Release ${stats.ready} ready`} title="Release" message={`Publishes the ${Math.min(stats.ready, 200)} product(s) that are Ready to Release. They become visible on the store, in the sitemap and in the Merchant Center feed.`} action={releaseAllReadyAction} confirmLabel="Release" />}
           </>
         }
@@ -116,6 +117,14 @@ export default async function AdminImportsPage() {
                 </Field>
                 <Field label="Check the feed every (hours)">
                   <input name="syncHours" type="number" min={1} max={720} defaultValue={settings["imports.syncHours"]} className={adminInput} />
+                </Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Auction without comparables: current bid ×" hint="Used only when no other listing of the same book exists to base a Buy It Now price on.">
+                  <input name="auctionMultiplier" type="number" min={1} max={20} step="0.1" defaultValue={settings["imports.auctionBidMultiplierPct"] / 100} className={adminInput} />
+                </Field>
+                <Field label="…and never below (US$)">
+                  <input name="auctionMinPrice" type="number" min={1} step="0.01" defaultValue={(settings["imports.auctionMinPrice"] / 100).toFixed(2)} className={adminInput} />
                 </Field>
               </div>
               <Field label="Authorised feed address (optional)" hint="An https address the source gave you for its data (CSV or JSON). If it needs an access token, set HIPCOMIC_FEED_TOKEN in the hosting environment. Leave empty to sync by file upload only. If the source refuses the request, the sync stops and reports it.">

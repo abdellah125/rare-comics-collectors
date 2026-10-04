@@ -119,6 +119,9 @@ export const settingDefaults = {
   "imports.discountBps": 2500,
   /** When the source price changes, also replace a selling price an admin set by hand. */
   "imports.autoPriceSync": false,
+  /** Auction with nothing to compare with: suggested Buy It Now = current bid × this (200 = ×2), and never below the minimum. */
+  "imports.auctionBidMultiplierPct": 200,
+  "imports.auctionMinPrice": 499,
   /** The authorised data feed (https address given by the source). Empty = sync by file upload only. */
   "imports.feedUrl": "",
   /** The feed lists everything currently for sale, so a product missing from it is no longer available. */

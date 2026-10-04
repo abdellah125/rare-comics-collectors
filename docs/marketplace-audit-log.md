@@ -227,6 +227,13 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 
 - Correction (owner): the first catalogue page is `/search`, not `/search?page=1`; pages 2–208 keep `?page=N` (`catalogPagePath`). A request to route the importer through proxies to get past the source’s block was declined: that is working around an access control; the way through is the source allowing the importer or giving a feed.
 
+### Imports: errors re-checked, auctions accepted with a suggested Buy It Now price, raw books accepted (2026-10-08)
+- **Auctions** are no longer an error. The item is marked `auction`, the source figure is kept as the current bid, and the selling price is a suggestion with its basis stored in `priceBasis` and shown to the admin (`src/lib/imports/suggest.ts`). Order: the auction's own Buy It Now price less the discount; else the median selling price of the same book in the same grade; else the nearest grade within one point; else the fallback rule current bid × 2 with a $4.99 minimum (both editable under Pricing). Never below the current bid. Suggested prices are not used as comparables for other suggestions, and a later bid change does not move the suggestion.
+- **Raw books** (no grading company) are accepted as grader "Raw" (`src/lib/imports/raw.ts`). The grade is the condition the listing itself states (two-letter codes such as VF+, or the source's own grade field); when it states none the product says "Not graded" and the description says so. A title that reads like a slab (white pages, graded, cert…) without naming a company stays in Error.
+- **Publisher** is filled in when every other listing of the same series within three years names the same one.
+- **Re-check** (`reprocessErrors`, job `import_fix`, button "Fix N errors"): runs over existing Error items after each deploy and on demand. Items an admin edited or already reviewed are skipped; anything still missing a fact (publication year, issue number, publisher, label type) stays in Error with its reasons. Local run on 39 real Error items: 27 moved to Pending Review (24 of them auctions), 12 stayed.
+- Still never guessed: publication year, issue number, label type of signed books, certified grades.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml` (the index; it lists the store and guide sitemaps).

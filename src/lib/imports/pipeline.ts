@@ -9,9 +9,11 @@ import { adjustmentForDiscount, reprice, retailPrice } from "@/lib/imports/prici
 import { loadSeoContext, recommendSeo } from "@/lib/imports/seo";
 import { defaultSeoTitle, type SeoFacts } from "@/lib/imports/seo-rules";
 import { readSource, SourceFormatError, type SourceRow } from "@/lib/imports/source";
-import { dedupeKey, releaseProblems } from "@/lib/imports/status";
+import { bookKey, dedupeKey, releaseProblems } from "@/lib/imports/status";
+import { LOOKS_SLABBED, RAW_GRADER, RAW_UNSTATED, buildRawListing, rawCondition, type RawParsed } from "@/lib/imports/raw";
+import { addComp, newCompIndex, suggestBuyNow, type CompIndex } from "@/lib/imports/suggest";
 import { ADULT, PALETTES, buildListing, cadRateOf, slugify, usdPrice } from "../../../scripts/lib/hipcomic-listing.mjs";
-import { CGC_GRADES, eraForYear, parseTitle, tidyCase } from "../../../scripts/lib/hipcomic-title.mjs";
+import { CGC_GRADES, eraForYear, normSeries, parseTitle, tidyCase } from "../../../scripts/lib/hipcomic-title.mjs";
 
 /**
  * The import pipeline: source data → review queue → (admin approval) → ready → (admin release) → listing.
@@ -80,15 +82,168 @@ function classify(row: SourceRow): { p: Parsed; reasons: string[] } {
   if (/^\d{7,12}(?:-\d{1,3})?$/.test(x.cert)) p.certNumber = x.cert;
   if (row.note) holds.unshift(row.note);
   const reasons = [...row.problems];
-  if (row.auction) reasons.push("auction listing (current bid, not a fixed price)");
   if (ADULT.test(row.title)) reasons.push("adult-variant wording (needs a manual look before Merchant Center)");
   reasons.push(...holds);
   return { p, reasons };
 }
 
-type ExistingItem = Pick<ImportItem, "id" | "sourceId" | "status" | "certNumber" | "dedupeKey" | "sourcePrice" | "retailPrice" | "priceManual" | "markupBps" | "productId" | "editedJson" | "sourceTitle" | "sourceSeller" | "sourceImage" | "available" | "slug" | "imageUrl"> & {
+type ExistingItem = Pick<ImportItem, "id" | "sourceId" | "status" | "certNumber" | "dedupeKey" | "sourcePrice" | "retailPrice" | "priceManual" | "markupBps" | "productId" | "editedJson" | "sourceTitle" | "sourceSeller" | "sourceImage" | "available" | "slug" | "imageUrl" | "auction" | "title" | "issue" | "publisher" | "year" | "grader" | "grade"> & {
   product: { id: string; price: number; status: string; stock: number; slug: string } | null;
 };
+
+/** Everything an evaluation needs to know about what is already in the catalogue and the queue. */
+type Env = {
+  items: ExistingItem[];
+  markupBps: number;
+  bidMultiplierPct: number;
+  minPrice: number;
+  takenSlugs: Set<string>;
+  certOwner: Map<string, string>;
+  keyOwner: Map<string, string>;
+  photoOwner: Map<string, string>;
+  comps: CompIndex;
+  seriesPublishers: Map<string, { year: number | null; publisher: string }[]>;
+};
+
+async function loadEnv(source: string): Promise<Env> {
+  const settings = await getSettings();
+  const [items, products] = await Promise.all([
+    db.importItem.findMany({
+      where: { source },
+      select: { id: true, sourceId: true, status: true, certNumber: true, dedupeKey: true, sourcePrice: true, retailPrice: true, priceManual: true, markupBps: true, productId: true, editedJson: true, sourceTitle: true, sourceSeller: true, sourceImage: true, available: true, slug: true, imageUrl: true, auction: true, title: true, issue: true, publisher: true, year: true, grader: true, grade: true, product: { select: { id: true, price: true, status: true, stock: true, slug: true } } },
+    }),
+    db.product.findMany({ where: { deletedAt: null }, select: { id: true, slug: true, certNumber: true, publisher: true, title: true, issue: true, grade: true, grader: true, label: true, year: true } }),
+  ]);
+  const takenSlugs = new Set<string>([...products.map((p) => p.slug), ...items.map((i) => i.slug).filter(Boolean)]);
+  const linkedProducts = new Set(items.map((i) => i.productId).filter(Boolean));
+  const certOwner = new Map<string, string>();
+  const keyOwner = new Map<string, string>();
+  const comps = newCompIndex();
+  const seriesPublishers: Env["seriesPublishers"] = new Map();
+  const learn = (title: string, year: number | null, publisher: string) => {
+    if (!title || !publisher) return;
+    const k = normSeries(title) as string;
+    seriesPublishers.set(k, [...(seriesPublishers.get(k) ?? []), { year, publisher }]);
+  };
+  for (const p of products) {
+    learn(p.title, p.year, p.publisher);
+    if (linkedProducts.has(p.id)) continue; // an item's own product is not its duplicate
+    if (p.certNumber) certOwner.set(p.certNumber, `listing ${p.slug}`);
+    const key = dedupeKey(p);
+    if (key) keyOwner.set(key, `listing ${p.slug}`);
+  }
+  for (const i of items) {
+    if (i.status === "rejected") continue;
+    if (i.certNumber) certOwner.set(i.certNumber, `queue item ${i.sourceId}`);
+    if (i.dedupeKey && !keyOwner.has(i.dedupeKey)) keyOwner.set(i.dedupeKey, `queue item ${i.sourceId}`);
+    if (i.status === "error" || i.status === "duplicate") continue;
+    learn(i.title, i.year, i.publisher);
+    // Only fixed-price listings are comparables: a suggested price must not feed the next suggestion.
+    if (!i.auction) addComp(comps, { key: i.dedupeKey, bookKey: bookKey(i), grade: i.grade, price: i.retailPrice });
+  }
+  const photoOwner = new Map<string, string>(items.map((i) => [`${i.sourceSeller}|${i.sourceTitle}|${i.sourceImage}`, i.sourceId]));
+  return { items, markupBps: adjustmentForDiscount(settings["imports.discountBps"]), bidMultiplierPct: settings["imports.auctionBidMultiplierPct"], minPrice: settings["imports.auctionMinPrice"], takenSlugs, certOwner, keyOwner, photoOwner, comps, seriesPublishers };
+}
+
+type Evaluated = { outcome: "ok" | "duplicate" | "error"; facts: (SeoFacts & { era: string }) | null; data: Record<string, unknown> };
+
+/**
+ * Decides what a row becomes: a product ready for review, a duplicate, or an error with reasons.
+ * `selfId` is the row's own queue id when an existing item is being re-checked, so it is never
+ * reported as a duplicate of itself.
+ */
+function evaluateNew(row: SourceRow, usd: { price: number | null; priceNote: string | null; reason: string | null }, env: Env, selfId: string | null): Evaluated {
+  const { p, reasons: initial } = classify(row);
+  let reasons = initial;
+  const drop = (re: RegExp) => {
+    reasons = reasons.filter((r) => !re.test(r));
+  };
+
+  // Publisher: when every known listing of the series (within three years) names the same one.
+  if (!p.publisher && p.series) {
+    const known = (env.seriesPublishers.get(normSeries(p.series) as string) ?? []).filter((x) => p.year === null || x.year === null || Math.abs(x.year - p.year) <= 3);
+    const names = [...new Set(known.map((x) => x.publisher))];
+    if (names.length === 1) {
+      p.publisher = names[0];
+      drop(/^publisher not stated/);
+    }
+  }
+
+  // Raw books: no grading company. The condition is what the listing states, or "Not graded".
+  let raw = false;
+  let condition: string | null = null;
+  const looksSlabbed = row.slabbed !== false && LOOKS_SLABBED.test(row.title);
+  if (!p.grader && !looksSlabbed) {
+    raw = true;
+    condition = row.extra.rawGrade?.trim() || rawCondition(row.title);
+    p.grader = RAW_GRADER;
+    p.grade = condition ?? RAW_UNSTATED;
+    p.label = RAW_GRADER;
+    drop(/^(no grading company|no numeric grade|more than one grade|raw book|signed or conserved)/);
+  }
+
+  // Price: a fixed price follows the formula; an auction gets a suggested Buy It Now price below.
+  let retail: number | null = null;
+  if (!row.auction) {
+    if (usd.reason) reasons.push(usd.reason);
+    if (usd.price !== null && usd.price < 100) reasons.push("price under $1");
+    retail = usd.price !== null ? retailPrice(usd.price, env.markupBps) : null;
+  }
+  if (row.available === false) reasons.push("marked unavailable at the source");
+
+  if (reasons.length > 0) {
+    return {
+      outcome: "error",
+      facts: null,
+      data: { status: "error", problemsJson: json([...new Set(reasons)]), auction: row.auction, retailPrice: retail, priceBasis: null, title: p.series ?? "", issue: p.issue ?? "", publisher: p.publisher ?? "", year: p.year, era: p.era ?? "", grader: p.grader ?? "", grade: p.grade ?? "", label: p.label ?? "Universal Blue", certNumber: p.certNumber, description: row.extra.description },
+    };
+  }
+
+  const l = raw
+    ? buildRawListing({ sourceId: row.sourceId!, p: p as unknown as RawParsed, condition }, env.takenSlugs)
+    : (buildListing({ row, p, price: usd.price, priceNote: usd.priceNote }, env.takenSlugs) as unknown as BuiltListing);
+  const key = dedupeKey({ ...l, variant: row.extra.variant });
+  const book = bookKey(l);
+  let priceBasis: string | null = null;
+  if (row.auction) {
+    const suggestion = suggestBuyNow({ buyNow: row.buyNow ?? null, bid: usd.price, key, bookKey: book, grade: l.grade, comps: env.comps, adjustmentBps: env.markupBps, bidMultiplierPct: env.bidMultiplierPct, minPrice: env.minPrice });
+    retail = suggestion.price;
+    priceBasis = `Sold by auction at the source${usd.price !== null ? ` (current bid ${money(usd.price)})` : ""}. Suggested Buy It Now ${money(suggestion.price)}: ${suggestion.basis}`;
+  }
+
+  let status = "pending_review";
+  let duplicateStatus = "unique";
+  let duplicateOf: string | null = null;
+  const self = selfId ? `queue item ${selfId}` : null;
+  const photoKey = `${row.seller}|${row.title}|${row.image}`;
+  const certHit = l.certNumber ? env.certOwner.get(l.certNumber) : undefined;
+  const photoHit = env.photoOwner.get(photoKey);
+  const keyHit = key ? env.keyOwner.get(key) : undefined;
+  if (certHit && certHit !== self) {
+    status = "duplicate";
+    duplicateStatus = "duplicate";
+    duplicateOf = `Certification number ${l.certNumber} is already on ${certHit}`;
+  } else if (photoHit && photoHit !== selfId) {
+    status = "duplicate";
+    duplicateStatus = "duplicate";
+    duplicateOf = `Same seller, title and photo as queue item ${photoHit}`;
+  } else if (keyHit && keyHit !== self) {
+    duplicateStatus = "possible";
+    duplicateOf = `Same publisher, title, issue, grade, grader and label as ${keyHit} (may be a second copy)`;
+  }
+  if (status === "duplicate") env.takenSlugs.delete(l.slug);
+  else {
+    if (l.certNumber) env.certOwner.set(l.certNumber, `queue item ${row.sourceId}`);
+    if (key && !env.keyOwner.has(key)) env.keyOwner.set(key, `queue item ${row.sourceId}`);
+    if (row.sourceId) env.photoOwner.set(photoKey, row.sourceId);
+    if (!row.auction) addComp(env.comps, { key, bookKey: book, grade: l.grade, price: retail });
+  }
+  return {
+    outcome: status === "duplicate" ? "duplicate" : "ok",
+    facts: { title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, grader: l.grader, grade: l.grade, label: l.label, keyIssue: l.keyIssue, slug: l.slug, era: l.era },
+    data: { status, problemsJson: "[]", duplicateStatus, duplicateOf, dedupeKey: key, auction: row.auction, retailPrice: retail, priceBasis, title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, era: l.era, grader: l.grader, grade: l.grade, label: l.label, certNumber: l.certNumber, keyIssue: l.keyIssue, summary: l.summary, description: l.description, highlightsJson: json(l.highlights), attributesJson: json(l.attributes), tagsJson: json(l.tags), slug: l.slug },
+  };
+}
 
 export type ImportInput = { source: string; kind: "csv_upload" | "feed" | "crawl"; fileName: string; text?: string; rows?: SourceRow[]; snapshot?: boolean; startedById?: string | null };
 
@@ -103,35 +258,14 @@ export async function runImport(input: ImportInput): Promise<ImportRun> {
     const rows = input.rows ?? readSource(input.text ?? "", input.fileName);
     counts.rows = rows.length;
     const settings = await getSettings();
-    // Stored per item as a signed adjustment: a 25 % discount is −2500.
-    const markupBps = adjustmentForDiscount(settings["imports.discountBps"]);
     const autoSync = settings["imports.autoPriceSync"];
     const cadRate = cadRateOf(rows) as number | null;
 
-    const [items, products] = await Promise.all([
-      db.importItem.findMany({
-        where: { source: input.source },
-        select: { id: true, sourceId: true, status: true, certNumber: true, dedupeKey: true, sourcePrice: true, retailPrice: true, priceManual: true, markupBps: true, productId: true, editedJson: true, sourceTitle: true, sourceSeller: true, sourceImage: true, available: true, slug: true, imageUrl: true, product: { select: { id: true, price: true, status: true, stock: true, slug: true } } },
-      }),
-      db.product.findMany({ where: { deletedAt: null }, select: { id: true, slug: true, certNumber: true, publisher: true, title: true, issue: true, grade: true, grader: true, label: true } }),
-    ]);
+    const env = await loadEnv(input.source);
+    const { items } = env;
+    // Stored per item as a signed adjustment: a 25 % discount is −2500.
+    const markupBps = env.markupBps;
     const bySourceId = new Map<string, ExistingItem>(items.map((i) => [i.sourceId, i]));
-    const takenSlugs = new Set<string>([...products.map((p) => p.slug), ...items.map((i) => i.slug).filter(Boolean)]);
-    const linkedProducts = new Set(items.map((i) => i.productId).filter(Boolean));
-    const certOwner = new Map<string, string>();
-    const keyOwner = new Map<string, string>();
-    for (const p of products) {
-      if (linkedProducts.has(p.id)) continue; // an item's own product is not its duplicate
-      if (p.certNumber) certOwner.set(p.certNumber, `listing ${p.slug}`);
-      const key = dedupeKey(p);
-      if (key) keyOwner.set(key, `listing ${p.slug}`);
-    }
-    for (const i of items) {
-      if (i.status === "rejected") continue;
-      if (i.certNumber) certOwner.set(i.certNumber, `queue item ${i.sourceId}`);
-      if (i.dedupeKey && !keyOwner.has(i.dedupeKey)) keyOwner.set(i.dedupeKey, `queue item ${i.sourceId}`);
-    }
-    const photoOwner = new Map<string, string>(items.map((i) => [`${i.sourceSeller}|${i.sourceTitle}|${i.sourceImage}`, i.sourceId]));
 
     const seen = new Set<string>();
     const fresh: { row: SourceRow; data: Prisma.ImportItemCreateManyInput; facts: (SeoFacts & { era: string }) | null }[] = [];
@@ -165,7 +299,13 @@ export async function runImport(input: ImportInput): Promise<ImportRun> {
           data.available = true;
           say("warn", `${row.sourceId}: available again at the source. Stock was not changed; review it.`);
         }
-        if (usd.price !== null && usd.price >= 100 && usd.price !== existing.sourcePrice) {
+        if (existing.auction) {
+          if (usd.price !== null && usd.price !== existing.sourcePrice) {
+            changed = true;
+            Object.assign(data, { sourcePrice: usd.price, sourceAmount: row.price });
+            say("info", `${row.sourceId}: current bid ${money(existing.sourcePrice)} → ${money(usd.price)} (the suggested Buy It Now price was left as it is)`);
+          }
+        } else if (usd.price !== null && usd.price >= 100 && usd.price !== existing.sourcePrice) {
           changed = true;
           counts.priceChanges += 1;
           const manual = existing.priceManual || Boolean(existing.product && existing.retailPrice !== null && existing.product.price !== existing.retailPrice);
@@ -182,7 +322,7 @@ export async function runImport(input: ImportInput): Promise<ImportRun> {
           changed = true;
           data.sourceTitle = row.title;
           if (existing.status === "pending_review" || existing.status === "error") {
-            Object.assign(data, refreshFields(row, existing, usd, takenSlugs));
+            Object.assign(data, refreshFields(row, existing, usd, env));
             say("info", `${row.sourceId}: source title changed; fields nobody edited were refreshed`);
           } else say("warn", `${row.sourceId}: source title changed after review; our copy was left as it is`);
         }
@@ -197,65 +337,31 @@ export async function runImport(input: ImportInput): Promise<ImportRun> {
       }
 
       // ── new item
-      const { p, reasons } = classify(row);
-      if (usd.reason) reasons.push(usd.reason);
-      if (usd.price !== null && usd.price < 100) reasons.push("price under $1");
-      const base: Prisma.ImportItemCreateManyInput = {
-        source: input.source,
-        sourceId: row.sourceId,
-        sourceUrl: row.url,
-        sourceSeller: row.seller || null,
-        sourceTitle: row.title || "(no title)",
-        sourceImage: row.image,
-        sourceCurrency: row.currency ?? "USD",
-        sourceAmount: row.price,
-        sourcePrice: usd.price,
-        priceNote: usd.priceNote,
-        markupBps,
-        retailPrice: usd.price !== null ? retailPrice(usd.price, markupBps) : null,
-        available: row.available !== false,
-        variant: row.extra.variant || null,
-        runId: run.id,
-        importFile: row.file,
-      };
-      if (row.available === false) reasons.push("marked unavailable at the source");
-      if (reasons.length > 0) {
-        counts.created += 1;
-        counts.errors += 1;
-        fresh.push({ row, facts: null, data: { ...base, status: "error", problemsJson: json(reasons), title: p.series ?? "", issue: p.issue ?? "", publisher: p.publisher ?? "", year: p.year, era: p.era ?? "", grader: p.grader ?? "", grade: p.grade ?? "", label: p.label ?? "Universal Blue", certNumber: p.certNumber, description: row.extra.description } });
-        continue;
-      }
-      const l = buildListing({ row, p, price: usd.price, priceNote: usd.priceNote }, takenSlugs) as unknown as BuiltListing;
-      const key = dedupeKey({ ...l, variant: row.extra.variant });
-      let status = "pending_review";
-      let duplicateStatus = "unique";
-      let duplicateOf: string | null = null;
-      const photoKey = `${row.seller}|${row.title}|${row.image}`;
-      if (l.certNumber && certOwner.has(l.certNumber)) {
-        status = "duplicate";
-        duplicateStatus = "duplicate";
-        duplicateOf = `Certification number ${l.certNumber} is already on ${certOwner.get(l.certNumber)}`;
-      } else if (photoOwner.has(photoKey)) {
-        status = "duplicate";
-        duplicateStatus = "duplicate";
-        duplicateOf = `Same seller, title and photo as queue item ${photoOwner.get(photoKey)}`;
-      } else if (key && keyOwner.has(key)) {
-        duplicateStatus = "possible";
-        duplicateOf = `Same publisher, title, issue, grade, grader and label as ${keyOwner.get(key)} (may be a second copy)`;
-      }
-      if (status === "duplicate") {
-        counts.duplicates += 1;
-        takenSlugs.delete(l.slug);
-      } else {
-        if (l.certNumber) certOwner.set(l.certNumber, `queue item ${row.sourceId}`);
-        if (key && !keyOwner.has(key)) keyOwner.set(key, `queue item ${row.sourceId}`);
-        photoOwner.set(photoKey, row.sourceId);
-      }
+      const ev = evaluateNew(row, usd, env, null);
       counts.created += 1;
+      if (ev.outcome === "error") counts.errors += 1;
+      if (ev.outcome === "duplicate") counts.duplicates += 1;
       fresh.push({
         row,
-        facts: { title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, grader: l.grader, grade: l.grade, label: l.label, keyIssue: l.keyIssue, slug: l.slug, era: l.era },
-        data: { ...base, status, duplicateStatus, duplicateOf, dedupeKey: key, title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, era: l.era, grader: l.grader, grade: l.grade, label: l.label, certNumber: l.certNumber, keyIssue: l.keyIssue, summary: l.summary, description: l.description, highlightsJson: json(l.highlights), attributesJson: json(l.attributes), tagsJson: json(l.tags), slug: l.slug },
+        facts: ev.facts,
+        data: {
+          source: input.source,
+          sourceId: row.sourceId,
+          sourceUrl: row.url,
+          sourceSeller: row.seller || null,
+          sourceTitle: row.title || "(no title)",
+          sourceImage: row.image,
+          sourceCurrency: row.currency ?? "USD",
+          sourceAmount: row.price,
+          sourcePrice: usd.price,
+          priceNote: usd.priceNote,
+          markupBps,
+          available: row.available !== false,
+          variant: row.extra.variant || null,
+          runId: run.id,
+          importFile: row.file,
+          ...ev.data,
+        } as Prisma.ImportItemCreateManyInput,
       });
     }
 
@@ -319,15 +425,17 @@ async function markUnavailable(item: Pick<ExistingItem, "id" | "sourceId" | "sta
 }
 
 /** Re-derives the normalised fields after the source title changed, keeping whatever an admin edited. */
-function refreshFields(row: SourceRow, existing: ExistingItem, usd: { price: number | null; priceNote: string | null }, takenSlugs: Set<string>): Prisma.ImportItemUpdateInput {
+function refreshFields(row: SourceRow, existing: ExistingItem, usd: { price: number | null; priceNote: string | null; reason: string | null }, env: Env): Prisma.ImportItemUpdateInput {
   const edited = new Set(list(existing.editedJson));
-  const { p, reasons } = classify(row);
-  if (reasons.length > 0) return { status: "error", problemsJson: json(reasons) };
-  const l = buildListing({ row, p, price: usd.price, priceNote: usd.priceNote }, new Set([...takenSlugs].filter((s) => s !== existing.slug))) as unknown as BuiltListing;
+  if (existing.slug) env.takenSlugs.delete(existing.slug);
+  const ev = evaluateNew(row, usd, env, existing.sourceId);
   const data: Record<string, unknown> = {};
-  for (const field of ["title", "issue", "publisher", "year", "era", "grader", "grade", "label", "certNumber", "keyIssue", "summary", "description"] as const) if (!edited.has(field)) data[field] = l[field];
-  if (!edited.has("description")) Object.assign(data, { highlightsJson: json(l.highlights), attributesJson: json(l.attributes), tagsJson: json(l.tags) });
-  return { ...data, status: "pending_review", problemsJson: "[]" };
+  for (const [field, value] of Object.entries(ev.data)) {
+    if (edited.has(field)) continue;
+    if (field === "retailPrice" && existing.priceManual) continue;
+    data[field] = value;
+  }
+  return data;
 }
 
 // ───────────────────────────── review ─────────────────────────────
@@ -597,6 +705,69 @@ export async function updateItem(id: string, edit: ItemEdit): Promise<{ ok: true
   Object.assign(data, { status, problemsJson: json(factProblems), editedJson: json([...edited]) });
   await db.importItem.update({ where: { id }, data });
   return { ok: true, status };
+}
+
+// ───────────────────────────── automatic re-check of errors ─────────────────────────────
+
+const ROW_PROBLEMS = ["no identifier", "no listing URL", "no title", "no readable price", "no image"];
+
+/**
+ * Re-checks items in Error against the current rules (auctions get a suggested Buy It Now price,
+ * raw books are accepted with the condition the listing states, a publisher every other listing
+ * of the series agrees on is filled in). Items an admin has edited or already reviewed are left
+ * alone, and anything that still lacks a fact stays in Error with its reasons: nothing is guessed.
+ */
+export async function reprocessErrors(source: string, opts: { cursor?: string | null; limit?: number } = {}): Promise<{ checked: number; fixed: number; duplicates: number; still: number; nextCursor: string | null }> {
+  const limit = opts.limit ?? 300;
+  const batch = await db.importItem.findMany({ where: { source, status: "error", reviewedAt: null, editedJson: "[]", ...(opts.cursor ? { id: { gt: opts.cursor } } : {}) }, orderBy: { id: "asc" }, take: limit });
+  if (batch.length === 0) return { checked: 0, fixed: 0, duplicates: 0, still: 0, nextCursor: null };
+  const env = await loadEnv(source);
+  const done: { id: string; ev: Evaluated }[] = [];
+  let still = 0;
+  for (const item of batch) {
+    const problems = list(item.problemsJson);
+    // Errors from later stages (photo, release check, availability) are not classification problems.
+    if (problems.some((r) => /^(photo could not|no longer available|certification number .* already on sale|no photo stored)/.test(r))) {
+      still += 1;
+      continue;
+    }
+    const auction = item.auction || problems.some((r) => r.startsWith("auction listing"));
+    const row: SourceRow = {
+      file: item.importFile ?? "",
+      line: 0,
+      sourceId: item.sourceId,
+      url: item.sourceUrl,
+      image: item.sourceImage,
+      imageHash: item.sourceImage,
+      title: item.sourceTitle,
+      currency: item.sourceCurrency,
+      price: item.sourceAmount,
+      approxUsd: null,
+      seller: item.sourceSeller ?? "",
+      auction,
+      problems: problems.filter((r) => ROW_PROBLEMS.includes(r)),
+      extra: { publisher: item.publisher, year: item.year ? String(item.year) : "", series: item.title, issue: item.issue.replace(/^#/, ""), grade: item.grade, grader: item.grader, cert: item.certNumber ?? "", description: "", variant: item.variant ?? "" },
+      available: item.available,
+      fillOnly: true,
+      note: problems.find((r) => r.startsWith("flagged as adult")),
+      slabbed: problems.some((r) => r.startsWith("raw book")) ? false : null,
+    };
+    const priceReason = problems.find((r) => r.startsWith("price is in")) ?? null;
+    const ev = evaluateNew(row, { price: item.sourcePrice, priceNote: item.priceNote, reason: item.sourcePrice === null ? priceReason : null }, env, item.sourceId);
+    if (ev.outcome === "error") still += 1;
+    done.push({ id: item.id, ev });
+  }
+  const withFacts = done.filter((d) => d.ev.facts);
+  const ctx = withFacts.length > 0 ? await loadSeoContext(withFacts.map((d) => d.ev.facts!)) : null;
+  for (let n = 0; n < done.length; n += 50) {
+    await db.$transaction(
+      done.slice(n, n + 50).map(({ id, ev }) => {
+        const rec = ev.facts && ctx ? recommendSeo(ev.facts, ctx) : null;
+        return db.importItem.update({ where: { id }, data: { ...ev.data, ...(rec ? { seoTitle: rec.seoTitle, seoDescription: rec.seoDescription, primaryKeyword: rec.primaryKeyword, secondaryKeywordsJson: json(rec.secondaryKeywords), searchIntent: rec.searchIntent, internalLinksJson: json(rec.internalLinks), seoNotesJson: json(rec.notes), seoStatus: rec.status } : {}) } });
+      }),
+    );
+  }
+  return { checked: batch.length, fixed: done.filter((d) => d.ev.outcome === "ok").length, duplicates: done.filter((d) => d.ev.outcome === "duplicate").length, still, nextCursor: batch.length === limit ? batch[batch.length - 1].id : null };
 }
 
 // ───────────────────────────── SEO backfill and statistics ─────────────────────────────

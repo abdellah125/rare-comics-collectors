@@ -481,6 +481,10 @@ model ImportItem {
   priceManual           Boolean    @default(false)
   /// set when the source price moved while a manual price was kept
   priceChangeNote       String?
+  /// the source sells this by auction: sourcePrice is the current bid and retailPrice a suggested Buy It Now price
+  auction               Boolean    @default(false)
+  /// how a suggested price was arrived at (shown to the admin only)
+  priceBasis            String?
   available             Boolean    @default(true)
   lastSeenAt            DateTime   @default(now())
 

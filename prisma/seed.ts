@@ -822,6 +822,10 @@ async function main() {
   await seedCatalogQueue();
   await seedImportItems();
   await seedCatalogueCrawl();
+  if ((await db.importItem.count({ where: { status: "error", reviewedAt: null, editedJson: "[]" } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: "pending" } })) === 0) {
+    await db.job.create({ data: { type: "import_fix", payloadJson: "{}", maxAttempts: 3 } });
+    log("import errors: re-check queued");
+  }
   await seedSeoKeywords();
   await seedGuides();
   await seedDemo();

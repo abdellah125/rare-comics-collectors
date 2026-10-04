@@ -59,6 +59,13 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
         }
       />
 
+      {item.auction && item.priceBasis && (
+        <div className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 text-[13px] text-ink-800" role="note" data-testid="price-basis">
+          <p className="font-semibold text-ink-950">Suggested price</p>
+          <p className="mt-1">{item.priceBasis}</p>
+          <p className="mt-1 text-[12px] text-ink-600">A suggestion, not a source price: change the selling price below if you want a different one.</p>
+        </div>
+      )}
       {(problems.length > 0 || item.duplicateOf || item.priceChangeNote || !item.available) && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-900" role="status">
           {problems.length > 0 && (
@@ -141,6 +148,7 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
                         <input name="price" inputMode="decimal" defaultValue={item.retailPrice !== null ? (item.retailPrice / 100).toFixed(2) : ""} required className={adminInput} />
                       </Field>
                       <div className="text-[13px] text-ink-700 sm:col-span-2">
+                        {item.auction && <p className="mb-1 text-amber-700">Sold by auction at the source: the figure below is the current bid, not a price.</p>}
                         <p>
                           Source price <strong>{item.sourcePrice !== null ? formatMoney(item.sourcePrice) : "—"}</strong> × {(1 + item.markupBps / 10_000).toFixed(2)} = <strong>{formula !== null ? formatMoney(formula) : "—"}</strong>
                         </p>
@@ -241,9 +249,9 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
           <Card title="Pricing (admin only)" description="Never shown to customers.">
             <Kv
               items={[
-                { label: "Source price", value: item.sourcePrice !== null ? formatMoney(item.sourcePrice) : "—" },
+                { label: item.auction ? "Current bid at the source" : "Source price", value: item.sourcePrice !== null ? formatMoney(item.sourcePrice) : "—" },
                 ...(item.priceNote ? [{ label: "Note", value: item.priceNote }] : []),
-                { label: "Price rule", value: describeAdjustment(item.markupBps) },
+                { label: "Price rule", value: item.auction ? "Suggested Buy It Now (auction)" : describeAdjustment(item.markupBps) },
                 { label: "Selling price", value: item.retailPrice !== null ? `${formatMoney(item.retailPrice)}${item.priceManual ? " (set by hand)" : ""}` : "—" },
                 { label: "Against the source price", value: margin ? `${margin.amount < 0 ? "−" : "+"}${formatMoney(Math.abs(margin.amount))} (${(margin.bps / 100).toFixed(1)}%)` : "—" },
               ]}

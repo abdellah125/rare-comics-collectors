@@ -154,6 +154,14 @@ export function registerJobHandlers() {
     if (crawl && crawl.status === "running") await enqueueJob("import_crawl", {}, { runAt: new Date(Math.max(Date.now() + 2_000, crawl.notBefore.getTime())), dedupe: true, maxAttempts: 3 });
   });
 
+  // Re-checks items in Error against the current rules, a batch at a time, until every one has been looked at once.
+  registerJobHandler("import_fix", async (payload) => {
+    const { reprocessErrors } = await import("@/lib/imports/pipeline");
+    const { IMPORT_SOURCE } = await import("@/lib/imports/status");
+    const result = await reprocessErrors(IMPORT_SOURCE, { cursor: typeof payload.cursor === "string" ? payload.cursor : null, limit: 300 });
+    if (result.nextCursor) await enqueueJob("import_fix", { cursor: result.nextCursor }, { runAt: new Date(Date.now() + 2_000), maxAttempts: 3 });
+  });
+
   // SEO recommendations for queue items the seed created without one.
   registerJobHandler("import_seo", async () => {
     const { analyseSeoPending } = await import("@/lib/imports/pipeline");

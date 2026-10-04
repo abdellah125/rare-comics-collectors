@@ -53,6 +53,13 @@ export function dedupeKey(p: { publisher: string; title: string; issue: string; 
   return [publisher, title, issue, squash(p.grade), squash(p.grader), squash(p.label ?? ""), squash(p.variant ?? "")].join("|");
 }
 
+/** The book without its grade or label: title + issue + grader. Used to find the same book in a nearby grade. */
+export function bookKey(p: { title: string; issue: string; grader: string }): string {
+  const title = squash(p.title).replace(/^the /, "");
+  const issue = squash(p.issue.replace(/^#/, ""));
+  return title && issue && p.grader.trim() ? [title, issue, squash(p.grader)].join("|") : "";
+}
+
 /** What must be true of an item before it may be released; mirrors what makes a listing a valid page. */
 export function releaseProblems(p: { title: string; issue: string; publisher: string; year: number | null; era: string; grader: string; grade: string; retailPrice: number | null; summary: string; description: string; slug: string; hasImage: boolean; available: boolean }): string[] {
   const problems: string[] = [];

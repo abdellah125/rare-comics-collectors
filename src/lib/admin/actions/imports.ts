@@ -9,7 +9,7 @@ import { assertAdmin, can } from "@/lib/auth/session";
 import { activeCrawl, advanceCrawl, crawlProgress, setCrawlStatus, startCrawl, type CrawlProgress } from "@/lib/imports/crawl";
 import { fetchFeed, checkFeedUrl, FeedAccessError } from "@/lib/imports/feed";
 import { enqueueJob } from "@/lib/jobs/queue";
-import { approveItems, rejectItems, releaseItems, removeItems, restoreItems, runImport, updateItem } from "@/lib/imports/pipeline";
+import { approveItems, rejectItems, releaseItems, removeItems, reprocessErrors, restoreItems, runImport, updateItem } from "@/lib/imports/pipeline";
 import { IMPORT_SOURCE } from "@/lib/imports/status";
 import { getSettings, saveSettings } from "@/lib/settings";
 import { failState, fieldErrors, formToObject, okState, zBool, zSlug, type ActionState } from "@/lib/validation";
@@ -100,12 +100,30 @@ export async function crawlTickAction(): Promise<CrawlProgress | null> {
   return crawlProgress(after);
 }
 
+/**
+ * Re-checks the products in Error: auctions get a suggested Buy It Now price, raw books are
+ * accepted with the condition their listing states, a publisher the rest of the series agrees on
+ * is filled in. What can be fixed moves to Pending Review; the rest keeps its reasons.
+ */
+export async function fixErrorsAction(): Promise<ActionState> {
+  return runAdmin("products.manage", async (admin) => {
+    const first = await reprocessErrors(IMPORT_SOURCE, { limit: 300 });
+    if (first.nextCursor) await enqueueJob("import_fix", { cursor: first.nextCursor }, { maxAttempts: 3 });
+    await audit({ actor: actorOf(admin), action: "import.fix_errors", targetType: "import", summary: `Import errors re-checked: ${first.fixed} fixed, ${first.duplicates} duplicates, ${first.still} still need a person${first.nextCursor ? " (more in the background)" : ""}` });
+    refresh();
+    if (first.checked === 0) return okState(undefined, "No products in Error to re-check (products you edited or already reviewed are left alone).");
+    return okState(undefined, `${first.fixed} moved to Pending Review, ${first.duplicates} are duplicates, ${first.still} still need a person.${first.nextCursor ? " The rest is being checked in the background; refresh in a minute." : ""}`);
+  });
+}
+
 const SettingsSchema = z.object({
   discountPercent: z.coerce.number().min(0).max(99),
   autoPriceSync: zBool,
   feedUrl: z.string().trim().max(500),
   feedIsComplete: zBool,
   syncHours: z.coerce.number().int().min(1).max(720),
+  auctionMultiplier: z.coerce.number().min(1).max(20),
+  auctionMinPrice: z.coerce.number().min(1).max(100_000),
 });
 
 export async function saveImportSettingsAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
@@ -120,7 +138,7 @@ export async function saveImportSettingsAction(_prev: ActionState | undefined, f
         return failState(err instanceof Error ? err.message : "The feed address is not valid.", { feedUrl: "Not valid" });
       }
     }
-    await saveSettings({ "imports.discountBps": Math.round(d.discountPercent * 100), "imports.autoPriceSync": d.autoPriceSync, "imports.feedUrl": d.feedUrl, "imports.feedIsComplete": d.feedIsComplete, "imports.syncHours": d.syncHours }, admin.id);
+    await saveSettings({ "imports.discountBps": Math.round(d.discountPercent * 100), "imports.autoPriceSync": d.autoPriceSync, "imports.feedUrl": d.feedUrl, "imports.feedIsComplete": d.feedIsComplete, "imports.syncHours": d.syncHours, "imports.auctionBidMultiplierPct": Math.round(d.auctionMultiplier * 100), "imports.auctionMinPrice": Math.round(d.auctionMinPrice * 100) }, admin.id);
     await audit({ actor: actorOf(admin), action: "import.settings", targetType: "setting", summary: `Import settings: discount ${d.discountPercent}%, automatic price sync ${d.autoPriceSync ? "on" : "off"}, feed ${d.feedUrl ? "set" : "not set"}` });
     refresh();
     return okState(undefined, "Saved. The discount applies to products imported from now on; existing queue items keep the discount they were imported with.");
