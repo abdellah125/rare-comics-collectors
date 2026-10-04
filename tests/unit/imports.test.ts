@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { adjustmentForDiscount, describeAdjustment, marginOf, reprice, retailPrice } from "@/lib/imports/pricing";
-import { listingToRow, PageFormatError, readPageState } from "@/lib/imports/catalog-page";
+import { catalogPagePath, listingToRow, PageFormatError, readPageState } from "@/lib/imports/catalog-page";
 import { robotsAllows, robotsRules } from "@/lib/imports/robots";
 import { candidateKeywords, defaultSeoDescription, defaultSeoTitle, seoChecks, type SeoFacts } from "@/lib/imports/seo-rules";
 import { availabilityOf, readSource, SourceFormatError } from "@/lib/imports/source";
@@ -128,7 +128,12 @@ describe("robots.txt", () => {
     expect(rules.disallow).toContain("/search/");
   });
   it("allows clean catalogue pages and refuses what is disallowed", () => {
-    expect(robotsAllows(rules, "/search?page=1")).toBe(true);
+    // Page 1 is the plain address; later pages carry ?page=N.
+    expect(catalogPagePath(1)).toBe("/search");
+    expect(catalogPagePath(2)).toBe("/search?page=2");
+    expect(catalogPagePath(208)).toBe("/search?page=208");
+    expect(robotsAllows(rules, catalogPagePath(1))).toBe(true);
+    expect(robotsAllows(rules, "/search?page=2")).toBe(true);
     expect(robotsAllows(rules, "/search?page=208")).toBe(true);
     expect(robotsAllows(rules, "/search/comics?page=2")).toBe(false);
     expect(robotsAllows(rules, "/search?sort=price")).toBe(false);

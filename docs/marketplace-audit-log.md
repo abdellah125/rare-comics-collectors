@@ -225,6 +225,8 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - **Dashboard:** HipComic import shows Pages processed, Current page, Products found, Products imported, Already in the queue, Duplicates, Errors, the status, the latest activity, Pause / Resume / Try again, and a form to run a page range. The deploy seed starts pages 1–208 once.
 - Owed by the owner: ask HipComic to allow the importer's user agent through its bot protection (or to provide a feed/API address, which the feed setting accepts). Until then the page import stays stopped at page 1 and file uploads remain the way in.
 
+- Correction (owner): the first catalogue page is `/search`, not `/search?page=1`; pages 2–208 keep `?page=N` (`catalogPagePath`). A request to route the importer through proxies to get past the source’s block was declined: that is working around an access control; the way through is the source allowing the importer or giving a feed.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml` (the index; it lists the store and guide sitemaps).

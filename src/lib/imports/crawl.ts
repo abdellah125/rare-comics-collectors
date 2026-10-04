@@ -1,13 +1,13 @@
 import "server-only";
 import type { ImportCrawl } from "@prisma/client";
 import { db } from "@/lib/db";
-import { listingToRow, PageFormatError, readPageState } from "@/lib/imports/catalog-page";
+import { catalogPagePath as pagePath, listingToRow, PageFormatError, readPageState } from "@/lib/imports/catalog-page";
 import { runImport } from "@/lib/imports/pipeline";
 import { robotsAllows, robotsRules } from "@/lib/imports/robots";
 import { site } from "@/lib/site";
 
 /**
- * Page-by-page import of the source's catalogue pages (search?page=1 … page=N), in order.
+ * Page-by-page import of the source's catalogue pages (/search, then /search?page=2 … page=N), in order.
  *
  * How it behaves towards the source:
  *  - it identifies itself (USER_AGENT) and reads robots.txt first; a path robots.txt disallows is
@@ -23,7 +23,6 @@ import { site } from "@/lib/site";
  */
 export const CRAWL_ORIGIN = "https://www.hipcomic.com";
 export const USER_AGENT = `RareComicsCollectors-Import/1.0 (+${site.url}; ${site.email})`;
-const pagePath = (page: number) => `/search?page=${page}`;
 const MIN_DELAY_SECONDS = 6;
 const MAX_ATTEMPTS = 3;
 const MAX_SLOWDOWNS = 6;

@@ -8,6 +8,9 @@ import type { SourceRow } from "@/lib/imports/source";
  */
 export class PageFormatError extends Error {}
 
+/** The address of a catalogue page. The first page is the plain /search address; later pages carry ?page=N. */
+export const catalogPagePath = (page: number): string => (page <= 1 ? "/search" : `/search?page=${page}`);
+
 type Listing = {
   id?: number | string;
   _id?: number | string;
