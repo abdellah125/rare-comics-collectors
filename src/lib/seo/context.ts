@@ -12,6 +12,8 @@ import { SERIES_PUBLISHERS } from "../../../scripts/lib/hipcomic-title.mjs";
 /** Characters collectors search first appearances for; guides add to this list. */
 const CHARACTERS = ["spider man", "batman", "superman", "wonder woman", "wolverine", "deadpool", "venom", "carnage", "hulk", "iron man", "captain america", "thor", "black panther", "silver surfer", "doctor strange", "daredevil", "punisher", "ghost rider", "moon knight", "blade", "black widow", "hawkeye", "ant man", "wasp", "vision", "scarlet witch", "thanos", "galactus", "doctor doom", "magneto", "storm", "cyclops", "jean grey", "rogue", "gambit", "cable", "nightcrawler", "kitty pryde", "x 23", "miles morales", "spider gwen", "gwen stacy", "green goblin", "hobgoblin", "mysterio", "kingpin", "elektra", "bullseye", "she hulk", "captain marvel", "ms marvel", "kamala khan", "nova", "adam warlock", "rocket raccoon", "groot", "star lord", "gamora", "harley quinn", "joker", "catwoman", "robin", "nightwing", "batgirl", "flash", "green lantern", "aquaman", "supergirl", "darkseid", "lobo", "swamp thing", "john constantine", "constantine", "spawn", "invincible", "teenage mutant ninja turtles", "hellboy", "the walking dead", "savage dragon", "x men", "avengers", "fantastic four", "justice league", "teen titans", "guardians of the galaxy", "inhumans", "eternals", "sub mariner", "namor", "luke cage", "iron fist", "shang chi", "kang", "ultron", "loki", "red skull", "winter soldier", "falcon", "war machine", "apocalypse", "sabretooth", "mystique", "bishop", "jubilee", "psylocke", "silk", "morbius", "kraven", "black cat", "sandman", "lizard", "rhino", "electro", "vulture", "doctor octopus", "bane", "riddler", "penguin", "two face", "poison ivy", "ras al ghul", "deathstroke", "doomsday", "brainiac", "lex luthor", "cyborg", "raven", "starfire", "beast boy", "booster gold", "blue beetle", "shazam", "black adam", "hawkman", "atom", "martian manhunter", "zatanna", "howard the duck", "man thing", "werewolf by night", "conan"];
 
+/** Publisher names that are also everyday words only count when "comics" follows ("image comics", not "image"). */
+const EVERYDAY = new Set(["better", "image", "quality", "standard", "fox", "atlas", "gold key", "eclipse", "valiant", "titan", "ablaze", "dynamite", "top cow", "boom", "mirage", "avon", "dell", "harvey", "fiction house"]);
 const seriesOf = (title: string) => normPhrase(title.replace(/\([^)]*\)/g, " "));
 const issueOf = (issue: string) => (/^#?(\d{1,4})$/.test(issue.trim()) ? String(Number(issue.trim().replace("#", ""))) : null);
 
@@ -20,7 +22,7 @@ export type SeoContext = { catalog: Catalog; inventory: SiteInventory };
 /** What the site sells and publishes, in the shapes the keyword analysis needs. One set of queries per run. */
 export async function buildContext(): Promise<SeoContext> {
   const [products, articles, categories, publishers, characters] = await Promise.all([
-    db.product.findMany({ where: publishedWhere, select: { slug: true, title: true, issue: true, grader: true, grade: true, publisher: true } }),
+    db.product.findMany({ where: publishedWhere, select: { slug: true, title: true, issue: true, grader: true, grade: true, publisher: true, keyIssue: true, attributesJson: true } }),
     db.article.findMany({ where: { status: "published" }, select: { slug: true, title: true, topic: true, charactersJson: true, titlesJson: true } }),
     db.category.findMany({ where: { isActive: true }, select: { slug: true, name: true } }),
     db.product.groupBy({ by: ["publisher"], where: publishedWhere, _count: { _all: true } }),
@@ -30,6 +32,7 @@ export async function buildContext(): Promise<SeoContext> {
   const stockedSeries = new Set<string>();
   const stockedIssues = new Set<string>();
   const invProducts: SiteInventory["products"] = [];
+  const tagged: { key: string; text: string }[] = [];
   for (const p of products) {
     const series = seriesOf(p.title);
     if (!series) continue;
@@ -38,6 +41,9 @@ export async function buildContext(): Promise<SeoContext> {
     if (issue) {
       stockedIssues.add(`${series}|${issue}`);
       invProducts.push({ series, issue, slug: p.slug, label: `${p.title} ${p.issue} ${p.grader} ${p.grade}` });
+      let attr = "";
+      try { attr = String((JSON.parse(p.attributesJson) as Record<string, unknown>).Character ?? ""); } catch { attr = ""; }
+      if (attr || p.keyIssue) tagged.push({ key: `${series}|${issue}`, text: normPhrase(`${attr} ${p.keyIssue ?? ""}`) });
     }
   }
   const series = new Set<string>([...stockedSeries, ...Object.keys(SERIES_PUBLISHERS as Record<string, unknown>).map((s) => normPhrase(s))]);
@@ -49,12 +55,22 @@ export async function buildContext(): Promise<SeoContext> {
   // One- and two-letter names and bare numbers would match everywhere.
   const cleanSeries = [...series].filter((s) => s.length >= 3 && !/^\d+$/.test(s));
 
+  // Which characters an issue matters for, read from the listing's own "Character" attribute and key-issue line.
+  const issueCharacters = new Map<string, string[]>();
+  const names = [...characterSet].filter((c) => c.length >= 4);
+  for (const t of tagged) {
+    const padded = ` ${t.text} `;
+    const found = names.filter((c) => padded.includes(` ${c} `));
+    if (found.length) issueCharacters.set(t.key, [...new Set([...(issueCharacters.get(t.key) ?? []), ...found])].slice(0, 4));
+  }
+
   const catalog: Catalog = {
+    issueCharacters,
     series: cleanSeries,
     stockedSeries,
     stockedIssues,
     characters: [...characterSet].filter((c) => c.length >= 3),
-    publishers: [...new Set(publishers.map((p) => normPhrase(p.publisher.replace(/\b(comics|publishing|publications|entertainment|studios|magazines|periodicals)\b/gi, ""))).filter((p) => p.length >= 2))],
+    publishers: [...new Set(publishers.map((p) => normPhrase(p.publisher.replace(/\b(comics|publishing|publications|entertainment|studios|magazines|periodicals)\b/gi, ""))).filter((p) => p.length >= 2).map((p) => (EVERYDAY.has(p) ? `${p} comics` : p)))],
   };
   const inventory: SiteInventory = {
     products: invProducts,

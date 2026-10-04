@@ -12,17 +12,18 @@ import { aiConfigured } from "@/lib/seo/ai";
 import { INTENT_LABEL, SPECIFIC_LABEL, type Intent, type SpecificIntent } from "@/lib/seo/intel/intent";
 import { PRIORITY_LABEL, type Priority, type ScoreParts } from "@/lib/seo/intel/score";
 import { openSeoConfigured } from "@/lib/seo/openseo";
+import { CompetitorIntel, InternalLinks, RankingPlaybook, Topics, WarRoom } from "./growth-tabs";
 
 export const metadata: Metadata = { title: "SEO intelligence" };
 export const dynamic = "force-dynamic";
 // Research and metric calls wait on the provider; never cut one off after the credits are spent.
 export const maxDuration = 60;
 
-const TABS = [["roadmap", "Roadmap"], ["keywords", "Keywords"], ["clusters", "Page strategy"], ["rankings", "Rankings"], ["competitors", "Competitors & gaps"], ["audit", "Site audit"], ["runs", "Runs & credits"]] as const;
+const TABS = [["roadmap", "Roadmap"], ["war", "War room"], ["competitors", "Competitors"], ["topics", "Topics"], ["clusters", "Page strategy"], ["links", "Internal links"], ["keywords", "Keywords"], ["rankings", "Rankings"], ["audit", "Site audit"], ["runs", "Runs & credits"]] as const;
 type Tab = (typeof TABS)[number][0];
 const STATUS_LABEL: Record<string, string> = { discovered: "Discovered", analyzed: "Analyzed", targeting: "Targeting", content_needed: "Content needed", optimizing: "Optimizing", published: "Published", ranking: "Ranking", needs_improvement: "Needs improvement" };
 const PRIORITY_TONE: Record<string, "success" | "warning" | "neutral" | "brand"> = { high: "success", medium: "warning", long_term: "brand", low: "neutral" };
-const INSIGHT_LABEL: Record<string, string> = { striking_distance: "Close to page one (positions 4–15)", low_competition: "Demand with low difficulty", keyword_gap: "Competitor ranks, this site does not", cannibalization: "Several pages for one query", wrong_page: "Ranking with the wrong page", commercial_gap: "Buyer keyword with no page" };
+const INSIGHT_LABEL: Record<string, string> = { rank_drop: "Rankings that fell", striking_distance: "Close to page one (positions 4–15)", low_competition: "Demand with low difficulty", keyword_gap: "Competitor ranks, this site does not", cannibalization: "Several pages for one query", wrong_page: "Ranking with the wrong page", commercial_gap: "Buyer keyword with no page" };
 
 const n = (v: number | null | undefined, digits = 0) => (v === null || v === undefined ? "—" : v.toLocaleString("en-US", { maximumFractionDigits: digits }));
 const arr = <T,>(json: string): T[] => { try { const v = JSON.parse(json); return Array.isArray(v) ? (v as T[]) : []; } catch { return []; } };
@@ -92,6 +93,9 @@ export default async function AdminSeoPage({ searchParams }: PageProps<"/admin/s
         ))}
       </nav>
       {tab === "roadmap" && <Roadmap configured={configured} empty={total === 0} />}
+      {tab === "war" && <WarRoom sp={sp} />}
+      {tab === "topics" && <Topics sp={sp} />}
+      {tab === "links" && <InternalLinks sp={sp} />}
       {tab === "keywords" && <Keywords sp={sp} />}
       {tab === "clusters" && <Clusters sp={sp} />}
       {tab === "rankings" && <Rankings sp={sp} />}
@@ -389,6 +393,7 @@ async function Rankings({ sp }: { sp: SP }) {
   const top = (max: number) => ranked.filter((k) => k.position! <= max).length;
   return (
     <div className="grid gap-5">
+      <RankingPlaybook />
       <div className="grid gap-5 lg:grid-cols-3">
         <Card title="Visibility" description="Average position over the last 28 days, from Search Console (Google's own data, free).">
           <Kv items={[{ label: "Queries ranking", value: n(ranked.length) }, { label: "Top 3", value: n(top(3)) }, { label: "Top 10", value: n(top(10)) }, { label: "Top 20", value: n(top(20)) }, { label: "Impressions (28 d)", value: n(ranked.reduce((s, k) => s + (k.impressions ?? 0), 0)) }, { label: "Clicks (28 d)", value: n(ranked.reduce((s, k) => s + (k.clicks ?? 0), 0)) }]} />
@@ -456,6 +461,7 @@ async function Competitors() {
   ]);
   return (
     <div className="grid gap-5">
+      <CompetitorIntel />
       <Card title="Who ranks for this site's keywords" description="Domains found in the Google results read so far, and competitors whose rankings were pulled for a gap analysis. Reading more results (Roadmap › Read Google results) widens this list.">
         {competitors.length === 0 ? (
           <p className="text-[13px] text-ink-500">No competitor data yet. Read Google results for the best keywords, or run a keyword gap for a domain you know.</p>

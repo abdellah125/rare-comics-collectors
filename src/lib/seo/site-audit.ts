@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { enqueueJob } from "@/lib/jobs/queue";
 import { normPhrase } from "@/lib/seo/intel/entities";
+import { parsePage } from "@/lib/seo/intel/html";
 import { allSitemapEntries } from "@/lib/sitemap-entries";
 
 /**
@@ -22,28 +23,6 @@ const CONCURRENCY = 6;
 export type Issue = { code: string; severity: "high" | "medium" | "low"; message: string };
 
 const kindOf = (path: string) => (path === "/" ? "home" : path.startsWith("/store/") ? "product" : path === "/store" ? "store" : path.startsWith("/guides/") ? "guide" : path.startsWith("/collections") ? "collection" : path.startsWith("/publishers") ? "publisher" : path.startsWith("/characters") ? "character" : path.startsWith("/services") ? "service" : path.startsWith("/sellers") ? "seller" : "page");
-const decode = (s: string) => s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;|&#39;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
-const strip = (html: string) => decode(html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " "));
-const attr = (tag: string, name: string) => tag.match(new RegExp(`${name}\\s*=\\s*"([^"]*)"`, "i"))?.[1] ?? null;
-
-export function parsePage(html: string, origin: string) {
-  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
-  const metas = [...html.matchAll(/<meta\b[^>]*>/gi)].map((m) => m[0]);
-  const description = metas.map((t) => (attr(t, "name")?.toLowerCase() === "description" ? attr(t, "content") : null)).find(Boolean) ?? null;
-  const robots = metas.map((t) => (attr(t, "name")?.toLowerCase() === "robots" ? attr(t, "content") : null)).find(Boolean) ?? "";
-  const canonicalTag = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]).find((t) => attr(t, "rel")?.toLowerCase() === "canonical");
-  const h1s = [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map((m) => strip(m[1]));
-  const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ?? html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? "";
-  const words = strip(main).split(" ").filter((w) => /[A-Za-z0-9]/.test(w)).length;
-  const links = new Set<string>();
-  for (const m of main.matchAll(/<a\b[^>]*href\s*=\s*"([^"#?]+)[^"]*"/gi)) {
-    const href = m[1];
-    const path = href.startsWith("/") ? href : href.startsWith(origin) ? href.slice(origin.length) : null;
-    if (path && !/^\/(admin|account|dashboard|cart|checkout|api)\b/.test(path)) links.add(path.replace(/\/$/, "") || "/");
-  }
-  return { title: title ? decode(title) : null, description: description ? decode(description) : null, noindex: /noindex/i.test(robots), canonical: canonicalTag ? attr(canonicalTag, "href") : null, h1: h1s[0] ?? null, h1Count: h1s.length, wordCount: words, links: [...links] };
-}
-
 async function crawlList(): Promise<string[]> {
   const origin = env.siteUrl.replace(/\/+$/, "");
   const entries = await allSitemapEntries();
@@ -83,7 +62,7 @@ export async function auditChunk(offset: number): Promise<void> {
         const html = res.status === 200 ? await res.text() : "";
         const p = parsePage(html, origin);
         linkRows.push({ from: path, to: p.links });
-        const data = { kind: kindOf(path), httpStatus: res.status, title: p.title, description: p.description, h1: p.h1, h1Count: p.h1Count, wordCount: p.wordCount, canonical: p.canonical, noindex: p.noindex || /noindex/i.test(res.headers.get("x-robots-tag") ?? ""), outlinks: p.links.length, issuesJson: JSON.stringify({ links: p.links.slice(0, 200) }), crawledAt: new Date() };
+        const data = { kind: kindOf(path), httpStatus: res.status, title: p.title, description: p.description, h1: p.h1, h1Count: p.h1Count, wordCount: p.wordCount, canonical: p.canonical, noindex: p.noindex || /noindex/i.test(res.headers.get("x-robots-tag") ?? ""), outlinks: p.links.length, issuesJson: JSON.stringify({ links: p.links.slice(0, 200) }), linksJson: JSON.stringify(p.links.slice(0, 300)), crawledAt: new Date() };
         await db.seoPage.upsert({ where: { url: path }, create: { url: path, ...data }, update: data });
       } catch {
         await db.seoPage.upsert({ where: { url: path }, create: { url: path, kind: kindOf(path), httpStatus: 0 }, update: { httpStatus: 0 } });
@@ -107,7 +86,7 @@ export async function finishAudit(): Promise<string> {
   const pages = await db.seoPage.findMany();
   const inlinks = new Map<string, number>();
   for (const p of pages) {
-    const links = ((JSON.parse(p.issuesJson) as { links?: string[] }).links ?? []).filter((l) => l !== p.url);
+    const links = (JSON.parse(p.linksJson) as string[]).filter((l) => l !== p.url);
     for (const l of new Set(links)) inlinks.set(l, (inlinks.get(l) ?? 0) + 1);
   }
   const count = (key: (p: (typeof pages)[number]) => string | null) => { const m = new Map<string, number>(); for (const p of pages) { const k = key(p); if (k) m.set(k, (m.get(k) ?? 0) + 1); } return m; };

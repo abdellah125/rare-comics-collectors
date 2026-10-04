@@ -39,6 +39,7 @@ export const COST = {
   get_keyword_metrics: (phrases: number) => 12 + Math.ceil(phrases * 0.15),
   get_serp_results: (queries: number, depth: number) => Math.ceil(queries * (5 + Math.max(0, depth - 20) * 0.25)),
   get_ranked_keywords: () => 30,
+  find_serp_competitors: () => 30,
   get_domain_overview: () => 300,
 } as const;
 

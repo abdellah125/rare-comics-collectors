@@ -1409,12 +1409,18 @@ model SeoKeyword {
   /// JSON array of { domain, position, url, title }
   competitorsJson String   @default("[]")
   serpAt         DateTime?
+  /// how exposed the best-placed competitor is, 0–100, and the attack score built on it
+  weakness       Int?
+  attackScore    Int?
+  /// JSON: { target: { domain, position, url, kind }, reasons: string[], level, action }
+  attackJson     String    @default("{}")
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   snapshots SeoRankSnapshot[]
 
   @@index([priority, score])
+  @@index([attackScore])
   @@index([clusterKey])
   @@index([status])
   @@index([intent])
@@ -1481,6 +1487,14 @@ model SeoCompetitor {
   /// keywords of ours in whose top results the domain appeared, and its average position there
   keywordsSeen     Int       @default(0)
   avgPosition      Float?
+  /// from OpenSEO's competitor comparison over this site's best keywords
+  medianPosition   Float?
+  visibility       Float?
+  etv              Float?
+  rating           Float?
+  comparedAt       DateTime?
+  /// JSON: what they rank for, with which kind of page, and what can be taken
+  profileJson      String    @default("{}")
   organicTraffic   Float?
   organicKeywords  Int?
   backlinks        Float?
@@ -1515,9 +1529,67 @@ model SeoPage {
   position    Float?
   /// JSON array of { query, impressions, position }
   topQueriesJson String @default("[]")
+  /// JSON array of internal paths this page links to (for the internal-link recommendations)
+  linksJson   String   @default("[]")
   crawledAt   DateTime @default(now())
 
   @@index([kind])
+}
+
+/// A competitor's ranking page, fetched once to see how strong it really is.
+model SeoCompetitorPage {
+  id        String   @id @default(cuid())
+  url       String   @unique
+  domain    String
+  httpStatus Int
+  title     String?
+  wordCount Int?
+  hasOffer  Boolean?
+  latestYear Int?
+  checkedAt DateTime @default(now())
+
+  @@index([domain])
+}
+
+/// A subject the site should own as a whole (a character, a title, an era…): its pages, gaps and rankings.
+model SeoTopic {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  label         String
+  /// character | series | era | publisher | grading | values | key_issues | collecting
+  type          String
+  hubUrl        String?
+  hubExists     Boolean  @default(false)
+  clusterCount  Int      @default(0)
+  volume        Int      @default(0)
+  pagesExisting Int      @default(0)
+  pagesMissing  Int      @default(0)
+  ranking       Int      @default(0)
+  top10         Int      @default(0)
+  /// share of the topic's measured demand that has a page on the site, 0–100
+  coverage      Int      @default(0)
+  /// JSON array of { label, primary, url, exists, position, volume, score, pageType }
+  membersJson   String   @default("[]")
+  updatedAt     DateTime @updatedAt
+
+  @@index([type, volume])
+}
+
+/// A recommended internal link between two pages that exist.
+model SeoLinkRec {
+  id       String   @id @default(cuid())
+  fromUrl  String
+  toUrl    String
+  anchor   String
+  /// hub_to_page | page_to_hub | guide_to_product | parent_to_hub
+  kind     String
+  reason   String
+  /// true / false once the audit has crawled the source page, null before
+  present  Boolean?
+  weight   Int      @default(0)
+
+  @@unique([fromUrl, toUrl])
+  @@index([present, weight])
 }
 
 /// A detected opportunity or problem, rebuilt on every analysis.

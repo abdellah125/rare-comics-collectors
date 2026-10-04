@@ -570,14 +570,45 @@ async function seedCatalogQueue() {
  * job then classifies, scores and clusters the rows against the live catalogue.
  */
 async function seedSeoKeywords() {
-  const file = path.join(process.cwd(), "prisma", "data", "seo", "keywords.json");
-  if (!fs.existsSync(file) || (await db.seoKeyword.count()) > 0) return;
+  const dir = path.join(process.cwd(), "prisma", "data", "seo");
+  const file = path.join(dir, "keywords.json");
+  if (!fs.existsSync(file)) return;
   type Row = { phrase: string; norm: string; volume: number | null; difficulty: number | null; cpc: number | null; competition: number | null; providerIntent: string | null; serpFeaturesJson: string; serpDomainRank: number | null; serpRefDomains: number | null; metricsAt: string | null; sourcesJson: string; competitorsJson: string; serpAt: string | null };
   const rows = JSON.parse(fs.readFileSync(file, "utf8")) as Row[];
-  for (let i = 0; i < rows.length; i += 500) {
-    await db.seoKeyword.createMany({ data: rows.slice(i, i + 500).map((r) => ({ ...r, metricsAt: r.metricsAt ? new Date(r.metricsAt) : null, serpAt: r.serpAt ? new Date(r.serpAt) : null })), skipDuplicates: true });
+  // New phrases are added; a phrase already in the table only gains what it lacks (metrics, competitor
+  // positions), so data bought later in production is never overwritten by the pack.
+  const existing = new Map((await db.seoKeyword.findMany({ select: { norm: true, metricsAt: true, competitorsJson: true } })).map((k) => [k.norm, k]));
+  const fresh = rows.filter((r) => !existing.has(r.norm));
+  for (let i = 0; i < fresh.length; i += 500) {
+    await db.seoKeyword.createMany({ data: fresh.slice(i, i + 500).map((r) => ({ ...r, metricsAt: r.metricsAt ? new Date(r.metricsAt) : null, serpAt: r.serpAt ? new Date(r.serpAt) : null })), skipDuplicates: true });
   }
-  log(`seo keywords: ${rows.length} measured keywords loaded`);
+  let filled = 0;
+  for (const r of rows) {
+    const old = existing.get(r.norm);
+    if (!old) continue;
+    const data: Record<string, unknown> = {};
+    if (!old.metricsAt && r.metricsAt) Object.assign(data, { volume: r.volume, difficulty: r.difficulty, cpc: r.cpc, competition: r.competition, providerIntent: r.providerIntent, metricsAt: new Date(r.metricsAt) });
+    if (old.competitorsJson === "[]" && r.competitorsJson !== "[]") data.competitorsJson = r.competitorsJson;
+    if (Object.keys(data).length === 0) continue;
+    await db.seoKeyword.update({ where: { norm: r.norm }, data });
+    filled += 1;
+  }
+  const competitorsFile = path.join(dir, "competitors.json");
+  let competitors = 0;
+  if (fs.existsSync(competitorsFile)) {
+    type C = { domain: string; medianPosition: number | null; visibility: number | null; etv: number | null; rating: number | null; comparedAt: string | null; kind: string };
+    for (const c of JSON.parse(fs.readFileSync(competitorsFile, "utf8")) as C[]) {
+      const data = { medianPosition: c.medianPosition, visibility: c.visibility, etv: c.etv, rating: c.rating, comparedAt: c.comparedAt ? new Date(c.comparedAt) : null, kind: c.kind };
+      const had = await db.seoCompetitor.findUnique({ where: { domain: c.domain }, select: { comparedAt: true } });
+      if (!had) await db.seoCompetitor.create({ data: { domain: c.domain, ...data } });
+      else if (!had.comparedAt) await db.seoCompetitor.update({ where: { domain: c.domain }, data });
+      else continue;
+      competitors += 1;
+    }
+  }
+  // New data needs scoring, clustering and attack analysis: queue the free analysis phase of the weekly job.
+  if (fresh.length || filled || competitors) await db.job.create({ data: { type: "seo_sync", payloadJson: JSON.stringify({ phase: "analyse" }), maxAttempts: 3 } });
+  if (fresh.length || filled || competitors) log(`seo data pack: ${fresh.length} keywords added, ${filled} completed, ${competitors} competitors`);
 }
 
 type SeedGuide = {

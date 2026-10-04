@@ -15,6 +15,8 @@ export type Catalog = {
   stockedIssues: Set<string>;
   characters: string[];
   publishers: string[];
+  /** "series|issue" → characters tied to that issue (from the listings' own data), for topic hubs */
+  issueCharacters?: Map<string, string[]>;
 };
 
 export type EntityType = "issue" | "first_appearance" | "series" | "character" | "era" | "publisher" | "grading" | "topic";
@@ -102,7 +104,7 @@ export function extractEntity(phrase: string, catalog: Catalog): Entity {
   if (found) return { type: "series", key: `series:${found.series}`, label: titleCase(found.series), series: found.series, inStock: catalog.stockedSeries.has(found.series) };
   if (character) return { type: "character", key: `character:${character}`, label: titleCase(character) };
   const publisher = catalog.publishers.filter((x) => padded.includes(` ${x} `)).sort((a, b) => b.length - a.length)[0];
-  if (publisher) return { type: "publisher", key: `publisher:${publisher}`, label: `${titleCase(publisher)} comics` };
+  if (publisher) return { type: "publisher", key: `publisher:${publisher}`, label: publisher.endsWith(" comics") ? titleCase(publisher) : `${titleCase(publisher)} comics` };
 
   // 4. Grading as a subject, else a general topic identified by its core words.
   const sig = topicSignature(p);
@@ -140,6 +142,7 @@ const OFF_TOPIC: [RegExp, number, string][] = [
   [/\b(movie|movies|film|trailer|cast|actor|netflix|disney plus|tv show|series cast|episode|season \d|box office|streaming)\b/, 8, "about a film or show"],
   [/\b(game|games|lego|funko|pop|toy|toys|action figure|figure|costume|cosplay|wallpaper|drawing|draw|coloring|tattoo|shirt|t shirt|poster|hoodie|plush|statue)\b/, 8, "about merchandise or art, not comics"],
   [/\b(comic sans|comic strip|comic con|comiccon|convention tickets|garfield|peanuts|calvin and hobbes|newspaper)\b/, 10, "not collectible comic books"],
+  [/\b(quotes?|names? list|list of|characters|most powerful|strongest|who would win|powers|height|real name|invented|creator of|how old)\b/, 12, "character trivia, not collecting or buying"],
   [/\b(manga|anime|manhwa|manhua|light novel)\b/, 20, "manga is not sold here"],
   [/\b(omnibus|trade paperback|tpb|hardcover|graphic novel|kindle|digital)\b/, 25, "collected editions and digital are not sold here"],
 ];
@@ -163,6 +166,8 @@ export function relevanceFor(phrase: string, entity: Entity, intent: IntentResul
     case "era":
       return { score: 90, reason: "an era the store has a collection page for" };
     case "series":
+      // A bare name ("spiderman", "invincible") is mostly people after the character, film or show.
+      if (!graded && !COMIC_SIGNAL.test(p) && intent.specific.length === 0 && p.replace(/^the /, "") === entity.series) return { score: 40, reason: "a bare title or character name: most of these searchers are not looking for comic books" };
       return entity.inStock ? { score: graded ? 95 : 85, reason: "a series the store has on sale" } : { score: graded ? 80 : 68, reason: "a comic series (nothing in stock right now)" };
     case "character":
       return COMIC_SIGNAL.test(p) ? { score: 72, reason: "a character, searched as comics" } : { score: 35, reason: "a character with no sign the searcher means comic books" };

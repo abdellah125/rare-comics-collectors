@@ -7,6 +7,7 @@ import { extractEntity, type Bucket } from "@/lib/seo/intel/entities";
 import type { Intent, SpecificIntent } from "@/lib/seo/intel/intent";
 import type { Priority } from "@/lib/seo/intel/score";
 import { planPage } from "@/lib/seo/intel/strategy";
+import { domainKind } from "@/lib/seo/intel/attack";
 
 type Competitor = { domain: string; position: number; url: string; title: string };
 type Row = {
@@ -18,15 +19,6 @@ type Row = {
 const PRIORITY_RANK: Record<string, number> = { high: 3, medium: 2, long_term: 1, low: 0 };
 const pathOf = (url: string | null) => { if (!url) return null; try { return new URL(url, env.siteUrl).pathname.replace(/\/$/, "") || "/"; } catch { return null; } };
 const demand = (k: Row) => k.volume ?? k.impressions ?? 0;
-
-const DOMAIN_KIND: [RegExp, string][] = [
-  [/(^|\.)(ebay|amazon|etsy|walmart|whatnot|mercari)\./, "marketplace"],
-  [/(^|\.)(youtube|tiktok|vimeo)\./, "video"],
-  [/(^|\.)(reddit|facebook|instagram|pinterest|quora|x|twitter)\./, "social"],
-  [/(^|\.)(wikipedia|fandom|marvel|dc|cgccomics|cbcscomics|gocollect|comicvine|keycollectorcomics|pricecharting|covrprice)\.|\.(org|edu)$/, "reference"],
-  [/(^|\.)(ha|comiclink|comicconnect|heritageauctions|mycomicshop|milehighcomics|midtowncomics)\./, "dealer"],
-];
-const kindOf = (domain: string) => DOMAIN_KIND.find(([re]) => re.test(`${domain}`))?.[1] ?? "other";
 
 /**
  * Everything derived from the keyword table: clusters with their page plans, each keyword's
@@ -48,7 +40,9 @@ export async function rebuildStrategy(ctx: SeoContext): Promise<{ clusters: numb
   const planExists = new Map<string, { exists: boolean; url: string }>();
   for (const [key, members] of groups) {
     const maxRelevance = Math.max(...members.map((m) => m.relevance));
-    members.sort((a, b) => demand(b) - demand(a) || (b.score ?? -1) - (a.score ?? -1) || a.phrase.length - b.phrase.length);
+    // The primary keyword is the most searched one that is actually relevant: a huge off-topic head term never leads a cluster.
+    const fit = (m: Row) => (m.relevance >= 45 ? 1 : 0);
+    members.sort((a, b) => fit(b) - fit(a) || demand(b) - demand(a) || (b.score ?? -1) - (a.score ?? -1) || a.phrase.length - b.phrase.length);
     const primary = members[0];
     role.set(primary.id, "primary");
     const secondary = members.slice(1).filter((m) => demand(m) > 0).slice(0, 5);
@@ -118,7 +112,7 @@ export async function rebuildStrategy(ctx: SeoContext): Promise<{ clusters: numb
   }
   await db.seoCompetitor.updateMany({ data: { keywordsSeen: 0, avgPosition: null } });
   for (const [domain, s] of seen) {
-    const data = { keywordsSeen: s.n, avgPosition: Math.round((s.sum / s.n) * 10) / 10, kind: kindOf(domain) };
+    const data = { keywordsSeen: s.n, avgPosition: Math.round((s.sum / s.n) * 10) / 10, kind: domainKind(domain) };
     await db.seoCompetitor.upsert({ where: { domain }, create: { domain, ...data }, update: data });
   }
 
@@ -159,5 +153,8 @@ export async function rebuildStrategy(ctx: SeoContext): Promise<{ clusters: numb
   insights.sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0));
   const kept = insights.slice(0, 600);
   for (let i = 0; i < kept.length; i += 300) await db.seoInsight.createMany({ data: kept.slice(i, i + 300) });
+  // The competitive layer reads the clusters just written.
+  const { rebuildGrowth } = await import("@/lib/seo/growth");
+  await rebuildGrowth(ctx);
   return { clusters: clusters.length, insights: kept.length };
 }

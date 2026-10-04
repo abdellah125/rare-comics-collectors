@@ -5,12 +5,12 @@ import { audit } from "@/lib/audit";
 import { actorOf, runAdmin } from "@/lib/admin/guard";
 import { db } from "@/lib/db";
 import { writeAnalysis } from "@/lib/seo/ai";
-import { connectionStatus, stepAnalyse, stepCandidates, stepCompetitorGap, stepMetrics, stepOwnRankings, stepResearch, stepSearchConsole, stepSerps, type StepResult } from "@/lib/seo/pipeline";
+import { connectionStatus, stepAnalyse, stepCandidates, stepCompetitorGap, stepFindCompetitors, stepInspectRivalPages, stepMetrics, stepOwnRankings, stepResearch, stepSearchConsole, stepSerps, type StepResult } from "@/lib/seo/pipeline";
 import { startAudit } from "@/lib/seo/site-audit";
 import { failState, okState, type ActionState } from "@/lib/validation";
 
 const STATUSES = ["discovered", "analyzed", "targeting", "content_needed", "optimizing", "published", "ranking", "needs_improvement"];
-export type SeoStep = "test" | "candidates" | "search_console" | "analyse" | "research" | "metrics" | "serp" | "gap" | "own_rankings" | "audit" | "ai";
+export type SeoStep = "competitors" | "inspect_rivals" | "test" | "candidates" | "search_console" | "analyse" | "research" | "metrics" | "serp" | "gap" | "own_rankings" | "audit" | "ai";
 
 /** Runs one pipeline step. Paid steps are guarded again inside the client (balance and reserve). */
 export async function runSeoStepAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
@@ -31,6 +31,8 @@ export async function runSeoStepAction(_prev: ActionState | undefined, formData:
       case "serp": result = await stepSerps(Number.parseInt(String(formData.get("count") ?? "5"), 10) || 5, admin.id); break;
       case "gap": result = await stepCompetitorGap(String(formData.get("domain") ?? ""), admin.id); break;
       case "own_rankings": result = await stepOwnRankings(admin.id); break;
+      case "competitors": result = await stepFindCompetitors(admin.id); break;
+      case "inspect_rivals": result = await stepInspectRivalPages(20, admin.id); break;
       case "audit": {
         const n = await startAudit(admin.id);
         result = { ok: true, summary: `Site audit started: ${n} pages are being crawled in the background. Reload the Site audit tab in a few minutes. No credits used.` };

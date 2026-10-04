@@ -377,6 +377,82 @@ export const stepOwnRankings = (actorId?: string | null) =>
     return { credits: r.credits, summary: `${inputs.length} keywords the site ranks for in Google's top 100, with difficulty, intent and SERP data (${saved.created} new). ${r.credits} credits used${r.balance !== null ? `, ${r.balance} left` : ""}.` };
   });
 
+export type CompetitorsReply = { competitors?: { domain: string; avg_position?: number; median_position?: number; rating?: number; etv?: number; keywords_count?: number; visibility?: number; keywords_positions?: Record<string, number[]> }[] };
+
+/**
+ * Who competes across this site's best keywords, and at which position for each one
+ * (one call for up to 100 keywords, about 22 credits). The raw material of the war room.
+ */
+export const stepFindCompetitors = (actorId?: string | null) =>
+  step("competitors", actorId, async (ctx) => {
+    const targets = await db.seoKeyword.findMany({ where: { score: { not: null }, relevance: { gte: 70 }, volume: { gte: 30 } }, orderBy: [{ score: "desc" }], take: 100, select: { phrase: true } });
+    if (targets.length < 5) return { summary: "Fewer than five scored, relevant keywords: fetch metrics first. No credits used." };
+    const r = await callTool<CompetitorsReply>("find_serp_competitors", { keywords: targets.map((t) => t.phrase), excludeDomains: [host()], limit: 50 }, { estimate: COST.find_serp_competitors(), summary: `${targets.length} keywords, top 50 domains`, lines: (d) => d.competitors?.length ?? 0, actorId });
+    const stored = await applyCompetitorComparison(r.data, ctx);
+    await rebuildStrategy(ctx);
+    return { credits: r.credits, summary: `${(r.data.competitors ?? []).length} competing domains compared across ${targets.length} keywords; positions stored for ${stored} keywords. ${r.credits} credits used${r.balance !== null ? `, ${r.balance} left` : ""}.` };
+  });
+
+/** Stores a competitor comparison: one row per domain, and each domain's position on each keyword. */
+export async function applyCompetitorComparison(reply: CompetitorsReply, ctx: SeoContext): Promise<number> {
+    const byKeyword = new Map<string, Competitor[]>();
+    const now = new Date();
+    for (const c of reply.competitors ?? []) {
+      const domain = c.domain.toLowerCase().replace(/^www\./, "");
+      const data = { medianPosition: c.median_position ?? null, visibility: c.visibility ?? null, etv: c.etv ?? null, rating: c.rating ?? null, comparedAt: now };
+      await db.seoCompetitor.upsert({ where: { domain }, create: { domain, ...data }, update: data });
+      for (const [phrase, positions] of Object.entries(c.keywords_positions ?? {})) {
+        const position = Math.min(...positions);
+        if (!Number.isFinite(position)) continue;
+        byKeyword.set(normPhrase(phrase), [...(byKeyword.get(normPhrase(phrase)) ?? []), { domain, position, url: "", title: "" }]);
+      }
+    }
+    // Merge with what is already known: a URL and title read from a live result are worth keeping.
+    const known = await db.seoKeyword.findMany({ where: { norm: { in: [...byKeyword.keys()] } }, select: { phrase: true, norm: true, competitorsJson: true } });
+    const inputs: KeywordInput[] = known.map((k) => {
+      const prior = JSON.parse(k.competitorsJson) as Competitor[];
+      const merged = new Map<string, Competitor>();
+      for (const c of byKeyword.get(k.norm) ?? []) merged.set(c.domain, c);
+      for (const c of prior) merged.set(c.domain, c.url ? c : (merged.get(c.domain) ?? c));
+      return { phrase: k.phrase, source: "", competitors: [...merged.values()].sort((a, b) => a.position - b.position).slice(0, 25) };
+    });
+    await saveKeywords(inputs, ctx);
+    return inputs.length;
+}
+
+/**
+ * Fetches competitors' ranking pages for the best attack keywords and measures them: words,
+ * product/price markup, the latest year mentioned. One polite GET per page, no API credits.
+ */
+export const stepInspectRivalPages = (count: number, actorId?: string | null) =>
+  step("inspect_rivals", actorId, async (ctx) => {
+    const { parsePage } = await import("@/lib/seo/intel/html");
+    const rows = await db.seoKeyword.findMany({ where: { attackScore: { not: null }, attackJson: { contains: '"url":"http' } }, orderBy: { attackScore: "desc" }, take: 200, select: { attackJson: true } });
+    const urls = [...new Set(rows.map((k) => (JSON.parse(k.attackJson) as { target?: { url?: string } }).target?.url ?? "").filter(Boolean))];
+    const done = new Set((await db.seoCompetitorPage.findMany({ where: { url: { in: urls } }, select: { url: true } })).map((p) => p.url));
+    const todo = urls.filter((u) => !done.has(u)).slice(0, Math.min(40, Math.max(5, count)));
+    if (todo.length === 0) return { summary: "Every competitor page behind the current attack keywords has been inspected. Read more Google results or run a gap to add pages. No credits used." };
+    let ok = 0;
+    for (const url of todo) {
+      let domain = "";
+      try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch { continue; }
+      try {
+        const res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 (compatible; RCC-Research/1.0)", accept: "text/html" }, redirect: "follow", signal: AbortSignal.timeout(15_000) });
+        const html = res.ok ? (await res.text()).slice(0, 1_500_000) : "";
+        const p = parsePage(html, new URL(url).origin);
+        const years = [...html.replace(/<script[\s\S]*?<\/script>/gi, " ").matchAll(/\b(20[1-3]\d)\b/g)].map((m) => Number(m[1])).filter((y) => y <= new Date().getUTCFullYear());
+        const data = { domain, httpStatus: res.status, title: p.title, wordCount: res.ok ? p.wordCount : null, hasOffer: res.ok ? /"@type"\s*:\s*"(Product|Offer|AggregateOffer)"|itemprop="price"|add to cart|add-to-cart/i.test(html) : null, latestYear: years.length ? Math.max(...years) : null, checkedAt: new Date() };
+        await db.seoCompetitorPage.upsert({ where: { url }, create: { url, ...data }, update: data });
+        if (res.ok) ok += 1;
+      } catch {
+        await db.seoCompetitorPage.upsert({ where: { url }, create: { url, domain, httpStatus: 0 }, update: { httpStatus: 0, checkedAt: new Date() } });
+      }
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    await rebuildStrategy(ctx);
+    return { summary: `${todo.length} competitor pages fetched, ${ok} readable (the others block automated visits and stay unmeasured). No credits used.` };
+  });
+
 /** Free: the authentication test. */
 export async function connectionStatus(): Promise<{ ok: boolean; message: string; credits: number | null; email: string | null }> {
   try {

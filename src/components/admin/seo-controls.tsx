@@ -70,6 +70,8 @@ export function SeoActionsPanel({ configured, aiConfigured }: { configured: bool
         </label>
       </SeoStep>
       <SeoStep step="own_rankings" label="Check Google top 100" cost="≈ 25–30" disabled={!configured} />
+      <SeoStep step="competitors" label="Find top competitors" cost="≈ 22" disabled={!configured} />
+      <SeoStep step="inspect_rivals" label="Inspect competitor pages" cost="Free" />
       <SeoStep step="audit" label="Run site audit" cost="Free" />
       <SeoStep step="ai" label="Write the analysis" cost={aiConfigured ? "No OpenSEO credits" : "Needs ANTHROPIC_API_KEY"} disabled={!aiConfigured} />
     </div>
