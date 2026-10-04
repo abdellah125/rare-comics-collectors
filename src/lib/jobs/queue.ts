@@ -26,7 +26,10 @@ export type JobType =
   | "catalog_release"
   | "reconcile_payments"
   | "seo_sync"
-  | "seo_audit";
+  | "seo_audit"
+  | "import_prepare"
+  | "import_sync"
+  | "import_seo";
 
 export type JobHandler = (payload: Record<string, unknown>, ctx: { jobId: string; attempt: number }) => Promise<void>;
 

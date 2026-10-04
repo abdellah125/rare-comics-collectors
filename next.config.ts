@@ -16,6 +16,8 @@ const canonicalHost = canonicalOrigin ? new URL(canonicalOrigin).host : "";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Catalogue import files are posted to a server action (the platform's own request limit is 4.5 MB).
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   images: {
     remotePatterns: [
       {

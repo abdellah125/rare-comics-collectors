@@ -31,11 +31,11 @@ export async function generateMetadata({ params }: PageProps<"/store/[slug]">): 
   const settings = await getSettings();
 
   const gradeLabel = product.grader === "Raw" ? `Raw ${product.grade}` : `${product.grader} ${product.grade}`;
-  const title = `${product.title} ${product.issue} — ${gradeLabel} (${product.year}) for Sale`;
+  const title = product.seoTitle?.trim() || `${product.title} ${product.issue} — ${gradeLabel} (${product.year}) for Sale`;
   return {
     ...pageMetadata({
       title,
-      description: `${product.title} ${product.issue}, ${product.publisher} ${product.year}. ${gradeLabel}${product.keyIssue ? ` — ${product.keyIssue}` : ""}. ${formatMoney(product.price, "USD", "en-US", { compact: true })}, insured shipping and a ${settings["commerce.returnWindowDays"]}-day return window from ${site.name}.`,
+      description: product.seoDescription?.trim() || `${product.title} ${product.issue}, ${product.publisher} ${product.year}. ${gradeLabel}${product.keyIssue ? ` — ${product.keyIssue}` : ""}. ${formatMoney(product.price, "USD", "en-US", { compact: true })}, insured shipping and a ${settings["commerce.returnWindowDays"]}-day return window from ${site.name}.`,
       path: `/store/${product.slug}`,
       type: "article",
       keywords: [`${product.title} ${product.issue}`, `${product.title} ${product.issue} ${product.grader} ${product.grade}`, `${product.publisher} ${product.era}`, "graded comic for sale"],

@@ -53,6 +53,9 @@ export type ProductDetail = ProductSummary & {
   allowedCountries: string[];
   categorySlug: string | null;
   categoryName: string | null;
+  /** Edited page title / meta description, when an admin set one. */
+  seoTitle: string | null;
+  seoDescription: string | null;
   status: string;
   seller: { id: string; slug: string; displayName: string; ratingAvg: number; ratingCount: number; handlingDays: number; shipsFromCountry: string | null; salesCount: number } | null;
   weightGrams: number | null;
@@ -81,6 +84,8 @@ function toDetail(p: Prisma.ProductGetPayload<{ include: typeof detailInclude }>
     allowedCountries: parseJsonArray(p.allowedCountriesJson, isString),
     categorySlug: p.category?.slug ?? null,
     categoryName: p.category?.name ?? null,
+    seoTitle: p.seoTitle,
+    seoDescription: p.seoDescription,
     status: p.status,
     seller: p.seller && p.seller.status === "approved" ? p.seller : null,
     weightGrams: p.weightGrams,

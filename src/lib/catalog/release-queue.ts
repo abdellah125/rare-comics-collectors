@@ -65,10 +65,13 @@ export function nextReleaseRun(now = new Date()): Date {
 
 export async function releaseDueListings(now = new Date()): Promise<{ released: number; blocked: number; paused: boolean }> {
   const settings = await getSettings();
-  if (settings["catalog.releasePaused"]) return { released: 0, blocked: 0, paused: true };
+  // Imported products are released by an admin from the review queue (src/lib/imports). The
+  // scheduled path only runs when it has been switched back on deliberately.
+  if (!settings["catalog.autoRelease"] || settings["catalog.releasePaused"]) return { released: 0, blocked: 0, paused: true };
 
   const due = await db.product.findMany({
-    where: { status: "draft", importSource: { not: null }, releaseAt: { lte: now }, deletedAt: null },
+    // Never a product that sits in the review queue: those need an explicit release.
+    where: { status: "draft", importSource: { not: null }, releaseAt: { lte: now }, deletedAt: null, importItem: null },
     include: { images: { orderBy: { position: "asc" }, take: 1, select: { url: true } } },
     orderBy: [{ releaseAt: "asc" }, { createdAt: "asc" }],
     take: 500,

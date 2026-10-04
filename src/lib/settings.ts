@@ -113,6 +113,17 @@ export const settingDefaults = {
   "system.jobsEnabled": true,
   "system.exchangeRatesAuto": true,
   "catalog.releasePaused": false,
+  /** Legacy scheduled publishing of queued imports. Off: imported products go live only when an admin releases them. */
+  "catalog.autoRelease": false,
+  /** Imported products: selling price = source price × (1 + markup). 2500 = 25 %. */
+  "imports.markupBps": 2500,
+  /** When the source price changes, also replace a selling price an admin set by hand. */
+  "imports.autoPriceSync": false,
+  /** The authorised data feed (https address given by the source). Empty = sync by file upload only. */
+  "imports.feedUrl": "",
+  /** The feed lists everything currently for sale, so a product missing from it is no longer available. */
+  "imports.feedIsComplete": false,
+  "imports.syncHours": 24,
   "seo.openseoProjectId": "",
   "seo.openseoReserveCredits": 100,
   "seo.autoSync": true,

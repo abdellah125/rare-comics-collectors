@@ -32,7 +32,13 @@ export function listCsvFiles(inputs) {
  *   shipping: string|null, problems: string[] }> }}
  */
 export function readHipcomicCsv(file) {
-  const table = parseCsv(fs.readFileSync(file, "utf8"));
+  return parseHipcomicCsv(fs.readFileSync(file, "utf8"), file);
+}
+
+/** The same reader for CSV text that did not come from a file on disk (an upload or a feed). */
+export function parseHipcomicCsv(text, file) {
+  const table = parseCsv(text);
+  if (table.length === 0) return { file: path.basename(file), rows: [], table, header: [] };
   const header = table[0].map((h) => h.trim());
   const rows = [];
   table.slice(1).forEach((cells, i) => {
@@ -75,5 +81,5 @@ export function readHipcomicCsv(file) {
       seller: get(COL.seller), auction, sponsored, bestOffer, shipping, problems,
     });
   });
-  return { file: path.basename(file), rows };
+  return { file: path.basename(file), rows, table, header };
 }

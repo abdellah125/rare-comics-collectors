@@ -367,6 +367,9 @@ model Product {
   importSource            String?
   importFile              String?
   releaseAt               DateTime?
+  /// Optional overrides for the page title and meta description (otherwise built from the fields above)
+  seoTitle                String?
+  seoDescription          String?
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
   deletedAt               DateTime?
@@ -377,6 +380,7 @@ model Product {
   reviews       Review[]
   adjustments   InventoryAdjustment[]
   wishlistItems WishlistItem[]
+  importItem    ImportItem?
 
   @@index([status, publishedAt])
   @@index([importSource, releaseAt])
@@ -386,6 +390,127 @@ model Product {
   @@index([publisher])
   @@index([featured])
   @@index([price])
+}
+
+// ───────────────────────────── catalogue imports ─────────────────────────────
+// Products from an authorised outside source wait here for review. Nothing in these tables is
+// public: the storefront only ever reads Product, which an item becomes when an admin releases it.
+
+/// One run of an import or sync (a CSV upload, a feed fetch, or the seed migration).
+model ImportRun {
+  id           String       @id @default(cuid())
+  source       String
+  /// csv_upload | feed | seed
+  kind         String
+  fileName     String?
+  /// running | completed | failed
+  status       String       @default("running")
+  rows         Int          @default(0)
+  created      Int          @default(0)
+  updated      Int          @default(0)
+  unchanged    Int          @default(0)
+  duplicates   Int          @default(0)
+  errors       Int          @default(0)
+  priceChanges Int          @default(0)
+  unavailable  Int          @default(0)
+  message      String?
+  /// JSON array of { level, text }
+  logJson      String       @default("[]")
+  startedById  String?
+  startedAt    DateTime     @default(now())
+  finishedAt   DateTime?
+  items        ImportItem[]
+
+  @@index([source, startedAt])
+}
+
+model ImportItem {
+  id                    String     @id @default(cuid())
+  source                String
+  /// the source's own identifier for the listing
+  sourceId              String
+  sourceUrl             String?
+  sourceSeller          String?
+  sourceTitle           String
+  sourceImage           String?
+  sourceCurrency        String     @default("USD")
+  /// the source's price in its own currency (minor units)
+  sourceAmount          Int?
+  /// the source's price in the base currency (minor units). Private: never shown to customers.
+  sourcePrice           Int?
+  priceNote             String?
+  /// 2500 = 25 % over the source price
+  markupBps             Int        @default(2500)
+  /// our selling price: sourcePrice × (1 + markup), unless an admin set it by hand
+  retailPrice           Int?
+  priceManual           Boolean    @default(false)
+  /// set when the source price moved while a manual price was kept
+  priceChangeNote       String?
+  available             Boolean    @default(true)
+  lastSeenAt            DateTime   @default(now())
+
+  // normalised into the site's product format
+  title                 String     @default("")
+  issue                 String     @default("")
+  publisher             String     @default("")
+  year                  Int?
+  era                   String     @default("")
+  grader                String     @default("")
+  grade                 String     @default("")
+  label                 String     @default("Universal Blue")
+  variant               String?
+  certNumber            String?
+  keyIssue              String?
+  summary               String     @default("")
+  description           String     @default("")
+  highlightsJson        String     @default("[]")
+  attributesJson        String     @default("{}")
+  tagsJson              String     @default("[]")
+  slug                  String     @default("")
+  /// our own copy of the photo (a /covers path or a media URL); null until it has been stored
+  imageUrl              String?
+  /// publisher + title + issue + grade + grader + label/variant, normalised
+  dedupeKey             String     @default("")
+
+  // SEO recommendation
+  seoTitle              String     @default("")
+  seoDescription        String     @default("")
+  primaryKeyword        String     @default("")
+  secondaryKeywordsJson String     @default("[]")
+  searchIntent          String     @default("")
+  internalLinksJson     String     @default("[]")
+  /// pending | ok | review
+  seoStatus             String     @default("pending")
+  seoNotesJson          String     @default("[]")
+  seoManual             Boolean    @default(false)
+
+  /// pending_review | approved | rejected | duplicate | ready | released | error
+  status                String     @default("pending_review")
+  /// unique | possible | duplicate
+  duplicateStatus       String     @default("unique")
+  duplicateOf           String?
+  /// JSON array of strings: what stops this item from being released
+  problemsJson          String     @default("[]")
+  /// JSON array of field names an admin edited; a sync never overwrites them
+  editedJson            String     @default("[]")
+  attempts              Int        @default(0)
+
+  productId             String?    @unique
+  product               Product?   @relation(fields: [productId], references: [id], onDelete: SetNull)
+  runId                 String?
+  run                   ImportRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  importFile            String?
+  reviewedById          String?
+  reviewedAt            DateTime?
+  releasedAt            DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  @@unique([source, sourceId])
+  @@index([source, status])
+  @@index([certNumber])
+  @@index([dedupeKey])
+  @@index([seoStatus])
 }
 
 model ProductImage {

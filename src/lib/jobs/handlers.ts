@@ -97,7 +97,8 @@ export function registerJobHandlers() {
     if (!result.ok) throw new Error(`IndexNow responded ${result.status}`);
   });
 
-  // Daily: queued catalogue imports whose release day has come go live (100 a day by schedule).
+  // Legacy scheduled publishing. With catalog.autoRelease off (the default) it publishes nothing:
+  // imported products go live only through the review queue's Release button.
   registerJobHandler("catalog_release", async () => {
     const { releaseDueListings, nextReleaseRun } = await import("@/lib/catalog/release-queue");
     await releaseDueListings();
@@ -137,6 +138,50 @@ export function registerJobHandlers() {
     await auditChunk(typeof payload.offset === "number" ? payload.offset : 0);
   });
 
+  // Approved imports: store the photo and check the facts, a batch at a time, until none are left.
+  registerJobHandler("import_prepare", async () => {
+    const { prepareItems } = await import("@/lib/imports/pipeline");
+    const result = await prepareItems({ limit: 20 });
+    const left = await db.importItem.count({ where: { status: "approved" } });
+    if (left > 0 && result.ready + result.errors + result.waiting > 0) await enqueueJob("import_prepare", {}, { runAt: new Date(Date.now() + (result.ready + result.errors > 0 ? 2_000 : 5 * 60_000)), maxAttempts: 3 });
+  });
+
+  // SEO recommendations for queue items the seed created without one.
+  registerJobHandler("import_seo", async () => {
+    const { analyseSeoPending } = await import("@/lib/imports/pipeline");
+    const { remaining } = await analyseSeoPending(400);
+    if (remaining > 0) await enqueueJob("import_seo", {}, { runAt: new Date(Date.now() + 2_000), maxAttempts: 3 });
+  });
+
+  // Periodic sync with the authorised feed, when one is configured. New products only ever enter
+  // the review queue; a refusal by the source ends the run and is not worked around.
+  registerJobHandler("import_sync", async () => {
+    const settings = await getSettings();
+    const hours = Math.max(1, settings["imports.syncHours"]);
+    const next = () => enqueueJob("import_sync", {}, { runAt: new Date(Date.now() + hours * 3_600_000), dedupe: true });
+    const feedUrl = settings["imports.feedUrl"].trim();
+    if (!feedUrl) {
+      await next();
+      return;
+    }
+    const { fetchFeed, FeedAccessError } = await import("@/lib/imports/feed");
+    const { runImport } = await import("@/lib/imports/pipeline");
+    const { IMPORT_SOURCE } = await import("@/lib/imports/status");
+    try {
+      const feed = await fetchFeed(feedUrl);
+      await runImport({ source: IMPORT_SOURCE, kind: "feed", fileName: feed.fileName, text: feed.text, snapshot: settings["imports.feedIsComplete"] });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await db.importRun.create({ data: { source: IMPORT_SOURCE, kind: "feed", fileName: feedUrl.slice(0, 200), status: "failed", message, logJson: JSON.stringify([{ level: "error", text: message }]), finishedAt: new Date() } });
+      // Only a temporary failure is worth the queue's own retries.
+      if (err instanceof FeedAccessError && !err.permanent) {
+        await next();
+        throw err;
+      }
+    }
+    await next();
+  });
+
   registerJobHandler("retry_webhook", async (payload) => {
     const id = typeof payload.webhookEventId === "string" ? payload.webhookEventId : null;
     if (!id) return;
@@ -158,4 +203,5 @@ export async function ensureRecurringJobs() {
   await enqueueJob("catalog_release", {}, { dedupe: true });
   await enqueueJob("reconcile_payments", {}, { dedupe: true });
   await enqueueJob("seo_sync", {}, { dedupe: true });
+  await enqueueJob("import_sync", {}, { dedupe: true });
 }

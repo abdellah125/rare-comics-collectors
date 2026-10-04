@@ -14,10 +14,12 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { products } from "../src/lib/products";
 import { DEFAULT_ROLES } from "../src/lib/permissions";
+import { DEFAULT_MARKUP_BPS, retailPrice } from "../src/lib/imports/pricing";
+import { dedupeKey } from "../src/lib/imports/status";
 import coverMap from "../src/lib/gocovers-map.json";
 
 const db = new PrismaClient();
@@ -506,14 +508,21 @@ async function seedImportedCatalog() {
   }
 }
 
-type QueueListing = ImportListing & { file: string; releaseAt: string; image: string };
+type QueueListing = ImportListing & { file: string; releaseAt: string; image: string; sourceUrl?: string; sourceSeller?: string; sourceTitle?: string; sourcePrice?: number; sourceCurrency?: string; priceNote?: string | null; sourceImage?: string };
+
+/**
+ * The scheduled release ended on this day. Listings scheduled up to it are created as before
+ * (they were already live); everything later exists only as a review-queue item until an admin
+ * releases it.
+ */
+const LEGACY_SCHEDULE_END = new Date("2026-10-06T00:00:00Z");
 type QueueFile = { source: string; listings: QueueListing[] };
 
 /**
  * Release queue (prisma/data/catalog-queue/*.json, produced by scripts/import-hipcomic-csv.mjs).
- * Queued listings are house listings created as DRAFTS with their release day; the daily
- * `catalog_release` job publishes them. A listing whose day has already come is published right
- * here, so the first batch is live as soon as the deployment is, unless the queue is paused.
+ * Legacy path: listings whose scheduled day fell before the review queue replaced the schedule
+ * (LEGACY_SCHEDULE_END) are created as house listings, published. Later listings are NOT created
+ * here: seedImportItems() puts them in the review queue and an admin releases them.
  * Thousands of rows, so existence checks and inserts are batched instead of one query each.
  */
 async function seedCatalogQueue() {
@@ -530,7 +539,7 @@ async function seedCatalogQueue() {
     const slugs = new Set(existing.map((p) => p.slug));
     const skus = new Set(existing.map((p) => p.sku));
     const certs = new Set(existing.map((p) => p.certNumber).filter(Boolean));
-    const fresh = data.listings.filter((l) => !slugs.has(l.slug) && !skus.has(`IMP-${l.sourceId}`) && !(l.certNumber && certs.has(l.certNumber)) && fs.existsSync(path.join(process.cwd(), "public", l.image)));
+    const fresh = data.listings.filter((l) => !slugs.has(l.slug) && !skus.has(`IMP-${l.sourceId}`) && !(l.certNumber && certs.has(l.certNumber)) && new Date(l.releaseAt) < LEGACY_SCHEDULE_END && fs.existsSync(path.join(process.cwd(), "public", l.image)));
     const brandIds: Record<string, string> = {};
     for (const name of new Set(fresh.map((l) => l.publisher))) {
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -563,6 +572,69 @@ async function seedCatalogQueue() {
   }
   for (let i = 0; i < newPaths.length; i += 100) {
     await db.job.create({ data: { type: "indexnow_ping", payloadJson: JSON.stringify({ paths: [...newPaths.slice(i, i + 100), ...(i === 0 ? ["/store", "/collections", "/publishers"] : [])] }), maxAttempts: 3 } });
+  }
+}
+
+/**
+ * Review queue (ImportItem) for everything in prisma/data/catalog-queue/*.json. Runs once per
+ * listing: an item that exists is never touched again, so admin decisions and edits survive.
+ *
+ *  - listing already live            → item "released", linked to its product
+ *  - listing still a scheduled draft → item "pending_review", linked to the draft
+ *  - listing not created yet         → item "pending_review" (the product is made on release)
+ *
+ * Pricing: the price in the file is the source price. The selling price becomes source × 1.25,
+ * on the item and on the linked product, unless the product's price was already changed by hand
+ * (then that price is kept and marked manual).
+ */
+async function seedImportItems() {
+  const dir = path.join(process.cwd(), "prisma", "data", "catalog-queue");
+  if (!fs.existsSync(dir)) return;
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
+    const data = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")) as QueueFile;
+    const known = new Set((await db.importItem.findMany({ where: { source: data.source }, select: { sourceId: true } })).map((i) => i.sourceId));
+    const fresh = data.listings.filter((l) => !known.has(String(l.sourceId)));
+    if (fresh.length === 0) continue;
+    const products = new Map<string, { id: string; price: number; status: string; deletedAt: Date | null; publishedAt: Date | null }>();
+    for (let i = 0; i < fresh.length; i += 1000) {
+      const rows = await db.product.findMany({ where: { sku: { in: fresh.slice(i, i + 1000).map((l) => `IMP-${l.sourceId}`) } }, select: { id: true, sku: true, price: true, status: true, deletedAt: true, publishedAt: true, importItem: { select: { id: true } } } });
+      for (const p of rows) if (!p.importItem) products.set(p.sku, p);
+    }
+    const run = await db.importRun.create({ data: { source: data.source, kind: "seed", fileName: file, rows: fresh.length } });
+    const reprice: { id: string; price: number }[] = [];
+    let released = 0;
+    let manual = 0;
+    const items = fresh.map((l) => {
+      const product = products.get(`IMP-${l.sourceId}`);
+      const source = l.price;
+      const formula = retailPrice(source, DEFAULT_MARKUP_BPS);
+      const priceManual = Boolean(product && product.price !== source && product.price !== formula);
+      if (product && !priceManual && product.price !== formula) reprice.push({ id: product.id, price: formula });
+      if (priceManual) manual += 1;
+      const status = !product ? "pending_review" : product.deletedAt ? "rejected" : product.status === "draft" && !product.publishedAt ? "pending_review" : "released";
+      if (status === "released") released += 1;
+      return {
+        source: data.source, sourceId: String(l.sourceId), sourceUrl: l.sourceUrl ?? null, sourceSeller: l.sourceSeller ?? null, sourceTitle: l.sourceTitle ?? `${l.title} ${l.issue}`, sourceImage: l.sourceImage ?? null,
+        sourceCurrency: l.sourceCurrency ?? "USD", sourceAmount: l.sourcePrice ?? source, sourcePrice: source, priceNote: l.priceNote ?? null,
+        markupBps: DEFAULT_MARKUP_BPS, retailPrice: priceManual ? product!.price : formula, priceManual,
+        title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, era: l.era, grader: l.grader, grade: l.grade, label: l.label, certNumber: l.certNumber, keyIssue: l.keyIssue,
+        summary: l.summary, description: l.description, highlightsJson: JSON.stringify(l.highlights), attributesJson: JSON.stringify(l.attributes), tagsJson: JSON.stringify(l.tags),
+        slug: l.slug, imageUrl: l.image, dedupeKey: dedupeKey(l),
+        status, productId: product && !product.deletedAt ? product.id : null, runId: run.id, importFile: l.file,
+        releasedAt: status === "released" ? (product?.publishedAt ?? new Date()) : null,
+      };
+    });
+    for (let i = 0; i < items.length; i += 500) await db.importItem.createMany({ data: items.slice(i, i + 500), skipDuplicates: true });
+    // One statement per thousand rows (a row-by-row update of thousands of listings takes minutes on a hosted database).
+    // Every listing in `reprice` still carries the source price, so the same rounding as retailPrice() applies in SQL.
+    for (let i = 0; i < reprice.length; i += 1000) {
+      await db.$executeRaw`UPDATE "Product" SET "price" = ROUND("price"::numeric * ${10_000 + DEFAULT_MARKUP_BPS} / 10000)::int, "updatedAt" = NOW() WHERE "id" IN (${Prisma.join(reprice.slice(i, i + 1000).map((r) => r.id))})`;
+    }
+    const message = `${items.length} listings moved to the review queue: ${released} already released, ${items.length - released} waiting for review. Selling price set to source × 1.25 on ${reprice.length} listing(s); ${manual} hand-set price(s) kept.`;
+    await db.importRun.update({ where: { id: run.id }, data: { status: "completed", created: items.length, priceChanges: reprice.length, message, finishedAt: new Date() } });
+    // SEO recommendations are worked out by the application once it is serving.
+    await db.job.create({ data: { type: "import_seo", payloadJson: "{}", maxAttempts: 3 } });
+    log(`review queue ${data.source}: ${message}`);
   }
 }
 
@@ -736,6 +808,7 @@ async function main() {
   await seedCatalog();
   await seedImportedCatalog();
   await seedCatalogQueue();
+  await seedImportItems();
   await seedSeoKeywords();
   await seedGuides();
   await seedDemo();
