@@ -243,6 +243,12 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - **Storefront** (`src/lib/catalog/labels.ts`): unknown values never print as "0" or "Unknown · Unknown". Product page, cards, cart lines, cover caption, structured data and SEO title skip what is not known; the Merchant Center feed sends no `g:brand` for an unknown publisher (brand is optional with identifier_exists = no). Imported raw books no longer show the in-house grading paragraph.
 - Release check now requires only: title, issue (or nn), a value for publisher / grader / grade (Unknown allowed), price, description, slug, photo, availability.
 
+### Imports: daily release rule, 1,000 products a day (2026-10-10)
+- Owner's instruction: release 1,000 products daily. This replaces "nothing is published without a manual Release" for imported products.
+- `autoRelease()` in `src/lib/imports/pipeline.ts`, job `import_auto_release` (a batch of 50 per run, every minute while there is work, every 15 minutes otherwise). Per UTC day it releases up to `imports.autoReleasePerDay` (default 1000; 0 = off). Manual releases count towards the day. Products already Ready to Release go first, oldest approval first; then the rule approves the oldest Pending Review products itself (`reviewedById` = `auto-release`), which stores the photo and runs the same release check as a manual release.
+- Left for a person by default: possible duplicates, and auction products whose price comes from the fallback rule (bid × multiplier). Never taken: Error, Rejected, Duplicate, unavailable items. All four switches (per day, include Pending Review, hold duplicates, hold fallback prices) are on the HipComic import page, which also shows "released today / limit".
+- Verified locally with a quota of 120: 100 approved, then 50 + 50 + 20 released, then nothing; the 24 held products were untouched; no product was published without a photo. The browser-test seed switches the rule off so tests that check "not public before release" stay deterministic.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml` (the index; it lists the store and guide sitemaps).

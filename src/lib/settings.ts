@@ -119,6 +119,13 @@ export const settingDefaults = {
   "imports.discountBps": 2500,
   /** When the source price changes, also replace a selling price an admin set by hand. */
   "imports.autoPriceSync": false,
+  /** Daily release rule: how many imported products go live per day (UTC) without a manual Release. 0 = off. */
+  "imports.autoReleasePerDay": 1000,
+  /** true: the rule also takes products still in Pending Review; false: only products an admin approved. */
+  "imports.autoReleaseIncludePending": true,
+  /** Kept for a person: possible duplicates, and auction prices that come from the fallback rule. */
+  "imports.autoReleaseHoldDuplicates": true,
+  "imports.autoReleaseHoldFallbackPrices": true,
   /** Auction with nothing to compare with: suggested Buy It Now = current bid × this (200 = ×2), and never below the minimum. */
   "imports.auctionBidMultiplierPct": 200,
   "imports.auctionMinPrice": 499,

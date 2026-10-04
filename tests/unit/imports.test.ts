@@ -323,3 +323,16 @@ describe("reference-knowledge answers", () => {
     expect(parseFactAnswers('[{"id":"a","publisher":', questions).size).toBe(0);
   });
 });
+
+describe("daily release rule", () => {
+  it("releases a batch at a time up to the day's quota", async () => {
+    const { dailyPlan, utcDayStart } = await import("@/lib/imports/daily");
+    expect(dailyPlan({ perDay: 1000, releasedToday: 0, ready: 400, inPreparation: 0, batch: 50 })).toEqual({ release: 50, approve: 100, remaining: 1000 });
+    expect(dailyPlan({ perDay: 1000, releasedToday: 980, ready: 400, inPreparation: 0, batch: 50 })).toEqual({ release: 20, approve: 0, remaining: 20 });
+    expect(dailyPlan({ perDay: 1000, releasedToday: 1000, ready: 400, inPreparation: 30, batch: 50 })).toEqual({ release: 0, approve: 0, remaining: 0 });
+    // Nothing ready yet: fill the pipeline, never beyond what is left of today.
+    expect(dailyPlan({ perDay: 1000, releasedToday: 990, ready: 0, inPreparation: 4, batch: 50 })).toEqual({ release: 0, approve: 6, remaining: 10 });
+    expect(dailyPlan({ perDay: 0, releasedToday: 0, ready: 400, inPreparation: 0, batch: 50 })).toEqual({ release: 0, approve: 0, remaining: 0 });
+    expect(utcDayStart(new Date("2026-10-09T23:59:59Z")).toISOString()).toBe("2026-10-09T00:00:00.000Z");
+  });
+});

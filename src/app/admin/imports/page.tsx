@@ -50,7 +50,7 @@ export default async function AdminImportsPage() {
     <>
       <AdminPageHeader
         title="HipComic import"
-        lead="Products from the authorised source wait here for review. Nothing is published automatically: a product becomes public only after you approve it and press Release."
+        lead={settings["imports.autoReleasePerDay"] > 0 ? `Products from the authorised source enter the queue here. The daily release rule publishes up to ${settings["imports.autoReleasePerDay"].toLocaleString("en-US")} of them per day${settings["imports.autoReleaseIncludePending"] ? "" : " (only those you approved)"}; you can also approve and release by hand.` : "Products from the authorised source wait here for review. The daily release rule is off: a product becomes public only after you approve it and press Release."}
         actions={
           <>
             <Link href="/admin/imports/queue" className={adminButton.primary}>
@@ -70,6 +70,11 @@ export default async function AdminImportsPage() {
           </Link>
         ))}
       </div>
+      {settings["imports.autoReleasePerDay"] > 0 && (
+        <p className="mt-3 text-[13px] text-ink-700" data-testid="daily-release">
+          Daily release rule: <strong className="text-ink-950">{stats.releasedToday.toLocaleString("en-US")} / {settings["imports.autoReleasePerDay"].toLocaleString("en-US")}</strong> released today (UTC) · {stats.ready + stats.approved} being prepared or ready · {stats.pending.toLocaleString("en-US")} in Pending Review
+        </p>
+      )}
       <p className="mt-3 text-[13px] text-ink-600">
         Last synchronisation: <strong className="text-ink-900">{stats.lastSyncAt ? `${formatDateTime(stats.lastSyncAt)} (${stats.lastSyncKind === "feed" ? "feed" : stats.lastSyncKind === "crawl" ? "catalogue page" : "file upload"})` : "none yet"}</strong>
         {stats.possibleDuplicates > 0 && (
@@ -111,6 +116,28 @@ export default async function AdminImportsPage() {
         >
           {canSettings ? (
             <ActionForm action={saveImportSettingsAction} submitLabel="Save settings">
+              <div className="rounded-lg border border-ink-200 bg-ink-50 p-3">
+                <Field label="Daily release rule: products released per day" hint="0 switches the rule off. Counted per day in UTC; a product released by hand counts too.">
+                  <input name="autoReleasePerDay" type="number" min={0} max={20000} step={1} defaultValue={settings["imports.autoReleasePerDay"]} className={`${adminInput} sm:w-40`} />
+                </Field>
+                <div className="mt-3 grid gap-2">
+                  <label className="flex items-start gap-2 text-[13px] text-ink-800">
+                    <input type="checkbox" name="autoReleaseIncludePending" defaultChecked={settings["imports.autoReleaseIncludePending"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
+                    <span>
+                      Also release products still in Pending Review
+                      <span className="block text-[12px] text-ink-500">Off: the rule only releases products you approved. On: it approves the oldest pending products itself, after the same checks as a manual release.</span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 text-[13px] text-ink-800">
+                    <input type="checkbox" name="autoReleaseHoldDuplicates" defaultChecked={settings["imports.autoReleaseHoldDuplicates"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
+                    <span>Keep possible duplicates for me to check</span>
+                  </label>
+                  <label className="flex items-start gap-2 text-[13px] text-ink-800">
+                    <input type="checkbox" name="autoReleaseHoldFallbackPrices" defaultChecked={settings["imports.autoReleaseHoldFallbackPrices"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
+                    <span>Keep auction products whose price comes from the fallback rule (bid × multiplier) for me to check</span>
+                  </label>
+                </div>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Discount off the source price (%)" hint="25 means $100 at the source sells for $75.">
                   <input name="discountPercent" type="number" min={0} max={99} step="0.01" defaultValue={settings["imports.discountBps"] / 100} className={adminInput} />

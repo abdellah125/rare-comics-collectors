@@ -128,6 +128,10 @@ const SettingsSchema = z.object({
   syncHours: z.coerce.number().int().min(1).max(720),
   auctionMultiplier: z.coerce.number().min(1).max(20),
   auctionMinPrice: z.coerce.number().min(1).max(100_000),
+  autoReleasePerDay: z.coerce.number().int().min(0).max(20_000),
+  autoReleaseIncludePending: zBool,
+  autoReleaseHoldDuplicates: zBool,
+  autoReleaseHoldFallbackPrices: zBool,
 });
 
 export async function saveImportSettingsAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
@@ -142,8 +146,9 @@ export async function saveImportSettingsAction(_prev: ActionState | undefined, f
         return failState(err instanceof Error ? err.message : "The feed address is not valid.", { feedUrl: "Not valid" });
       }
     }
-    await saveSettings({ "imports.discountBps": Math.round(d.discountPercent * 100), "imports.autoPriceSync": d.autoPriceSync, "imports.feedUrl": d.feedUrl, "imports.feedIsComplete": d.feedIsComplete, "imports.syncHours": d.syncHours, "imports.auctionBidMultiplierPct": Math.round(d.auctionMultiplier * 100), "imports.auctionMinPrice": Math.round(d.auctionMinPrice * 100) }, admin.id);
-    await audit({ actor: actorOf(admin), action: "import.settings", targetType: "setting", summary: `Import settings: discount ${d.discountPercent}%, automatic price sync ${d.autoPriceSync ? "on" : "off"}, feed ${d.feedUrl ? "set" : "not set"}` });
+    await saveSettings({ "imports.discountBps": Math.round(d.discountPercent * 100), "imports.autoPriceSync": d.autoPriceSync, "imports.feedUrl": d.feedUrl, "imports.feedIsComplete": d.feedIsComplete, "imports.syncHours": d.syncHours, "imports.auctionBidMultiplierPct": Math.round(d.auctionMultiplier * 100), "imports.auctionMinPrice": Math.round(d.auctionMinPrice * 100), "imports.autoReleasePerDay": d.autoReleasePerDay, "imports.autoReleaseIncludePending": d.autoReleaseIncludePending, "imports.autoReleaseHoldDuplicates": d.autoReleaseHoldDuplicates, "imports.autoReleaseHoldFallbackPrices": d.autoReleaseHoldFallbackPrices }, admin.id);
+    if (d.autoReleasePerDay > 0) await enqueueJob("import_auto_release", {}, { dedupe: true, maxAttempts: 3 });
+    await audit({ actor: actorOf(admin), action: "import.settings", targetType: "setting", summary: `Import settings: daily release ${d.autoReleasePerDay || "off"}${d.autoReleasePerDay ? (d.autoReleaseIncludePending ? " (including Pending Review)" : " (approved only)") : ""}, discount ${d.discountPercent}%, automatic price sync ${d.autoPriceSync ? "on" : "off"}, feed ${d.feedUrl ? "set" : "not set"}` });
     refresh();
     return okState(undefined, "Saved. The discount applies to products imported from now on; existing queue items keep the discount they were imported with.");
   });

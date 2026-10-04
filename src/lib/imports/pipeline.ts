@@ -13,6 +13,7 @@ import { bookKey, dedupeKey, issueKey, releaseProblems } from "@/lib/imports/sta
 import { LOOKS_SLABBED, RAW_GRADER, RAW_UNSTATED, buildRawListing, rawCondition, type RawParsed } from "@/lib/imports/raw";
 import { buildPlainListing } from "@/lib/imports/plain";
 import { UNKNOWN, isKnown } from "@/lib/catalog/labels";
+import { dailyPlan, utcDayStart } from "@/lib/imports/daily";
 import { addComp, newCompIndex, suggestBuyNow, type CompIndex } from "@/lib/imports/suggest";
 import { ADULT, PALETTES, buildListing, cadRateOf, slugify, usdPrice } from "../../../scripts/lib/hipcomic-listing.mjs";
 import { CGC_GRADES, eraForYear, normSeries, parseTitle, tidyCase } from "../../../scripts/lib/hipcomic-title.mjs";
@@ -685,6 +686,57 @@ export async function releaseItems(ids: string[]): Promise<ReleaseResult> {
   return out;
 }
 
+// ───────────────────────────── daily release rule ─────────────────────────────
+
+export const AUTO_REVIEWER = "auto-release";
+
+/**
+ * The daily release rule: up to `imports.autoReleasePerDay` imported products go live per UTC day
+ * without anyone pressing Release. Each run releases a batch of what is Ready to Release (oldest
+ * approval first, so an admin's own approvals go out first) and moves more products from Pending
+ * Review into preparation to fill the rest of the day's quota.
+ *
+ * Every product still passes the same release check as a manual release. Possible duplicates and
+ * auction prices from the fallback rule are left for a person unless the settings say otherwise.
+ */
+export async function autoRelease(source: string, batch = 50): Promise<{ enabled: boolean; released: number; approved: number; releasedToday: number; perDay: number; waiting: number }> {
+  const settings = await getSettings();
+  const perDay = settings["imports.autoReleasePerDay"];
+  if (perDay <= 0) return { enabled: false, released: 0, approved: 0, releasedToday: 0, perDay: 0, waiting: 0 };
+  const since = utcDayStart();
+  const [releasedToday, readyCount, inPreparation] = await Promise.all([
+    db.importItem.count({ where: { source, status: "released", releasedAt: { gte: since } } }),
+    db.importItem.count({ where: { source, status: "ready" } }),
+    db.importItem.count({ where: { source, status: "approved" } }),
+  ]);
+  const plan = dailyPlan({ perDay, releasedToday, ready: readyCount, inPreparation, batch });
+  let released = 0;
+  if (plan.release > 0) {
+    const ready = await db.importItem.findMany({ where: { source, status: "ready" }, orderBy: [{ reviewedAt: "asc" }, { id: "asc" }], take: plan.release, select: { id: true } });
+    released = (await releaseItems(ready.map((i) => i.id))).released;
+  }
+  let approved = 0;
+  if (plan.approve > 0 && settings["imports.autoReleaseIncludePending"]) {
+    const pending = await db.importItem.findMany({
+      where: {
+        source,
+        status: "pending_review",
+        available: true,
+        ...(settings["imports.autoReleaseHoldDuplicates"] ? { duplicateStatus: "unique" } : {}),
+        // (a product without a price note has a null basis, which a bare NOT would also exclude)
+        ...(settings["imports.autoReleaseHoldFallbackPrices"] ? { OR: [{ priceBasis: null }, { NOT: { priceBasis: { contains: "fallback rule" } } }] } : {}),
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      take: plan.approve,
+      select: { id: true },
+    });
+    if (pending.length > 0) approved = (await approveItems(pending.map((i) => i.id), AUTO_REVIEWER)).approved;
+  }
+  const waiting = await db.importItem.count({ where: { source, status: { in: ["ready", "approved"] } } });
+  if (released > 0 || approved > 0) console.log(`[auto-release] ${released} released (${releasedToday + released}/${perDay} today), ${approved} moved into preparation`);
+  return { enabled: true, released, approved, releasedToday: releasedToday + released, perDay, waiting };
+}
+
 // ───────────────────────────── edit ─────────────────────────────
 
 export type ItemEdit = {
@@ -922,12 +974,13 @@ export async function analyseSeoPending(limit = 400): Promise<{ analysed: number
 }
 
 export async function importStats(source: string) {
-  const [byStatus, lastRun, lastSync, possible, priceNotes] = await Promise.all([
+  const [byStatus, lastRun, lastSync, possible, priceNotes, releasedToday] = await Promise.all([
     db.importItem.groupBy({ by: ["status"], where: { source }, _count: { _all: true } }),
     db.importRun.findFirst({ where: { source }, orderBy: { startedAt: "desc" } }),
     db.importRun.findFirst({ where: { source, status: "completed", kind: { in: ["csv_upload", "feed", "crawl"] } }, orderBy: { finishedAt: "desc" }, select: { finishedAt: true, kind: true } }),
     db.importItem.count({ where: { source, duplicateStatus: "possible", status: { in: ["pending_review", "approved", "ready"] } } }),
     db.importItem.count({ where: { source, priceChangeNote: { not: null } } }),
+    db.importItem.count({ where: { source, status: "released", releasedAt: { gte: utcDayStart() } } }),
   ]);
   const count = (s: string) => byStatus.find((b) => b.status === s)?._count._all ?? 0;
   return {
@@ -940,6 +993,7 @@ export async function importStats(source: string) {
     duplicates: count("duplicate"),
     errors: count("error"),
     possibleDuplicates: possible,
+    releasedToday,
     priceNotes,
     lastRun,
     lastSyncAt: lastSync?.finishedAt ?? null,

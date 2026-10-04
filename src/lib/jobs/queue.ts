@@ -31,7 +31,8 @@ export type JobType =
   | "import_sync"
   | "import_seo"
   | "import_crawl"
-  | "import_fix";
+  | "import_fix"
+  | "import_auto_release";
 
 export type JobHandler = (payload: Record<string, unknown>, ctx: { jobId: string; attempt: number }) => Promise<void>;
 

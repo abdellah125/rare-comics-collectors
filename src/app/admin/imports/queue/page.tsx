@@ -214,6 +214,7 @@ export default async function AdminImportQueuePage({ searchParams }: PageProps<"
                     </Td>
                     <Td>
                       <Tone tone={itemStatusTone(r.status)}>{itemStatusLabel(r.status)}</Tone>
+                      {r.reviewedById === "auto-release" && r.status !== "pending_review" && <span className="mt-1 block text-[11px] text-ink-500">by the daily rule</span>}
                       {r.status === "released" && r.product && (
                         <Link href={`/store/${r.product.slug}`} className="mt-1 block text-[11px] text-brand-700 hover:underline">
                           view listing

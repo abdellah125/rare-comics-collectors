@@ -170,6 +170,15 @@ export function registerJobHandlers() {
     else await enqueueJob("import_fix", { phase: "knowledge" }, { runAt: new Date(Date.now() + 2_000), maxAttempts: 3 });
   });
 
+  // The daily release rule: a batch per run until the day's quota is met, then a slower check for the next day.
+  registerJobHandler("import_auto_release", async () => {
+    const { autoRelease } = await import("@/lib/imports/pipeline");
+    const { IMPORT_SOURCE } = await import("@/lib/imports/status");
+    const r = await autoRelease(IMPORT_SOURCE);
+    const busy = r.enabled && r.releasedToday < r.perDay && (r.released > 0 || r.approved > 0 || r.waiting > 0);
+    await enqueueJob("import_auto_release", {}, { runAt: new Date(Date.now() + (busy ? 60_000 : 15 * 60_000)), dedupe: true, maxAttempts: 3 });
+  });
+
   // SEO recommendations for queue items the seed created without one.
   registerJobHandler("import_seo", async () => {
     const { analyseSeoPending } = await import("@/lib/imports/pipeline");
@@ -228,4 +237,5 @@ export async function ensureRecurringJobs() {
   await enqueueJob("reconcile_payments", {}, { dedupe: true });
   await enqueueJob("seo_sync", {}, { dedupe: true });
   await enqueueJob("import_sync", {}, { dedupe: true });
+  await enqueueJob("import_auto_release", {}, { dedupe: true });
 }
