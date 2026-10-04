@@ -26,7 +26,7 @@ export default async function AdminLocalizationPage({ searchParams }: PageProps<
   const missing = keys.filter((k) => !currentByKey.has(k)).length;
   return (
     <>
-      <AdminPageHeader title="Localization" lead="Enabled locales appear in the language switcher. Strings fall back to the default locale, then to the built-in English copy." actions={<SettingsNav active="localization" />} />
+      <AdminPageHeader title="Localization" lead="Enabled locales appear in the language switcher and are offered to visitors from matching countries. The site ships Spanish, French and German translations; to change a sentence, add a string in the common namespace whose key is the exact English text and whose value is your wording." actions={<SettingsNav active="localization" />} />
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="grid gap-6 xl:col-span-2">
           <Card title={`Translations — ${locale} / ${namespace}`} description={`${keys.length} keys · ${missing} untranslated. Blank a value to fall back to the default locale.`} actions={<form className="flex gap-2" action="/admin/settings/localization"><select name="locale" defaultValue={locale} className={`${adminSelect} h-8 w-auto text-[12px]`}>{locales.map((l) => (<option key={l.code} value={l.code}>{l.code} — {l.name}</option>))}</select><select name="ns" defaultValue={namespace} className={`${adminSelect} h-8 w-auto text-[12px]`}>{[...new Set(["common", ...namespaces.map((n) => n.namespace)])].map((n) => (<option key={n} value={n}>{n}</option>))}</select><button type="submit" className="rounded-md border border-ink-300 px-2 text-[12px]">Go</button></form>}>

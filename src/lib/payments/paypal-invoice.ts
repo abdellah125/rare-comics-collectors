@@ -1,3 +1,4 @@
+import { site } from "@/lib/site";
 /**
  * PayPal invoice requests. Choosing PayPal at checkout does not charge anything: the buyer leaves
  * the details needed to invoice them, the order waits as "pending payment", and staff send the
@@ -30,7 +31,7 @@ export const invoiceStatusLabel = (status: string): string => (known(status) ? L
 export const invoiceStatusTone = (status: string) => (known(status) ? TONES[status] : ("warning" as const));
 
 /** The store's own WhatsApp: where buyers message us about their invoice. */
-export const INVOICE_WHATSAPP = { display: "+1 418-506-6697", url: "https://wa.me/14185066697" } as const;
+export const INVOICE_WHATSAPP = { display: site.whatsapp.display, url: `https://wa.me/${site.whatsapp.number}` } as const;
 
 /** Opens a WhatsApp chat with the store, with the first message already written. */
 export const whatsappChatUrl = (message: string): string => `${INVOICE_WHATSAPP.url}?text=${encodeURIComponent(message)}`;

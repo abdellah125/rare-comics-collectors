@@ -7,6 +7,7 @@ import { brandStyle } from "@/lib/brand-color";
 import { getSettings } from "@/lib/settings";
 import { env } from "@/lib/env";
 import { ClarityTag } from "@/components/clarity-tag";
+import { getLocale } from "@/lib/i18n";
 
 // `optional`: the fonts are preloaded and self-hosted, so on a decent connection they are in
 // place for the first paint; when they are late the size-adjusted fallbacks stay put instead of
@@ -90,8 +91,9 @@ export const viewport: Viewport = { themeColor: "#0d1017", width: "device-width"
 /** Root layout: document shell only. Storefront chrome lives in (site)/layout, the admin has its own. */
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await getSettings();
+  const lang = await getLocale().catch(() => "en");
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${display.variable} ${orbitron.variable} h-full antialiased`} style={brandStyle(settings["marketplace.primaryColor"]) as React.CSSProperties | undefined}>
+    <html lang={lang} data-scroll-behavior="smooth" className={`${inter.variable} ${display.variable} ${orbitron.variable} h-full antialiased`} style={brandStyle(settings["marketplace.primaryColor"]) as React.CSSProperties | undefined}>
       <head>
         <ClarityTag />
       </head>

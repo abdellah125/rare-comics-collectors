@@ -63,6 +63,8 @@ export const SETTING_GROUPS: SettingGroup[] = [
       { key: "features.reviews", label: "Feature: reviews", kind: "bool" },
       { key: "features.coupons", label: "Feature: coupons at checkout", kind: "bool" },
       { key: "features.multiCurrency", label: "Feature: currency switcher", kind: "bool" },
+      { key: "commerce.autoCurrency", label: "Currency by visitor country", kind: "bool", hint: "First-time visitors see prices in their country's currency (USD when it is not offered). Their own choice always wins." },
+      { key: "i18n.autoDetect", label: "Language by visitor country", kind: "bool", hint: "First-time visitors see the site in their country's language when it is enabled under Localization." },
       { key: "features.guestTracking", label: "Feature: guest order tracking", kind: "bool" },
       { key: "features.sellerStorefronts", label: "Feature: public seller storefronts", kind: "bool" },
       { key: "features.disputes", label: "Feature: buyer/seller disputes", kind: "bool" },

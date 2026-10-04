@@ -8,6 +8,7 @@ import { services } from "@/lib/services";
 import { formatPrice, schemaPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 
 export const metadata: Metadata = pageMetadata({
   title: "Comic Grading, Pressing, Appraisal & Consignment Services",
@@ -92,6 +93,7 @@ export default function ServicesPage() {
               <ButtonLink href="/contact" size="lg" variant="ghostLight">
                 Talk to a grader
               </ButtonLink>
+              <WhatsAppButton path="/services" className="h-12" />
             </div>
           </div>
         </Container>

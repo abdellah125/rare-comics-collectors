@@ -1,14 +1,17 @@
 import Link from "next/link";
 import type { Collection, Publisher } from "@/lib/catalog/collections";
+import { getTranslator } from "@/lib/i18n";
 
 /**
  * Internal-linking blocks shared by the home page, the store, the collection
  * and publisher landing pages and the footer. Plain server-rendered anchors so
  * crawlers reach every collection page from every catalogue page.
  */
-export function CollectionCards({ collections, current, heading = "Shop by era" }: { collections: Collection[]; current?: string; heading?: string }) {
+export async function CollectionCards({ collections, current, heading: headingProp }: { collections: Collection[]; current?: string; heading?: string }) {
   const items = collections.filter((c) => c.slug !== current);
   if (items.length === 0) return null;
+  const tr = await getTranslator();
+  const heading = headingProp ?? tr("Shop by era");
   return (
     <nav aria-label={heading}>
       <h2 className="font-display text-2xl font-semibold text-ink-950">{heading}</h2>
@@ -20,9 +23,9 @@ export function CollectionCards({ collections, current, heading = "Shop by era" 
               className="group flex h-full flex-col rounded-xl border border-ink-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lift"
             >
               <span className="font-display text-lg font-semibold text-ink-950 group-hover:text-brand-700">{c.shortName}</span>
-              <span className="mt-1 text-[13px] text-ink-500">{c.name !== c.shortName ? c.name.slice(c.shortName.length).trim().replace(/^\(|\)$/g, "") : "Collection"}</span>
+              <span className="mt-1 text-[13px] text-ink-500">{c.name !== c.shortName ? c.name.slice(c.shortName.length).trim().replace(/^\(|\)$/g, "") : tr("Collection")}</span>
               <span className="mt-3 text-[13px] font-semibold text-brand-700">
-                {c.count} listing{c.count === 1 ? "" : "s"} →
+                {c.count === 1 ? tr("1 listing") : tr("{count} listings", { count: c.count })} →
               </span>
             </Link>
           </li>
@@ -32,9 +35,11 @@ export function CollectionCards({ collections, current, heading = "Shop by era" 
   );
 }
 
-export function PublisherChips({ publishers, current, heading = "Shop by publisher" }: { publishers: Publisher[]; current?: string; heading?: string }) {
+export async function PublisherChips({ publishers, current, heading: headingProp }: { publishers: Publisher[]; current?: string; heading?: string }) {
   const items = publishers.filter((p) => p.slug !== current);
   if (items.length === 0) return null;
+  const tr = await getTranslator();
+  const heading = headingProp ?? tr("Shop by publisher");
   return (
     <nav aria-label={heading}>
       <h2 className="font-display text-2xl font-semibold text-ink-950">{heading}</h2>
@@ -52,7 +57,7 @@ export function PublisherChips({ publishers, current, heading = "Shop by publish
         ))}
         <li>
           <Link href="/publishers" className="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-semibold text-brand-700 underline-offset-4 hover:underline">
-            All publishers
+            {tr("All publishers")}
           </Link>
         </li>
       </ul>

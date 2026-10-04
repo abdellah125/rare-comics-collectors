@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CoverArt } from "@/components/cover-art";
 import { Badge, Stars } from "@/components/ui";
+import { useT } from "@/components/i18n-provider";
 import type { ProductSummary } from "@/lib/products";
 
 /**
@@ -9,7 +10,8 @@ import type { ProductSummary } from "@/lib/products";
  * measured worse: the Flight payload carried every card's markup a second time (a
  * 20-card grid shipped 325 KB of inline RSC) and parsing it cost more main-thread
  * time than hydrating the client card from ~1 KB of props. Prices arrive
- * pre-formatted; the cart buttons come in through `actions`.
+ * pre-formatted; the cart buttons come in through `actions`. Only ever rendered by the
+ * client ProductCard, so it can read the visitor's language from context.
  */
 export function ProductCardView({
   product,
@@ -27,6 +29,7 @@ export function ProductCardView({
   /** Below the first row: let the browser skip layout and paint until the card scrolls near. */
   deferPaint?: boolean;
 }) {
+  const tr = useT();
   const onSale = compareAtLabel !== undefined;
   const soldOut = product.stock <= 0;
 
@@ -40,9 +43,9 @@ export function ProductCardView({
         {/* Badges live in the body: every corner of the cover plate already carries a chip. */}
         {(onSale || product.keyIssue || (product.stock === 1 && !soldOut)) && (
           <div className="mb-2.5 flex flex-wrap gap-1.5">
-            {onSale && <Badge tone="sale">Sale</Badge>}
-            {product.keyIssue && <Badge tone="gold">Key issue</Badge>}
-            {product.stock === 1 && !soldOut && <Badge tone="dark">Last copy</Badge>}
+            {onSale && <Badge tone="sale">{tr("Sale")}</Badge>}
+            {product.keyIssue && <Badge tone="gold">{tr("Key issue")}</Badge>}
+            {product.stock === 1 && !soldOut && <Badge tone="dark">{tr("Last copy")}</Badge>}
           </div>
         )}
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500">
@@ -58,7 +61,7 @@ export function ProductCardView({
 
         <p className="mt-1 text-[13px] text-ink-600">
           {product.grader === "Raw" ? (
-            <>Raw · {product.grade}</>
+            <>{tr("Raw")} · {product.grade}</>
           ) : (
             <>
               <span className="font-semibold text-ink-900">

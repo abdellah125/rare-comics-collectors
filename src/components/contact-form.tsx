@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { FormError } from "@/components/auth-forms";
 import { SelectField, TextAreaField, TextField } from "@/components/form-fields";
 import { CheckIcon } from "@/components/icons";
+import { useT } from "@/components/i18n-provider";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 import { createTicketAction } from "@/lib/support/actions";
 
@@ -19,7 +20,9 @@ function categoryFor(topic: string): string {
   return "other";
 }
 
-export function ContactForm({ topics, defaultTopic, submitLabel = "Send message", className = "" }: { topics: string[]; defaultTopic?: string; submitLabel?: string; className?: string }) {
+/** `topics` stay in English as form values (they route the ticket); only their labels are translated. */
+export function ContactForm({ topics, defaultTopic, submitLabel, className = "" }: { topics: string[]; defaultTopic?: string; submitLabel?: string; className?: string }) {
+  const tr = useT();
   const [state, action, pending] = useActionState(createTicketAction, undefined);
   const err = (k: string) => (state && !state.ok ? state.errors?.[k] : undefined);
 
@@ -29,9 +32,9 @@ export function ContactForm({ topics, defaultTopic, submitLabel = "Send message"
         <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-600 text-white">
           <CheckIcon className="h-6 w-6" />
         </span>
-        <h3 className="mt-5 font-display text-xl font-semibold text-ink-950">Message received</h3>
+        <h3 className="mt-5 font-display text-xl font-semibold text-ink-950">{tr("Message received")}</h3>
         <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-ink-700">
-          Your reference is <span className="font-mono font-semibold text-ink-950">{state.data?.number}</span>. We reply within one business day, usually sooner.
+          {tr("Your reference is")} <span className="font-mono font-semibold text-ink-950">{state.data?.number}</span>. {tr("We reply within one business day, usually sooner.")}
         </p>
       </div>
     );
@@ -50,27 +53,27 @@ export function ContactForm({ topics, defaultTopic, submitLabel = "Send message"
       className={`grid gap-5 ${className}`}
     >
       <div className="grid gap-5 sm:grid-cols-2">
-        <TextField label="Name" name="name" required autoComplete="name" hint={err("name")} />
-        <TextField label="Email" name="email" type="email" required autoComplete="email" hint={err("email")} />
+        <TextField label={tr("Name")} name="name" required autoComplete="name" hint={err("name")} />
+        <TextField label={tr("Email")} name="email" type="email" required autoComplete="email" hint={err("email")} />
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
-        <TextField label="Phone (optional)" name="phone" type="tel" autoComplete="tel" />
-        <SelectField label="What's this about?" name="topic" required defaultValue={defaultTopic ?? topics[0]}>
+        <TextField label={tr("Phone (optional)")} name="phone" type="tel" autoComplete="tel" />
+        <SelectField label={tr("What's this about?")} name="topic" required defaultValue={defaultTopic ?? topics[0]}>
           {topics.map((t) => (
             <option key={t} value={t}>
-              {t}
+              {tr(t)}
             </option>
           ))}
         </SelectField>
       </div>
-      <TextField label="Order or submission number (optional)" name="orderNumber" placeholder="RCC-2026-000000" />
-      <TextAreaField label="Message" name="body" required rows={5} hint={err("body")} placeholder="Tell us about the books, the question, or what went wrong." />
+      <TextField label={tr("Order or submission number (optional)")} name="orderNumber" placeholder="RCC-2026-000000" />
+      <TextAreaField label={tr("Message")} name="body" required rows={5} hint={err("body")} placeholder={tr("Tell us about the books, the question, or what went wrong.")} />
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
       <FormError state={state} />
       <button type="submit" disabled={pending} className={`${buttonStyles.primary} ${buttonSizes.lg} w-full sm:w-auto`}>
-        {pending ? "Sending…" : submitLabel}
+        {pending ? tr("Sending…") : (submitLabel ?? tr("Send message"))}
       </button>
-      <p className="text-xs leading-relaxed text-ink-500">By sending this form you agree to our privacy policy. We only use your details to reply to this enquiry.</p>
+      <p className="text-xs leading-relaxed text-ink-500">{tr("By sending this form you agree to our privacy policy. We only use your details to reply to this enquiry.")}</p>
     </form>
   );
 }

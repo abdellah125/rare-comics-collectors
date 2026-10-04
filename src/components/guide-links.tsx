@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { GuideSummary } from "@/lib/guides/data";
 import { GUIDE_TOPICS } from "@/lib/guides/topics";
-import { formatDateTime } from "@/lib/i18n";
+import { formatDateTime, getTranslator } from "@/lib/i18n";
 
 const topicShort = (slug: string) => GUIDE_TOPICS.find((t) => t.slug === slug)?.short ?? slug;
 
@@ -37,8 +37,10 @@ export function GuideGrid({ guides, compact = false, columns = 3 }: { guides: Gu
 }
 
 /** "Read more" block for product, collection, publisher and character pages. */
-export function RelatedGuides({ guides, heading = "Guides & background", lead }: { guides: GuideSummary[]; heading?: string; lead?: string }) {
+export async function RelatedGuides({ guides, heading: headingProp, lead }: { guides: GuideSummary[]; heading?: string; lead?: string }) {
   if (guides.length === 0) return null;
+  const tr = await getTranslator();
+  const heading = headingProp ?? tr("Guides & background");
   return (
     <section aria-labelledby="related-guides">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -49,7 +51,7 @@ export function RelatedGuides({ guides, heading = "Guides & background", lead }:
           {lead && <p className="mt-1 text-[14px] text-ink-600">{lead}</p>}
         </div>
         <Link href="/guides" className="text-sm font-semibold text-brand-700 underline-offset-4 hover:underline">
-          All guides →
+          {tr("All guides")} →
         </Link>
       </div>
       <div className="mt-5">

@@ -4,21 +4,23 @@ import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/product-card";
 import { SearchIcon, CloseIcon } from "@/components/icons";
 import { buttonSizes, buttonStyles } from "@/components/ui";
+import { useT } from "@/components/i18n-provider";
+import { msg } from "@/lib/i18n/translate";
 import type { Era, Grader, ProductSummary } from "@/lib/products";
 
 type SortKey = "featured" | "price-asc" | "price-desc" | "year-asc" | "year-desc" | "grade-desc";
 
 const SORTS: { value: SortKey; label: string }[] = [
-  { value: "featured", label: "Featured" },
-  { value: "price-asc", label: "Price: low to high" },
-  { value: "price-desc", label: "Price: high to low" },
-  { value: "grade-desc", label: "Highest grade" },
-  { value: "year-asc", label: "Oldest first" },
-  { value: "year-desc", label: "Newest first" },
+  { value: "featured", label: msg("Featured") },
+  { value: "price-asc", label: msg("Price: low to high") },
+  { value: "price-desc", label: msg("Price: high to low") },
+  { value: "grade-desc", label: msg("Highest grade") },
+  { value: "year-asc", label: msg("Oldest first") },
+  { value: "year-desc", label: msg("Newest first") },
 ];
 
 const PRICE_BANDS = [
-  { label: "Under $250", min: 0, max: 25_000 },
+  { label: msg("Under $250"), min: 0, max: 25_000 },
   { label: "$250 – $1,000", min: 25_000, max: 100_000 },
   { label: "$1,000 – $10,000", min: 100_000, max: 1_000_000 },
   { label: "$10,000+", min: 1_000_000, max: Number.POSITIVE_INFINITY },
@@ -56,6 +58,7 @@ export function StoreBrowser({
   initialQuery = "",
   initialEra = "all",
 }: BrowserProps & { initialQuery?: string; initialEra?: Era | "all" }) {
+  const tr = useT();
   const [query, setQuery] = useState(initialQuery);
   const [era, setEra] = useState<Era | "all">(initialEra);
   const [publisher, setPublisher] = useState<string | "all">("all");
@@ -149,10 +152,10 @@ export function StoreBrowser({
   const filterPanel = (
     <div className="grid gap-6">
       <div>
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Age / era</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("Age / era")}</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" className={chip(era === "all")} aria-pressed={era === "all"} onClick={() => setEra("all")}>
-            All eras
+            {tr("All eras")}
           </button>
           {eras.map((e) => (
             <button key={e} type="button" className={chip(era === e)} aria-pressed={era === e} onClick={() => setEra(e)}>
@@ -163,7 +166,7 @@ export function StoreBrowser({
       </div>
 
       <div>
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Publisher</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("Publisher")}</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
@@ -171,7 +174,7 @@ export function StoreBrowser({
             aria-pressed={publisher === "all"}
             onClick={() => setPublisher("all")}
           >
-            All publishers
+            {tr("All publishers")}
           </button>
           {publishers.map((pub) => (
             <button
@@ -188,35 +191,35 @@ export function StoreBrowser({
       </div>
 
       <div>
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Grading</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("Grading")}</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" className={chip(grader === "all")} aria-pressed={grader === "all"} onClick={() => setGrader("all")}>
-            Any
+            {tr("Any")}
           </button>
           {graders.map((g) => (
             <button key={g} type="button" className={chip(grader === g)} aria-pressed={grader === g} onClick={() => setGrader(g)}>
-              {g === "Raw" ? "Raw (unslabbed)" : g}
+              {g === "Raw" ? tr("Raw (unslabbed)") : g}
             </button>
           ))}
         </div>
       </div>
 
       <div>
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Price</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("Price")}</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" className={chip(band === null)} aria-pressed={band === null} onClick={() => setBand(null)}>
-            Any price
+            {tr("Any price")}
           </button>
           {PRICE_BANDS.map((b, i) => (
             <button key={b.label} type="button" className={chip(band === i)} aria-pressed={band === i} onClick={() => setBand(i)}>
-              {b.label}
+              {tr(b.label)}
             </button>
           ))}
         </div>
       </div>
 
       <div>
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Other</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("Other")}</h3>
         <div className="mt-3">
           <label className="inline-flex cursor-pointer items-center gap-2.5 text-sm text-ink-700">
             <input
@@ -225,14 +228,14 @@ export function StoreBrowser({
               onChange={(e) => setKeysOnly(e.target.checked)}
               className="h-4 w-4 rounded border-ink-300 accent-brand-600"
             />
-            Key issues only
+            {tr("Key issues only")}
           </label>
         </div>
       </div>
 
       {activeCount > 0 && (
         <button type="button" onClick={reset} className={`${buttonStyles.quiet} ${buttonSizes.sm} justify-start px-0`}>
-          <CloseIcon className="h-4 w-4" /> Clear all filters
+          <CloseIcon className="h-4 w-4" /> {tr("Clear all filters")}
         </button>
       )}
     </div>
@@ -243,7 +246,7 @@ export function StoreBrowser({
       {/* Sidebar */}
       <aside className="hidden lg:col-span-3 lg:block">
         <div className="sticky top-24">
-          <h2 className="font-display text-lg font-semibold text-ink-950">Filter inventory</h2>
+          <h2 className="font-display text-lg font-semibold text-ink-950">{tr("Filter inventory")}</h2>
           <div className="mt-6">{filterPanel}</div>
         </div>
       </aside>
@@ -258,8 +261,8 @@ export function StoreBrowser({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by title, publisher, creator or key…"
-              aria-label="Search inventory"
+              placeholder={tr("Search by title, publisher, creator or key…")}
+              aria-label={tr("Search inventory")}
               className="h-11 w-full rounded-lg border border-ink-200 bg-white pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500"
             />
           </div>
@@ -271,20 +274,20 @@ export function StoreBrowser({
             aria-expanded={filtersOpen}
             aria-controls="mobile-filters"
           >
-            Filters{activeCount > 0 ? ` (${activeCount})` : ""}
+            {tr("Filters")}{activeCount > 0 ? ` (${activeCount})` : ""}
           </button>
 
           <label className="ml-auto flex items-center gap-2 text-sm text-ink-600 sm:ml-0">
-            <span className="hidden sm:inline">Sort</span>
+            <span className="hidden sm:inline">{tr("Sort")}</span>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              aria-label="Sort inventory"
+              aria-label={tr("Sort inventory")}
               className="h-11 rounded-lg border border-ink-200 bg-white px-3 text-sm text-ink-900 focus:border-brand-500"
             >
               {SORTS.map((s) => (
                 <option key={s.value} value={s.value}>
-                  {s.label}
+                  {tr(s.label)}
                 </option>
               ))}
             </select>
@@ -293,19 +296,19 @@ export function StoreBrowser({
 
         {filtersOpen && (
           <div id="mobile-filters" className="mt-5 rounded-xl border border-ink-200 bg-ink-50 p-5 lg:hidden">
-            <h2 className="sr-only">Filter inventory</h2>
+            <h2 className="sr-only">{tr("Filter inventory")}</h2>
             {filterPanel}
           </div>
         )}
 
         <p className="mt-5 text-sm text-ink-500" aria-live="polite">
-          Showing <span className="font-semibold text-ink-900">{fmt(visible.length)}</span> of {fmt(filtered.length)}{" "}
-          {activeCount > 0 ? "matching listings" : "listings"}
+          {tr("Showing")} <span className="font-semibold text-ink-900">{fmt(visible.length)}</span> {tr("of")} {fmt(filtered.length)}{" "}
+          {activeCount > 0 ? tr("matching listings") : tr("listings")}
           {activeCount > 0 && (
             <>
               {" · "}
               <button type="button" onClick={reset} className="font-medium text-brand-700 underline-offset-4 hover:underline">
-                clear filters
+                {tr("clear filters")}
               </button>
             </>
           )}
@@ -313,18 +316,17 @@ export function StoreBrowser({
 
         {filtered.length === 0 ? (
           <div className="mt-10 rounded-xl border border-dashed border-ink-300 bg-ink-50 px-6 py-16 text-center">
-            <p className="font-display text-lg font-semibold text-ink-950">No books match those filters</p>
+            <p className="font-display text-lg font-semibold text-ink-950">{tr("No books match those filters")}</p>
             <p className="mx-auto mt-2 max-w-md text-sm text-ink-600">
-              Try widening your price band or clearing a filter. We can also source books to order — send us a want
-              list and we&apos;ll hunt it down.
+              {tr("Try widening your price band or clearing a filter. We can also source books to order — send us a want list and we'll hunt it down.")}
             </p>
             <button type="button" onClick={reset} className={`${buttonStyles.primary} ${buttonSizes.md} mt-6`}>
-              Clear all filters
+              {tr("Clear all filters")}
             </button>
           </div>
         ) : (
           <>
-            <h2 className="sr-only">Listings</h2>
+            <h2 className="sr-only">{tr("Listings")}</h2>
             <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((p, i) => (
                 <ProductCard key={p.slug} product={p} priority={i < 2} deferPaint={i >= 4} />
@@ -334,9 +336,9 @@ export function StoreBrowser({
             {remaining > 0 && (
               <div className="mt-10 flex flex-col items-center gap-2.5">
                 <button type="button" onClick={showMore} className={`${buttonStyles.outline} ${buttonSizes.md}`}>
-                  Show {Math.min(PAGE_SIZE, remaining)} more
+                  {tr("Show {count} more", { count: Math.min(PAGE_SIZE, remaining) })}
                 </button>
-                <p className="text-[13px] text-ink-500">{fmt(remaining)} more to load</p>
+                <p className="text-[13px] text-ink-500">{tr("{count} more to load", { count: fmt(remaining) })}</p>
               </div>
             )}
           </>

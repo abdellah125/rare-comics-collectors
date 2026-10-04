@@ -223,7 +223,7 @@ async function seedTax() {
 
 async function seedLocales() {
   for (const [code, name, isDefault] of [["en", "English", true], ["es", "Español", false], ["fr", "Français", false], ["de", "Deutsch", false]] as const) {
-    await db.locale.upsert({ where: { code }, create: { code, name, isDefault, isEnabled: code === "en" }, update: { name } });
+    await db.locale.upsert({ where: { code }, create: { code, name, isDefault, isEnabled: true }, update: { name } });
   }
   log("4 locales");
 }

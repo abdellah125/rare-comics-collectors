@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useCart } from "@/components/cart-provider";
 import { CheckIcon, CloseIcon } from "@/components/icons";
+import { useT } from "@/components/i18n-provider";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 
 /** The existing coupon; this component only advertises it and never touches how it is applied. */
@@ -39,6 +40,7 @@ const write = (storage: "sessionStorage" | "localStorage", key: string, value: s
  * already has a paid order is not eligible for the code, so is never shown it.
  */
 export function WelcomeOffer({ returningCustomer }: { returningCustomer: boolean }) {
+  const tr = useT();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -152,28 +154,28 @@ export function WelcomeOffer({ returningCustomer }: { returningCustomer: boolean
         <button
           type="button"
           onClick={() => close()}
-          aria-label="Close welcome offer"
+          aria-label={tr("Close welcome offer")}
           className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400"
         >
           <CloseIcon className="h-5 w-5" />
         </button>
 
         <div className="px-6 pb-6 pt-8 text-center sm:px-9 sm:pb-8 sm:pt-10">
-          <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-gold-400">Welcome offer</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-gold-400">{tr("Welcome offer")}</p>
           <h2 id="welcome-offer-title" className="mt-3 font-display text-[3.25rem] font-semibold leading-none tracking-tight text-white sm:text-6xl">
-            10% Off
+            {tr("10% Off")}
           </h2>
           <div aria-hidden className="mx-auto mt-4 h-px w-12 bg-gold-400/60" />
           <ul className="mt-4 grid gap-0.5 text-[15px] font-medium text-white/90">
-            <li>New Customers</li>
-            <li>Your First Comic</li>
-            <li>Up to $1,000 Off</li>
+            <li>{tr("New Customers")}</li>
+            <li>{tr("Your First Comic")}</li>
+            <li>{tr("Up to $1,000 Off")}</li>
           </ul>
 
           <div className="mt-6 rounded-xl border border-dashed border-gold-400/50 bg-white/[0.04] p-1.5">
             <div className="flex items-center justify-between gap-3 rounded-lg bg-ink-950/60 py-2 pl-4 pr-2">
               <span className="text-left">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">Use code</span>
+                <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">{tr("Use code")}</span>
                 <span data-code className="block select-all font-logo text-xl font-black tracking-[0.16em] text-gold-300">
                   {CODE}
                 </span>
@@ -185,24 +187,24 @@ export function WelcomeOffer({ returningCustomer }: { returningCustomer: boolean
               >
                 {copied ? (
                   <>
-                    <CheckIcon className="h-4 w-4 text-gold-300" /> Copied
+                    <CheckIcon className="h-4 w-4 text-gold-300" /> {tr("Copied")}
                   </>
                 ) : (
-                  "Copy code"
+                  tr("Copy code")
                 )}
               </button>
             </div>
           </div>
           <span role="status" className="sr-only">
-            {copied ? `Code ${CODE} copied` : ""}
+            {copied ? tr("Code {code} copied", { code: CODE }) : ""}
           </span>
 
           <Link href="/store" onClick={() => close(true)} className={`${buttonStyles.gold} ${buttonSizes.lg} mt-5 w-full uppercase tracking-[0.12em]`}>
-            Shop comics
+            {tr("Shop comics")}
           </Link>
 
           <p id="welcome-offer-terms" className="mt-4 text-[11px] leading-relaxed text-white/50">
-            New customers only. Valid on your first comic purchase. 10% off, maximum discount $1,000. Use code {CODE}. Other exclusions may apply.
+            {tr("New customers only. Valid on your first comic purchase. 10% off, maximum discount $1,000. Use code {code}. Other exclusions may apply.", { code: CODE })}
           </p>
         </div>
       </div>

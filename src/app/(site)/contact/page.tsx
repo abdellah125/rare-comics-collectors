@@ -3,14 +3,21 @@ import type { Metadata } from "next";
 
 import { ContactForm } from "@/components/contact-form";
 import { Breadcrumbs, Container, Section, SectionHeading, type Crumb } from "@/components/ui";
-import { ClockIcon, MailIcon, PhoneIcon, PinIcon } from "@/components/icons";
+import { ClockIcon, MailIcon, PhoneIcon, PinIcon, WhatsAppIcon } from "@/components/icons";
+import { WhatsAppButton } from "@/components/whatsapp-button";
+import { getTranslator } from "@/lib/i18n";
+import { msg } from "@/lib/i18n/translate";
+import { localizedMetadata } from "@/lib/seo-i18n";
+import { whatsappMessage, whatsappUrl } from "@/lib/whatsapp";
 import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
-import { pageMetadata } from "@/lib/seo";
 import { fullAddress, mapDirectionsLink, mapEmbedLink, mapLink, site } from "@/lib/site";
 
-export const metadata: Metadata = pageMetadata({
-  title: `Contact ${site.name} — ${site.address.city}, ${site.address.region}`,
-  description: `Visit our vault at ${fullAddress}, call ${site.phoneDisplay}, or send a message. Free counter appraisals during business hours and vault viewings by appointment.`,
+/** Translated page: each language version is canonical for itself and lists the others (hreflang). */
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTranslator();
+  return localizedMetadata({
+  title: tr("Contact {name} — {city}, {region}", { name: site.name, city: site.address.city, region: site.address.region }),
+  description: tr("Visit our vault at {address}, call {phone}, message us on WhatsApp, or send a message. Free counter appraisals during business hours and vault viewings by appointment.", { address: fullAddress, phone: site.phoneDisplay }),
   path: "/contact",
   keywords: [
     `comic store ${site.address.city}`,
@@ -18,54 +25,67 @@ export const metadata: Metadata = pageMetadata({
     "contact comic dealer",
     "comic appraisal near me",
   ],
-});
+  });
+}
 
-const crumbs: Crumb[] = [
-  { name: "Home", href: "/" },
-  { name: "Contact", href: "/contact" },
-];
-
+/** Form values (they route the ticket to a queue), so they stay in English; the form translates the labels. */
 const topics = [
-  "Buying a book from the store",
-  "Grading submission",
-  "Pressing & cleaning",
-  "Restoration detection",
-  "Appraisal / valuation",
-  "Consignment or selling to you",
-  "Vault storage",
-  "Order or shipping question",
-  "Something else",
+  msg("Buying a book from the store"),
+  msg("Grading submission"),
+  msg("Pressing & cleaning"),
+  msg("Restoration detection"),
+  msg("Appraisal / valuation"),
+  msg("Consignment or selling to you"),
+  msg("Vault storage"),
+  msg("Order or shipping question"),
+  msg("Something else"),
 ];
 
 const channels = [
   {
+    icon: WhatsAppIcon,
+    label: msg("WhatsApp"),
+    value: site.whatsapp.display,
+    href: whatsappUrl(whatsappMessage("/contact")),
+    note: msg("Message us directly. Photos and cert numbers welcome."),
+    external: true,
+  },
+  {
     icon: PhoneIcon,
-    label: "Call us",
+    label: msg("Call us"),
     value: site.phoneDisplay,
     href: `tel:${site.phone}`,
-    note: "Fastest route to a grader during business hours.",
+    note: msg("Fastest route to a grader during business hours."),
+    external: false,
   },
   {
     icon: MailIcon,
-    label: "Sales & buying",
+    label: msg("Sales & buying"),
     value: site.salesEmail,
     href: `mailto:${site.salesEmail}`,
-    note: "Want lists, offers, consignment enquiries.",
+    note: msg("Want lists, offers, consignment enquiries."),
+    external: false,
   },
   {
     icon: MailIcon,
-    label: "Grading & services",
+    label: msg("Grading & services"),
     value: site.gradingEmail,
     href: `mailto:${site.gradingEmail}`,
-    note: "Submissions, pressing, appraisal, storage.",
+    note: msg("Submissions, pressing, appraisal, storage."),
+    external: false,
   },
 ];
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const tr = await getTranslator();
+  const crumbs: Crumb[] = [
+    { name: tr("Home"), href: "/" },
+    { name: tr("Contact"), href: "/contact" },
+  ];
   const contactJsonLd = {
     "@context": "https://schema.org",
     "@type": "ContactPage",
-    name: `Contact ${site.name}`,
+    name: tr("Contact {name}", { name: site.name }),
     url: `${site.url}/contact`,
     isPartOf: { "@id": `${site.url}/#website` },
     mainEntity: {
@@ -100,31 +120,31 @@ export default function ContactPage() {
         <Container className="py-12 lg:py-16">
           <Breadcrumbs items={crumbs} />
           <div className="mt-6 max-w-3xl">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-700">Get in touch</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-700">{tr("Get in touch")}</p>
             <h1 className="mt-3 font-display text-[clamp(2.1rem,4.6vw,3.4rem)] font-semibold leading-[1.08] text-ink-950">
-              Talk to a grader, not a call centre
+              {tr("Talk to a grader, not a call centre")}
             </h1>
             <p className="mt-5 text-[17px] leading-relaxed text-ink-700">
-              Every message is read by someone who handles books for a living. Send photos, cert numbers or a want
-              list and we&apos;ll come back with a straight answer — usually within one business day.
+              {tr("Every message is read by someone who handles books for a living. Send photos, cert numbers or a want list and we'll come back with a straight answer — usually within one business day.")}
             </p>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {channels.map((c) => (
               <a
                 key={c.label}
                 href={c.href}
+                {...(c.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                 className="group min-w-0 rounded-xl border border-ink-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-plate"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-50 text-brand-700 ring-1 ring-brand-100">
                   <c.icon className="h-5 w-5" />
                 </span>
-                <p className="mt-3.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{c.label}</p>
+                <p className="mt-3.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr(c.label)}</p>
                 <p className="mt-1 font-display text-lg font-semibold text-ink-950 [overflow-wrap:anywhere] group-hover:text-brand-700">
                   {c.value}
                 </p>
-                <p className="mt-1 text-[13px] text-ink-500">{c.note}</p>
+                <p className="mt-1 text-[13px] text-ink-500">{tr(c.note)}</p>
               </a>
             ))}
           </div>
@@ -134,27 +154,31 @@ export default function ContactPage() {
       <Container className="py-14 lg:py-20">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
-            <h2 className="font-display text-2xl font-semibold text-ink-950">Send us a message</h2>
+            <h2 className="font-display text-2xl font-semibold text-ink-950">{tr("Send us a message")}</h2>
             <p className="mt-2 text-[15px] text-ink-600">
-              Chasing an order?{" "}
+              {tr("Chasing an order?")}{" "}
               <Link href="/track-order" className="font-medium text-brand-700 underline-offset-2 hover:underline">
-                Track it here
+                {tr("Track it here")}
               </Link>{" "}
-              or{" "}
+              {tr("or")}{" "}
               <Link href="/support" className="font-medium text-brand-700 underline-offset-2 hover:underline">
-                open a support ticket
+                {tr("open a support ticket")}
               </Link>
               .
             </p>
+            <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="min-w-0 flex-1 text-[14px] text-ink-700">{tr("Prefer to chat? Message us on WhatsApp and send photos straight from your phone.")}</p>
+              <WhatsAppButton path="/contact" showNumber />
+            </div>
             <ContactForm topics={topics} className="mt-7" />
           </div>
 
           <aside className="lg:col-span-5" id="visit">
-            <h2 className="font-display text-2xl font-semibold text-ink-950">Visit the vault</h2>
+            <h2 className="font-display text-2xl font-semibold text-ink-950">{tr("Visit the vault")}</h2>
 
             <div className="mt-5 overflow-hidden rounded-xl border border-ink-200 shadow-plate">
               <iframe
-                title={`Google Map showing ${site.name} at ${fullAddress}`}
+                title={tr("Map showing {name} at {address}", { name: site.name, address: fullAddress })}
                 src={mapEmbedLink}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -170,7 +194,7 @@ export default function ContactPage() {
                     rel="noopener noreferrer"
                     className="text-brand-700 underline-offset-4 hover:underline"
                   >
-                    Get directions →
+                    {tr("Get directions")} →
                   </a>
                   <a
                     href={mapLink}
@@ -178,7 +202,7 @@ export default function ContactPage() {
                     rel="noopener noreferrer"
                     className="text-ink-600 underline-offset-4 hover:underline"
                   >
-                    View on Google Maps →
+                    {tr("View on Google Maps")} →
                   </a>
                 </div>
               </div>
@@ -188,7 +212,7 @@ export default function ContactPage() {
               <div>
                 <dt className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">
                   <PinIcon className="h-5 w-5 shrink-0 text-brand-600" />
-                  Address
+                  {tr("Address")}
                 </dt>
                 <dd className="mt-1 pl-8 text-[15px] leading-relaxed text-ink-800">
                   {site.address.street}
@@ -202,12 +226,12 @@ export default function ContactPage() {
               <div>
                 <dt className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">
                   <ClockIcon className="h-5 w-5 shrink-0 text-brand-600" />
-                  Opening hours
+                  {tr("Opening hours")}
                 </dt>
                 <dd className="mt-1 grid gap-1 pl-8 text-[15px] text-ink-800">
                   {site.hours.map((h) => (
                     <span key={h.days} className="flex justify-between gap-6">
-                      <span className="text-ink-600">{h.days}</span>
+                      <span className="text-ink-600">{tr(h.days)}</span>
                       <span className="font-medium">{h.time}</span>
                     </span>
                   ))}
@@ -216,12 +240,12 @@ export default function ContactPage() {
             </dl>
 
             <div className="mt-7 rounded-xl border border-ink-200 bg-ink-50 p-5">
-              <h3 className="font-display text-lg font-semibold text-ink-950">Parking &amp; access</h3>
+              <h3 className="font-display text-lg font-semibold text-ink-950">{tr("Parking & access")}</h3>
               <ul className="mt-3 grid gap-2 text-[14px] leading-relaxed text-ink-600">
-                <li>Metered street parking on Congress Avenue; covered garage entrance on 5th Street.</li>
-                <li>Step-free access from the lobby, with a lift to the second floor.</li>
-                <li>Vault viewings are by appointment and take place in the ground-floor inspection room.</li>
-                <li>Dropping off a submission? Call ahead and we&apos;ll have paperwork ready.</li>
+                <li>{tr("Metered street parking on Congress Avenue; covered garage entrance on 5th Street.")}</li>
+                <li>{tr("Step-free access from the lobby, with a lift to the second floor.")}</li>
+                <li>{tr("Vault viewings are by appointment and take place in the ground-floor inspection room.")}</li>
+                <li>{tr("Dropping off a submission? Call ahead and we'll have paperwork ready.")}</li>
               </ul>
             </div>
           </aside>
@@ -230,9 +254,9 @@ export default function ContactPage() {
 
       <Section tone="muted">
         <SectionHeading
-          eyebrow="Selling to us"
-          title="We buy collections of any size, anywhere in the US"
-          lead="Single keys, run collections, dealer stock or full estates. We pay by wire within 48 hours of agreement, and we'll travel for collections over $25,000."
+          eyebrow={tr("Selling to us")}
+          title={tr("We buy collections of any size, anywhere in the US")}
+          lead={tr("Single keys, run collections, dealer stock or full estates. We pay by wire within 48 hours of agreement, and we'll travel for collections over $25,000.")}
           align="center"
         />
       </Section>

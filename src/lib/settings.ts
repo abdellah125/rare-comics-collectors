@@ -57,6 +57,10 @@ export const settingDefaults = {
   "features.reviews": true,
   "features.coupons": true,
   "features.multiCurrency": true,
+  /** Show prices in the currency of the visitor's country until they pick one. */
+  "commerce.autoCurrency": true,
+  /** Show the site in the language of the visitor's country until they pick one. */
+  "i18n.autoDetect": true,
   "features.guestTracking": true,
   "features.sellerStorefronts": true,
   "features.disputes": true,

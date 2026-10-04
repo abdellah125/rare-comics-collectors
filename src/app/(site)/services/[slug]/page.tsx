@@ -11,6 +11,7 @@ import { getService, services } from "@/lib/services";
 import { formatPrice, schemaPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 
 export function generateStaticParams() {
   return services.map((s) => ({ slug: s.slug }));
@@ -131,6 +132,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
                       <AddToCartButton line={line} label="Add service to cart" className="w-full" />
                     </>
                   )}
+                  <WhatsAppButton path={`/services/${service.slug}`} className="w-full" />
                 </div>
 
                 <p className="mt-4 text-xs leading-relaxed text-ink-500">

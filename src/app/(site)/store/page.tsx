@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { StoreBrowser } from "@/components/store-browser";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
@@ -10,13 +9,17 @@ import { listPublishedProducts, storeFacets } from "@/lib/catalog/products";
 import type { Era } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 import { getSettings } from "@/lib/settings";
-import { pageMetadata } from "@/lib/seo";
+import { Rich } from "@/components/rich";
+import { getTranslator } from "@/lib/i18n";
+import { msg } from "@/lib/i18n/translate";
+import { localizedMetadata } from "@/lib/seo-i18n";
 import { site } from "@/lib/site";
 
-export const metadata: Metadata = pageMetadata({
-  title: "Graded Comics for Sale — CGC & CBCS Key Issues",
-  description:
-    "Browse CGC-graded Golden Age and Silver Age key issues for sale. Cert-verified, restoration-checked, insured shipping and a 14-day return window. Buy now or add to cart.",
+/** Translated page: each language version is canonical for itself and lists the others (hreflang). */
+export async function generateMetadata(): Promise<Metadata> {
+  return localizedMetadata({
+  title: msg("Graded Comics for Sale — CGC & CBCS Key Issues"),
+  description: msg("Browse CGC-graded Golden Age and Silver Age key issues for sale. Cert-verified, restoration-checked, insured shipping and a 14-day return window. Buy now or add to cart."),
   path: "/store",
   keywords: [
     "graded comics for sale",
@@ -26,18 +29,19 @@ export const metadata: Metadata = pageMetadata({
     "golden age key issues",
     "buy comic books online",
   ],
-});
-
-const crumbs: Crumb[] = [
-  { name: "Home", href: "/" },
-  { name: "Store", href: "/store" },
-];
+  });
+}
 
 export default async function StorePage({ searchParams }: PageProps<"/store">) {
   // Deep links like /store?q=… or /store?era=Golden+Age (footer links, SearchAction
   // structured data) are read on the server so the first page of results is in
   // the HTML rather than rendered client-side after hydration.
   const sp = await searchParams;
+  const tr = await getTranslator();
+  const crumbs: Crumb[] = [
+    { name: tr("Home"), href: "/" },
+    { name: tr("Store"), href: "/store" },
+  ];
   const [summaries, facets, settings, collections, publisherPages] = await Promise.all([listPublishedProducts(), storeFacets(), getSettings(), listCollections(), listPublishers()]);
   const freeShippingThreshold = settings["commerce.freeShippingThreshold"];
   const returnWindowDays = settings["commerce.returnWindowDays"];
@@ -51,9 +55,8 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
   const collectionJsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Graded comics for sale",
-    description:
-      "CGC and CBCS graded comic books for sale, plus honestly graded raw books with full defect disclosure.",
+    name: tr("Graded comics for sale"),
+    description: tr("CGC and CBCS graded comic books for sale, plus honestly graded raw books with full defect disclosure."),
     url: `${site.url}/store`,
     isPartOf: { "@id": `${site.url}/#website` },
     // Summary-page pattern: each entry links to the product page that carries the full Product/Offer markup.
@@ -71,23 +74,23 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
           <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
             <SectionHeading
               as="h1"
-              eyebrow={`${inventoryCount.toLocaleString("en-US")} listings in the vault`}
-              title="Graded comics for sale"
-              lead="Every slab is cert-verified against the grader's census before listing, and every raw book is graded in-house with its defects photographed and disclosed. Buy now to check out immediately, or add to cart and keep browsing."
+              eyebrow={tr("{count} listings in the vault", { count: inventoryCount.toLocaleString("en-US") })}
+              title={tr("Graded comics for sale")}
+              lead={tr("Every slab is cert-verified against the grader's census before listing, and every raw book is graded in-house with its defects photographed and disclosed. Buy now to check out immediately, or add to cart and keep browsing.")}
             />
             <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
               <div>
-                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">From</dt>
+                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("From")}</dt>
                 <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">{formatPrice(lowestPrice)}</dd>
               </div>
               <div>
-                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Eras</dt>
+                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("Eras")}</dt>
                 <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">{eras.length}</dd>
               </div>
               <div>
-                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{freeShippingThreshold > 0 ? "Free shipping" : "Shipping"}</dt>
+                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{freeShippingThreshold > 0 ? tr("Free shipping") : tr("Shipping")}</dt>
                 <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">
-                  {freeShippingThreshold > 0 ? `${formatPrice(freeShippingThreshold)}+` : "Insured"}
+                  {freeShippingThreshold > 0 ? `${formatPrice(freeShippingThreshold)}+` : tr("Insured")}
                 </dd>
               </div>
             </dl>
@@ -121,52 +124,42 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
       <section className="border-t border-ink-200 bg-ink-50">
         <Container className="py-14">
           <div className="prose-doc max-w-3xl">
-            <h2>Buying graded comic books online</h2>
+            <h2>{tr("Buying graded comic books online")}</h2>
             <p>
-              A graded comic is a book that has been authenticated, assessed on a 0.5–10.0 scale and sealed in a
-              tamper-evident holder by a third-party grading company. The two that matter in the US market are{" "}
-              <strong>CGC</strong> (Certified Guaranty Company) and <strong>CBCS</strong> (Comic Book Certification
-              Service). Grading removes the two biggest risks in buying a comic sight-unseen: disagreement about
-              condition, and undisclosed restoration.
+              <Rich text={tr("A graded comic is a book that has been authenticated, assessed on a 0.5–10.0 scale and sealed in a tamper-evident holder by a third-party grading company. The two that matter in the US market are <b>CGC</b> (Certified Guaranty Company) and <b>CBCS</b> (Comic Book Certification Service). Grading removes the two biggest risks in buying a comic sight-unseen: disagreement about condition, and undisclosed restoration.")} />
             </p>
-            <h3>What the label colour tells you</h3>
+            <h3>{tr("What the label colour tells you")}</h3>
             <ul>
               <li>
-                <strong>Universal (blue)</strong> — no restoration, no qualifying defects. This is the baseline and
-                the most liquid label at resale.
+                <Rich text={tr("<b>Universal (blue)</b> — no restoration, no qualifying defects. This is the baseline and the most liquid label at resale.")} />
               </li>
               <li>
-                <strong>Signature Series (yellow)</strong> — signed with a grading-company witness present. Carries a
-                premium over an unwitnessed signature, which is otherwise unverifiable.
+                <Rich text={tr("<b>Signature Series (yellow)</b> — signed with a grading-company witness present. Carries a premium over an unwitnessed signature, which is otherwise unverifiable.")} />
               </li>
               <li>
-                <strong>Restored (purple)</strong> — colour touch, glue, tear seals or trimming. Typically trades well
-                below the same grade in blue.
+                <Rich text={tr("<b>Restored (purple)</b> — colour touch, glue, tear seals or trimming. Typically trades well below the same grade in blue.")} />
               </li>
               <li>
-                <strong>Qualified (green)</strong> — an otherwise universal book with one significant, disclosed
-                defect such as a missing coupon.
+                <Rich text={tr("<b>Qualified (green)</b> — an otherwise universal book with one significant, disclosed defect such as a missing coupon.")} />
               </li>
             </ul>
-            <h3>Grade matters more than you think</h3>
+            <h3>{tr("Grade matters more than you think")}</h3>
             <p>
-              For modern books, the market is concentrated almost entirely at 9.8. A 9.6 of the same issue can trade at
-              a third of the 9.8 price. For Golden and Silver Age books the curve is flatter — scarcity does more work
-              than condition — which is why a 6.0 Golden Age key can outperform a 9.8 modern. We list the census
-              position on every high-value book so you can see where a copy sits in the surviving population.
+              {tr("For modern books, the market is concentrated almost entirely at 9.8. A 9.6 of the same issue can trade at a third of the 9.8 price. For Golden and Silver Age books the curve is flatter — scarcity does more work than condition — which is why a 6.0 Golden Age key can outperform a 9.8 modern. We list the census position on every high-value book so you can see where a copy sits in the surviving population.")}
             </p>
-            <h3>How we price</h3>
+            <h3>{tr("How we price")}</h3>
             <p>
-              Every listing is priced against realised public sales from the previous twelve months, adjusted for
-              label type, page quality and census position — not against guide values, which lag the market by months.
-              If you think a price is wrong, tell us which comparable you&apos;re looking at and we&apos;ll talk about it.
+              {tr("Every listing is priced against realised public sales from the previous twelve months, adjusted for label type, page quality and census position — not against guide values, which lag the market by months. If you think a price is wrong, tell us which comparable you're looking at and we'll talk about it.")}
             </p>
-            <h3>Buying with confidence</h3>
+            <h3>{tr("Buying with confidence")}</h3>
             <p>
-              Orders ship double-boxed, signature-required and insured to full value
-              {freeShippingThreshold > 0 ? `, free within the US above ${formatPrice(freeShippingThreshold)}` : ""}. You have {returnWindowDays} days from
-              delivery to inspect any book and return it in its original holder for a full refund. Undisclosed restoration is refundable in full with no time limit under our{" "}
-              <Link href="/policies/authenticity-guarantee">authenticity guarantee</Link>.
+              {freeShippingThreshold > 0
+                ? tr("Orders ship double-boxed, signature-required and insured to full value, free within the US above {amount}.", { amount: formatPrice(freeShippingThreshold) })
+                : tr("Orders ship double-boxed, signature-required and insured to full value.")}{" "}
+              <Rich
+                text={tr("You have {days} days from delivery to inspect any book and return it in its original holder for a full refund. Undisclosed restoration is refundable in full with no time limit under our <a>authenticity guarantee</a>.", { days: returnWindowDays })}
+                hrefs={["/policies/authenticity-guarantee"]}
+              />
             </p>
           </div>
         </Container>

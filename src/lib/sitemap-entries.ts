@@ -8,6 +8,7 @@ import { GUIDE_TOPICS } from "@/lib/guides/topics";
 import { policies } from "@/lib/policies";
 import { services } from "@/lib/services";
 import { getSettings } from "@/lib/settings";
+import { TRANSLATED_LOCALES, localizePath } from "@/lib/i18n/config";
 import { site } from "@/lib/site";
 
 export type SitemapEntry = MetadataRoute.Sitemap[number];
@@ -23,6 +24,9 @@ const url = (path: string) => `${site.url}${path}`;
  * two never disagree. Account, cart, checkout, dashboards and the admin are
  * noindex and deliberately absent.
  */
+/** Pages translated in full: the only ones that exist as separate, indexable URLs per language. */
+export const TRANSLATED_PATHS = ["/", "/store", "/contact"] as const;
+
 export async function sitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const settings = await getSettings();
 
@@ -74,7 +78,13 @@ export async function sitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const serviceUrls: MetadataRoute.Sitemap = services.map((s) => ({ url: url(`/services/${s.slug}`), changeFrequency: "monthly", priority: 0.75 }));
   const policyUrls: MetadataRoute.Sitemap = policies.map((p) => ({ url: url(`/policies/${p.slug}`), lastModified: new Date(p.updated), changeFrequency: "yearly", priority: 0.3 }));
 
-  return [...core, ...collectionUrls, ...publisherUrls, ...topicUrls, ...characterUrls, ...productUrls, ...sellerUrls, ...serviceUrls, ...policyUrls];
+  // Language versions of the pages whose copy is translated (the same list carries hreflang in the page head).
+  const enabled = new Set((await db.locale.findMany({ where: { isEnabled: true }, select: { code: true } })).map((l) => l.code));
+  const localizedUrls: MetadataRoute.Sitemap = TRANSLATED_LOCALES.filter((l) => enabled.has(l)).flatMap((l) =>
+    TRANSLATED_PATHS.map((p) => ({ url: url(localizePath(p, l)), lastModified: storeChanged, changeFrequency: "weekly" as const, priority: 0.6 })),
+  );
+
+  return [...core, ...localizedUrls, ...collectionUrls, ...publisherUrls, ...topicUrls, ...characterUrls, ...productUrls, ...sellerUrls, ...serviceUrls, ...policyUrls];
 }
 
 export async function guideSitemapPages(): Promise<number> {

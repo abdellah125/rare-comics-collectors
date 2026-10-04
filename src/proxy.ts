@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { LOCALE_COOKIE, LOCALE_HEADER, PATH_HEADER, canPrefix, splitLocale } from "@/lib/i18n/config";
 
 /**
  * Optimistic, cookie-only checks. Real authentication and authorization happen
@@ -17,6 +18,22 @@ function ipAllowed(ip: string | null, allowlist: string[]): boolean {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // /fr/store → the /store page, told through a request header that this URL is the French one.
+  const { locale, path } = splitLocale(pathname);
+  if (locale) {
+    const url = request.nextUrl.clone();
+    url.pathname = path;
+    // Private and transactional sections have no language twin: send the visitor to the real URL.
+    if (!canPrefix(path)) return NextResponse.redirect(url);
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(LOCALE_HEADER, locale);
+    requestHeaders.set(PATH_HEADER, path);
+    const res = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    // Remember the language so the unprefixed links on the page keep it.
+    res.cookies.set(LOCALE_COOKIE, locale, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 365 * 86_400 });
+    return res;
+  }
 
   if (pathname.startsWith("/admin")) {
     const allowlist = (process.env.ADMIN_IP_ALLOWLIST ?? "")
@@ -54,5 +71,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/account/:path*", "/dashboard/:path*"],
+  matcher: ["/admin/:path*", "/account/:path*", "/dashboard/:path*", "/(es|fr|de)", "/(es|fr|de)/:path*"],
 };

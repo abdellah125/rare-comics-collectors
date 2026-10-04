@@ -1,3 +1,4 @@
+import { msg } from "@/lib/i18n/translate";
 import { site } from "./site";
 
 export type Service = {
@@ -19,14 +20,14 @@ export type Service = {
 export const services: Service[] = [
   {
     slug: "grading-submission",
-    name: "CGC & CBCS Grading Submission",
-    short: "Authorised submission at dealer rates",
+    name: msg("CGC & CBCS Grading Submission"),
+    short: msg("Authorised submission at dealer rates"),
     price: 3900,
-    priceNote: "per book, plus grader tier fee",
+    priceNote: msg("per book, plus grader tier fee"),
     turnaround: "18–45 business days",
     icon: "shield",
     summary:
-      "We are an authorised submission centre for both CGC and CBCS. Send us your books and we handle packing, declared values, tier selection and the entire round trip.",
+      msg("We are an authorised submission centre for both CGC and CBCS. Send us your books and we handle packing, declared values, tier selection and the entire round trip."),
     description: [
       "Most collectors lose money on grading before the book is even opened — wrong tier, wrong declared value, or damage in transit. As an authorised submission centre we absorb that risk for you.",
       `Every book is pre-screened by a ${site.name} grader before it goes out. If we think a book will not return the grade you are paying for, we tell you before we submit it, not after.`,
@@ -55,14 +56,14 @@ export const services: Service[] = [
   },
   {
     slug: "pressing-and-cleaning",
-    name: "Professional Pressing & Dry Cleaning",
-    short: "Non-invasive defect removal",
+    name: msg("Professional Pressing & Dry Cleaning"),
+    short: msg("Non-invasive defect removal"),
     price: 2500,
-    priceNote: "per book",
+    priceNote: msg("per book"),
     turnaround: "10–20 business days",
     icon: "press",
     summary:
-      "Heat and humidity pressing removes non-colour-breaking bends, spine roll, and dents. Correctly done, it is fully accepted by both CGC and CBCS and is not restoration.",
+      msg("Heat and humidity pressing removes non-colour-breaking bends, spine roll, and dents. Correctly done, it is fully accepted by both CGC and CBCS and is not restoration."),
     description: [
       "Pressing is the highest-return service in the hobby when it is done on the right book. A single removed bend can move a 9.2 to a 9.6 and double the realised value.",
       "It is also the easiest way to destroy a book in unskilled hands. Our presser has fifteen years of experience and works exclusively on a calibrated, humidity-controlled system.",
@@ -90,14 +91,14 @@ export const services: Service[] = [
   },
   {
     slug: "restoration-detection",
-    name: "Restoration & Authenticity Detection",
-    short: "UV, magnification and solvent-free analysis",
+    name: msg("Restoration & Authenticity Detection"),
+    short: msg("UV, magnification and solvent-free analysis"),
     price: 1900,
-    priceNote: "per book",
+    priceNote: msg("per book"),
     turnaround: "3–5 business days",
     icon: "search",
     summary:
-      "Long-wave UV examination, high-magnification inspection, and paper-weight analysis to detect colour touch, trimming, married pages, glue, and reproduction covers.",
+      msg("Long-wave UV examination, high-magnification inspection, and paper-weight analysis to detect colour touch, trimming, married pages, glue, and reproduction covers."),
     description: [
       "Undisclosed restoration is the single most expensive mistake a collector can make. A purple-label book can be worth a fifth of the same book in blue.",
       "Our detection service catches colour touch, spine tears sealed with glue, trimmed edges, married interiors, and reproduced covers before you buy — or before you submit.",
@@ -124,14 +125,14 @@ export const services: Service[] = [
   },
   {
     slug: "appraisal-and-valuation",
-    name: "Collection Appraisal & Valuation",
-    short: "Insurance and estate-grade documentation",
+    name: msg("Collection Appraisal & Valuation"),
+    short: msg("Insurance and estate-grade documentation"),
     price: null,
-    priceNote: "quoted by collection size — from $250",
+    priceNote: msg("quoted by collection size — from $250"),
     turnaround: "5–15 business days",
     icon: "scale",
     summary:
-      "Formal written appraisals for insurance scheduling, estate settlement, divorce proceedings and charitable donation, built on realised auction data rather than guide prices.",
+      msg("Formal written appraisals for insurance scheduling, estate settlement, divorce proceedings and charitable donation, built on realised auction data rather than guide prices."),
     description: [
       "Guide prices are not appraisals. Insurers, executors and courts want documented fair market value tied to comparable realised sales, prepared by a qualified party.",
       "We build every appraisal from twelve months of realised sales across the major auction houses and marketplaces, adjusted for grade, label type and census position.",
@@ -159,10 +160,10 @@ export const services: Service[] = [
   },
   {
     slug: "consignment-and-brokerage",
-    name: "Consignment & Private Brokerage",
-    short: "We sell it for you, at our reach",
+    name: msg("Consignment & Private Brokerage"),
+    short: msg("We sell it for you, at our reach"),
     price: null,
-    priceNote: "8–15% commission, no listing fees",
+    priceNote: msg("8–15% commission, no listing fees"),
     turnaround: "Listed within 5 business days",
     icon: "camera",
     summary:
@@ -194,14 +195,14 @@ export const services: Service[] = [
   },
   {
     slug: "vault-storage",
-    name: "Insured Vault Storage",
-    short: "Climate-controlled, fully insured",
+    name: msg("Insured Vault Storage"),
+    short: msg("Climate-controlled, fully insured"),
     price: 1200,
-    priceNote: "per book, per year",
+    priceNote: msg("per book, per year"),
     turnaround: "Same-day intake",
     icon: "truck",
     summary:
-      "Climate-controlled, humidity-stabilised, fire-suppressed storage for high-value slabs, with per-item insurance and 48-hour retrieval.",
+      msg("Climate-controlled, humidity-stabilised, fire-suppressed storage for high-value slabs, with per-item insurance and 48-hour retrieval."),
     description: [
       "Paper degrades in ordinary homes. Heat cycles, humidity swings and UV exposure will pull a white-page book to off-white within a decade.",
       "Our vault holds 68°F and 45% relative humidity year-round, with inert-gas fire suppression, no windows, and 24-hour monitored access control.",

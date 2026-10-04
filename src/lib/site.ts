@@ -1,3 +1,4 @@
+import { msg } from "@/lib/i18n/translate";
 export const site = {
   name: "Rare Comics Collectors",
   legalName: "Rare Comics Collectors, LLC",
@@ -17,6 +18,10 @@ export const site = {
   email: "hello@rarecomicscollectors.com",
   salesEmail: "sales@rarecomicscollectors.com",
   gradingEmail: "grading@rarecomicscollectors.com",
+  /** WhatsApp for customers. The only place the number is written: digits for wa.me, and as displayed. */
+  whatsapp: { number: "14185066697", display: "+1 418-506-6697" },
+  /** The store's own time zone, used for the "open now" status. */
+  timeZone: "America/Chicago",
   phone: "+1-512-555-0184",
   phoneDisplay: "(512) 555-0184",
   address: {
@@ -30,9 +35,9 @@ export const site = {
   },
   geo: { lat: 30.267_15, lng: -97.743_06 },
   hours: [
-    { days: "Monday – Friday", time: "10:00 AM – 7:00 PM" },
-    { days: "Saturday", time: "10:00 AM – 6:00 PM" },
-    { days: "Sunday", time: "12:00 PM – 5:00 PM" },
+    { days: msg("Monday – Friday"), time: "10:00 AM – 7:00 PM" },
+    { days: msg("Saturday"), time: "10:00 AM – 6:00 PM" },
+    { days: msg("Sunday"), time: "12:00 PM – 5:00 PM" },
   ],
   // Schema.org openingHoursSpecification format
   openingHours: [
@@ -48,10 +53,10 @@ export const site = {
     linkedin: "https://www.linkedin.com/company/rarecomicscollectors",
   },
   stats: [
-    { value: "200K+", label: "Books graded & brokered" },
-    { value: "42", label: "Years combined expertise" },
-    { value: "99.4%", label: "Positive buyer feedback" },
-    { value: "$60M", label: "Insured vault coverage" },
+    { value: "200K+", label: msg("Books graded & brokered") },
+    { value: "42", label: msg("Years combined expertise") },
+    { value: "99.4%", label: msg("Positive buyer feedback") },
+    { value: "$60M", label: msg("Insured vault coverage") },
   ],
 } as const;
 

@@ -13,15 +13,20 @@ import { latestGuides } from "@/lib/guides/data";
 import { countPublished, homeProducts } from "@/lib/catalog/products";
 import { services } from "@/lib/services";
 import { formatPrice } from "@/lib/format";
-import { pageMetadata } from "@/lib/seo";
+import { getTranslator } from "@/lib/i18n";
+import { msg, type Translator } from "@/lib/i18n/translate";
+import { localizedMetadata } from "@/lib/seo-i18n";
 import { getSettings } from "@/lib/settings";
 import { formatMoney } from "@/lib/money";
 import { fullAddress, mapDirectionsLink, mapEmbedLink, site } from "@/lib/site";
 
-export const metadata: Metadata = pageMetadata({
+/** Translated page: each language version is canonical for itself and lists the others (hreflang). */
+export async function generateMetadata(): Promise<Metadata> {
+  const tr = await getTranslator();
+  return localizedMetadata({
   // The root layout template appends "| <site name>"; keep it out of the page title itself.
-  title: "Buy Graded Comics & Professional Comic Grading",
-  description: `Shop CGC and CBCS graded key issues with an authenticity guarantee, then use ${site.name} for grading submission, pressing, restoration detection and appraisal. Insured shipping nationwide from ${site.address.city}, ${site.address.region}.`,
+  title: msg("Buy Graded Comics & Professional Comic Grading"),
+  description: tr("Shop CGC and CBCS graded key issues with an authenticity guarantee, then use {name} for grading submission, pressing, restoration detection and appraisal. Insured shipping nationwide from {city}, {region}.", { name: site.name, city: site.address.city, region: site.address.region }),
   path: "/",
   keywords: [
     "buy graded comics online",
@@ -31,65 +36,66 @@ export const metadata: Metadata = pageMetadata({
     "comic appraisal",
     `comic shop ${site.address.city} ${site.address.region}`,
   ],
-});
+  });
+}
 
-const trustPointsFor = (freeShippingThreshold: number, returnWindowDays: number) => [
+const trustPointsFor = (tr: Translator, freeShippingThreshold: number, returnWindowDays: number) => [
   {
-    title: "Authenticity guaranteed",
-    body: "Every book is restoration-checked and cert-verified before it is listed. Undisclosed restoration is refunded in full, forever.",
+    title: tr("Authenticity guaranteed"),
+    body: tr("Every book is restoration-checked and cert-verified before it is listed. Undisclosed restoration is refunded in full, forever."),
   },
   {
-    title: "Insured, tracked shipping",
-    body: `Double-boxed, signature-required and insured to full value on every order.${freeShippingThreshold > 0 ? ` Free over ${formatMoney(freeShippingThreshold, "USD", "en-US", { compact: true })} within the US.` : ""}`,
+    title: tr("Insured, tracked shipping"),
+    body: `${tr("Double-boxed, signature-required and insured to full value on every order.")}${freeShippingThreshold > 0 ? ` ${tr("Free over {amount} within the US.", { amount: formatMoney(freeShippingThreshold, "USD", "en-US", { compact: true }) })}` : ""}`,
   },
   {
-    title: `${returnWindowDays}-day inspection window`,
-    body: `Buy with confidence. Return any book within ${returnWindowDays} days in its original holder for a full refund.`,
+    title: tr("{days}-day inspection window", { days: returnWindowDays }),
+    body: tr("Buy with confidence. Return any book within {days} days in its original holder for a full refund.", { days: returnWindowDays }),
   },
   {
-    title: "Real market pricing",
-    body: "We price against realised sales, not guide values, and publish the comparables that back every listing.",
+    title: tr("Real market pricing"),
+    body: tr("We price against realised sales, not guide values, and publish the comparables that back every listing."),
   },
 ];
 
-const steps = [
-  { n: "01", title: "Request a kit", body: "Tell us what you're sending. We ship archival supplies and a rigid shipper at no charge." },
-  { n: "02", title: "We pre-screen", body: `A ${site.name} grader estimates the grade, flags press candidates and checks for restoration.` },
-  { n: "03", title: "You approve", body: "Per-book recommendations with tier costs and expected value. Nothing is submitted without your sign-off." },
-  { n: "04", title: "Slab, sell or store", body: "Take your slabs back, list them on consignment, or leave them in the insured vault." },
+const stepsFor = (tr: Translator) => [
+  { n: "01", title: tr("Request a kit"), body: tr("Tell us what you're sending. We ship archival supplies and a rigid shipper at no charge.") },
+  { n: "02", title: tr("We pre-screen"), body: tr("A {name} grader estimates the grade, flags press candidates and checks for restoration.", { name: site.name }) },
+  { n: "03", title: tr("You approve"), body: tr("Per-book recommendations with tier costs and expected value. Nothing is submitted without your sign-off.") },
+  { n: "04", title: tr("Slab, sell or store"), body: tr("Take your slabs back, list them on consignment, or leave them in the insured vault.") },
 ];
 
-const reviews = [
+const reviewsFor = (tr: Translator) => [
   {
-    quote:
-      "They talked me out of submitting four of the eight books I sent — said the tier fees wouldn't pay for themselves. Nobody does that. The four they did submit all came back at or above their estimate.",
+    quote: tr("They talked me out of submitting four of the eight books I sent — said the tier fees wouldn't pay for themselves. Nobody does that. The four they did submit all came back at or above their estimate."),
     name: "Daniel R.",
-    role: "Collector, Houston TX",
+    role: tr("Collector, Houston TX"),
   },
   {
-    quote:
-      `I inherited a 6,000-book collection and had no idea what to do with it. ${site.name} appraised it, consigned the top 200 and handled the rest. The insurance schedule alone was worth the fee.`,
+    quote: tr("I inherited a 6,000-book collection and had no idea what to do with it. {name} appraised it, consigned the top 200 and handled the rest. The insurance schedule alone was worth the fee.", { name: site.name }),
     name: "Priya M.",
-    role: "Estate executor, Dallas TX",
+    role: tr("Estate executor, Dallas TX"),
   },
   {
-    quote:
-      "Bought a five-figure Silver Age key sight-unseen. It arrived double-boxed with a condition report and photos of the slab from six angles. Exactly as described.",
+    quote: tr("Bought a five-figure Silver Age key sight-unseen. It arrived double-boxed with a condition report and photos of the slab from six angles. Exactly as described."),
     name: "Marcus T.",
-    role: "Investor, Chicago IL",
+    role: tr("Investor, Chicago IL"),
   },
 ];
 
 export default async function HomePage() {
   const [{ hero, grid }, inventoryCount, settings, collections, publishers, guides] = await Promise.all([homeProducts(), countPublished(), getSettings(), listCollections(), listPublishers(), latestGuides(4)]);
-  const trustPoints = trustPointsFor(settings["commerce.freeShippingThreshold"], settings["commerce.returnWindowDays"]);
+  const tr = await getTranslator();
+  const trustPoints = trustPointsFor(tr, settings["commerce.freeShippingThreshold"], settings["commerce.returnWindowDays"]);
+  const steps = stepsFor(tr);
+  const reviews = reviewsFor(tr);
   const headline = settings["marketplace.homepageHeadline"].trim();
   const subheadline = settings["marketplace.homepageSubheadline"].trim();
 
   const itemListJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: "Featured graded comics",
+    name: tr("Featured graded comics"),
     numberOfItems: grid.length,
     itemListElement: grid.map((p, i) => ({
       "@type": "ListItem",
@@ -105,26 +111,26 @@ export default async function HomePage() {
     mainEntity: [
       {
         "@type": "Question",
-        name: "Do you sell CGC and CBCS graded comics?",
+        name: tr("Do you sell CGC and CBCS graded comics?"),
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Yes. Every slabbed book in our store is a genuine CGC or CBCS holder with a verifiable certification number, and we also sell honestly graded raw books with full defect disclosure.",
+          text: tr("Yes. Every slabbed book in our store is a genuine CGC or CBCS holder with a verifiable certification number, and we also sell honestly graded raw books with full defect disclosure."),
         },
       },
       {
         "@type": "Question",
-        name: "Can you grade my comics for me?",
+        name: tr("Can you grade my comics for me?"),
         acceptedAnswer: {
           "@type": "Answer",
-          text: "We are an authorised submission centre for CGC and CBCS. We pre-screen, press where it helps, select the tier and declared value, and handle insured shipping both ways at dealer rates.",
+          text: tr("We are an authorised submission centre for CGC and CBCS. We pre-screen, press where it helps, select the tier and declared value, and handle insured shipping both ways at dealer rates."),
         },
       },
       {
         "@type": "Question",
-        name: "Where are you located?",
+        name: tr("Where are you located?"),
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Our vault and showroom are at ${fullAddress}. Walk-ins are welcome during business hours and vault viewings are by appointment.`,
+          text: tr("Our vault and showroom are at {address}. Walk-ins are welcome during business hours and vault viewings are by appointment.", { address: fullAddress }),
         },
       },
     ],
@@ -158,42 +164,42 @@ export default async function HomePage() {
           <div className="lg:col-span-7">
             <span className="inline-flex items-center gap-2 rounded-full border border-brand-400/35 bg-brand-500/12 px-3.5 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-300">
               <ShieldIcon className="h-3.5 w-3.5" />
-              Authorised CGC &amp; CBCS submission centre
+              {tr("Authorised CGC & CBCS submission centre")}
             </span>
 
             <h1 className="mt-6 font-display text-[clamp(2.4rem,5.4vw,4rem)] font-semibold leading-[1.04] tracking-tight">
               {headline || (
                 <>
-                  Buy graded comics.
+                  {tr("Buy graded comics.")}
                   <br />
-                  <span className="text-brand-400">Grade yours.</span> Know what it&apos;s worth.
+                  <span className="text-brand-400">{tr("Grade yours.")}</span> {tr("Know what it's worth.")}
                 </>
               )}
             </h1>
 
             <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-300">
               {subheadline ||
-                "A vetted inventory of CGC and CBCS key issues, plus the grading, pressing, appraisal and consignment services that turn a shelf of long boxes into a documented, insurable collection."}
+                tr("A vetted inventory of CGC and CBCS key issues, plus the grading, pressing, appraisal and consignment services that turn a shelf of long boxes into a documented, insurable collection.")}
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink href="/store" size="lg" variant="primary">
-                Shop the store
+                {tr("Shop the store")}
               </ButtonLink>
               <ButtonLink href="/services" size="lg" variant="ghostLight">
-                Explore our services
+                {tr("Explore our services")}
               </ButtonLink>
             </div>
 
             <dl className="mt-12 grid max-w-2xl grid-cols-2 gap-x-6 gap-y-7 sm:grid-cols-4">
               {site.stats.map((s) => (
                 <div key={s.label}>
-                  <dt className="sr-only">{s.label}</dt>
+                  <dt className="sr-only">{tr(s.label)}</dt>
                   <dd>
                     <span className="block font-display text-2xl font-semibold text-white sm:text-[28px]">
                       {s.value}
                     </span>
-                    <span className="mt-1 block text-[12px] leading-snug text-ink-400">{s.label}</span>
+                    <span className="mt-1 block text-[12px] leading-snug text-ink-400">{tr(s.label)}</span>
                   </dd>
                 </div>
               ))}
@@ -228,9 +234,9 @@ export default async function HomePage() {
               ))}
             </div>
             <p className="mt-9 text-center text-[13px] text-ink-400">
-              Featured in the vault this week ·{" "}
+              {tr("Featured in the vault this week")} ·{" "}
               <Link href="/store" className="font-medium text-brand-300 underline-offset-4 hover:underline">
-                see all {inventoryCount.toLocaleString("en-US")} listings
+                {tr("see all {count} listings", { count: inventoryCount.toLocaleString("en-US") })}
               </Link>
             </p>
           </div>
@@ -256,12 +262,12 @@ export default async function HomePage() {
       <Section tone="white" id="featured">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <SectionHeading
-            eyebrow="The store"
-            title="Graded keys, ready to ship"
-            lead="Every listing is cert-verified, restoration-checked and photographed in the holder. Buy now for immediate checkout, or add to your cart and keep browsing."
+            eyebrow={tr("The store")}
+            title={tr("Graded keys, ready to ship")}
+            lead={tr("Every listing is cert-verified, restoration-checked and photographed in the holder. Buy now for immediate checkout, or add to your cart and keep browsing.")}
           />
           <ButtonLink href="/store" variant="outline" size="md">
-            View all inventory
+            {tr("View all inventory")}
           </ButtonLink>
         </div>
 
@@ -272,26 +278,26 @@ export default async function HomePage() {
         </div>
 
         <p className="mt-8 text-center text-sm text-ink-500">
-          Looking for something specific?{" "}
+          {tr("Looking for something specific?")}{" "}
           <Link href="/contact" className="font-medium text-brand-700 underline-offset-4 hover:underline">
-            Send us a want list
+            {tr("Send us a want list")}
           </Link>{" "}
-          — we source books privately for clients every week.
+          — {tr("we source books privately for clients every week.")}
         </p>
 
         <div className="mt-14 grid gap-10">
           <CollectionCards collections={collections} />
           <PublisherChips publishers={publishers.slice(0, 12)} />
-          <RelatedGuides guides={guides} heading="Collecting guides" lead="Grading explained, first appearances, what drives a book's value — written by the people who handle the books." />
+          <RelatedGuides guides={guides} heading={tr("Collecting guides")} lead={tr("Grading explained, first appearances, what drives a book's value — written by the people who handle the books.")} />
         </div>
       </Section>
 
       {/* -------------------------------------------------------- services */}
       <Section tone="muted" id="services">
         <SectionHeading
-          eyebrow="Collector services"
-          title="Everything that happens after you own the book"
-          lead="Grading, pressing, authentication, appraisal, consignment and storage — run in-house by graders who have handled six-figure books."
+          eyebrow={tr("Collector services")}
+          title={tr("Everything that happens after you own the book")}
+          lead={tr("Grading, pressing, authentication, appraisal, consignment and storage — run in-house by graders who have handled six-figure books.")}
           align="center"
         />
 
@@ -309,16 +315,16 @@ export default async function HomePage() {
                 <h3 className="mt-4 font-display text-lg font-semibold text-ink-950">
                   <Link href={`/services/${s.slug}`}>
                     <span className="absolute inset-0" aria-hidden />
-                    {s.name}
+                    {tr(s.name)}
                   </Link>
                 </h3>
-                <p className="mt-2 flex-1 text-[14px] leading-relaxed text-ink-600">{s.summary}</p>
+                <p className="mt-2 flex-1 text-[14px] leading-relaxed text-ink-600">{tr(s.summary)}</p>
                 <div className="mt-5 flex items-center justify-between border-t border-ink-100 pt-4">
                   <span className="text-sm font-semibold text-ink-950">
-                    {s.price === null ? "Quoted" : formatPrice(s.price)}
-                    <span className="ml-1.5 text-xs font-normal text-ink-500">{s.priceNote}</span>
+                    {s.price === null ? tr("Quoted") : formatPrice(s.price)}
+                    <span className="ml-1.5 text-xs font-normal text-ink-500">{tr(s.priceNote)}</span>
                   </span>
-                  <span className="text-[13px] font-semibold text-brand-700 group-hover:underline">Details →</span>
+                  <span className="text-[13px] font-semibold text-brand-700 group-hover:underline">{tr("Details")} →</span>
                 </div>
               </article>
             );
@@ -332,16 +338,16 @@ export default async function HomePage() {
           <div className="lg:col-span-5">
             <SectionHeading
               tone="dark"
-              eyebrow="How grading works"
-              title="Four steps from long box to slab"
-              lead="Most collectors lose money on grading before the book is even opened — wrong tier, wrong declared value, or damage in transit. We take that risk off your desk."
+              eyebrow={tr("How grading works")}
+              title={tr("Four steps from long box to slab")}
+              lead={tr("Most collectors lose money on grading before the book is even opened — wrong tier, wrong declared value, or damage in transit. We take that risk off your desk.")}
             />
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink href="/services/grading-submission" variant="primary" size="md">
-                Start a submission
+                {tr("Start a submission")}
               </ButtonLink>
               <ButtonLink href="/faq" variant="ghostLight" size="md">
-                Read the FAQ
+                {tr("Read the FAQ")}
               </ButtonLink>
             </div>
           </div>
@@ -363,14 +369,14 @@ export default async function HomePage() {
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-14">
           <div>
             <SectionHeading
-              eyebrow="Visit the vault"
-              title={`Comic grading & collectible sales in ${site.address.city}, ${site.address.regionName}`}
-              lead="Bring books in for a free counter appraisal, inspect a high-value slab in person before you buy, or drop off a submission and skip the shipping entirely."
+              eyebrow={tr("Visit the vault")}
+              title={tr("Comic grading & collectible sales in {city}, {region}", { city: site.address.city, region: site.address.regionName })}
+              lead={tr("Bring books in for a free counter appraisal, inspect a high-value slab in person before you buy, or drop off a submission and skip the shipping entirely.")}
             />
 
             <dl className="mt-8 grid gap-5 sm:grid-cols-2">
               <div>
-                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Address</dt>
+                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("Address")}</dt>
                 <dd className="mt-1.5 text-[15px] leading-relaxed text-ink-800">
                   {site.address.street}
                   <br />
@@ -378,11 +384,11 @@ export default async function HomePage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Opening hours</dt>
+                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("Opening hours")}</dt>
                 <dd className="mt-1.5 text-[15px] leading-relaxed text-ink-800">
                   {site.hours.map((h) => (
                     <span key={h.days} className="block">
-                      <span className="text-ink-500">{h.days}</span> · {h.time}
+                      <span className="text-ink-500">{tr(h.days)}</span> · {h.time}
                     </span>
                   ))}
                 </dd>
@@ -397,17 +403,17 @@ export default async function HomePage() {
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 text-sm font-semibold text-white shadow-plate transition-colors hover:bg-brand-700"
               >
                 <PinIcon className="h-4 w-4" />
-                Get directions
+                {tr("Get directions")}
               </a>
               <ButtonLink href="/contact" variant="outline" size="md">
-                Book an appointment
+                {tr("Book an appointment")}
               </ButtonLink>
             </div>
           </div>
 
           <div className="overflow-hidden rounded-xl border border-ink-200 shadow-plate">
             <iframe
-              title={`Map showing ${site.name} at ${fullAddress}`}
+              title={tr("Map showing {name} at {address}", { name: site.name, address: fullAddress })}
               src={mapEmbedLink}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
@@ -423,7 +429,7 @@ export default async function HomePage() {
                 rel="noopener noreferrer"
                 className="shrink-0 text-[13px] font-semibold text-brand-700 underline-offset-4 hover:underline"
               >
-                Open in Maps →
+                {tr("Open in Maps")} →
               </a>
             </div>
           </div>
@@ -433,8 +439,8 @@ export default async function HomePage() {
       {/* --------------------------------------------------------- reviews */}
       <Section tone="muted">
         <SectionHeading
-          eyebrow="What collectors say"
-          title="Trusted with collections from one book to forty thousand"
+          eyebrow={tr("What collectors say")}
+          title={tr("Trusted with collections from one book to forty thousand")}
           align="center"
         />
         <div className="mt-12 grid gap-5 md:grid-cols-3">
@@ -457,25 +463,24 @@ export default async function HomePage() {
       <section className="bg-ink-950">
         <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-brand-800 via-ink-900 to-ink-950 px-6 py-12 text-center sm:px-14 lg:py-16">
-            <Eyebrow tone="dark">Free, no-obligation</Eyebrow>
+            <Eyebrow tone="dark">{tr("Free, no-obligation")}</Eyebrow>
             <h2 className="mx-auto mt-3 max-w-2xl font-display text-3xl font-semibold leading-tight text-white sm:text-4xl">
-              Find out what your collection is actually worth
+              {tr("Find out what your collection is actually worth")}
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-ink-300">
-              Send photos or a cert list and we&apos;ll return a written market estimate within two business days —
-              whether you sell to us, consign, or keep it all.
+              {tr("Send photos or a cert list and we'll return a written market estimate within two business days — whether you sell to us, consign, or keep it all.")}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <ButtonLink href="/contact" size="lg" variant="gold">
-                Request a free appraisal
+                {tr("Request a free appraisal")}
               </ButtonLink>
               <ButtonLink href="/services/consignment-and-brokerage" size="lg" variant="ghostLight">
-                See consignment rates
+                {tr("See consignment rates")}
               </ButtonLink>
             </div>
             <p className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[13px] text-ink-400">
-              <Badge tone="brand">From {formatPrice(services[0].price ?? 0)} per book</Badge>
-              <span>No minimum collection size</span>
+              <Badge tone="brand">{tr("From {price} per book", { price: formatPrice(services[0].price ?? 0) })}</Badge>
+              <span>{tr("No minimum collection size")}</span>
             </p>
           </div>
         </div>

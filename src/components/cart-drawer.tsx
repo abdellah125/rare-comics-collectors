@@ -6,6 +6,7 @@ import { useCart } from "@/components/cart-provider";
 import { CartThumb } from "@/components/cart-thumb";
 import { CloseIcon, TrashIcon, CartIcon } from "@/components/icons";
 import { usePrice } from "@/components/currency-provider";
+import { useT } from "@/components/i18n-provider";
 import { buttonSizes, buttonStyles } from "@/components/ui";
 
 const FOCUSABLE =
@@ -14,6 +15,7 @@ const FOCUSABLE =
 export function CartDrawer() {
   const { isOpen, closeCart, lines, subtotal, setQty, remove, count } = useCart();
   const { formatExact } = usePrice();
+  const tr = useT();
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const restoreFocusTo = useRef<HTMLElement | null>(null);
@@ -62,7 +64,7 @@ export function CartDrawer() {
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Shopping cart"
+        aria-label={tr("Shopping cart")}
         onKeyDown={trapFocus}
         className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-250 ease-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
@@ -70,14 +72,14 @@ export function CartDrawer() {
       >
         <header className="flex items-center justify-between border-b border-ink-200 px-5 py-4">
           <h2 className="font-display text-lg font-semibold text-ink-950">
-            Your cart{count > 0 && <span className="ml-2 text-sm font-normal text-ink-500">({count})</span>}
+            {tr("Your cart")}{count > 0 && <span className="ml-2 text-sm font-normal text-ink-500">({count})</span>}
           </h2>
           <button
             ref={closeButtonRef}
             type="button"
             onClick={closeCart}
             className="grid h-9 w-9 place-items-center rounded-lg text-ink-500 hover:bg-ink-100 hover:text-ink-900"
-            aria-label="Close cart"
+            aria-label={tr("Close cart")}
           >
             <CloseIcon className="h-5 w-5" />
           </button>
@@ -88,13 +90,13 @@ export function CartDrawer() {
             <span className="grid h-14 w-14 place-items-center rounded-full bg-ink-100 text-ink-400">
               <CartIcon className="h-6 w-6" />
             </span>
-            <p className="text-sm text-ink-600">Your cart is empty.</p>
+            <p className="text-sm text-ink-600">{tr("Your cart is empty.")}</p>
             <Link
               href="/store"
               onClick={closeCart}
               className={`${buttonStyles.primary} ${buttonSizes.md}`}
             >
-              Browse the store
+              {tr("Browse the store")}
             </Link>
           </div>
         ) : (
@@ -118,7 +120,7 @@ export function CartDrawer() {
                           type="button"
                           onClick={() => setQty(line.id, line.qty - 1)}
                           className="h-7 w-7 text-ink-600 hover:bg-ink-100 disabled:opacity-40"
-                          aria-label={`Decrease quantity of ${line.name}`}
+                          aria-label={tr("Decrease quantity of {name}", { name: line.name })}
                         >
                           −
                         </button>
@@ -130,7 +132,7 @@ export function CartDrawer() {
                           onClick={() => setQty(line.id, line.qty + 1)}
                           disabled={line.qty >= line.maxQty}
                           className="h-7 w-7 text-ink-600 hover:bg-ink-100 disabled:opacity-40"
-                          aria-label={`Increase quantity of ${line.name}`}
+                          aria-label={tr("Increase quantity of {name}", { name: line.name })}
                         >
                           +
                         </button>
@@ -139,9 +141,9 @@ export function CartDrawer() {
                         type="button"
                         onClick={() => remove(line.id)}
                         className="inline-flex items-center gap-1 text-xs text-ink-500 hover:text-rose-600"
-                        aria-label={`Remove ${line.name} from cart`}
+                        aria-label={tr("Remove {name} from cart", { name: line.name })}
                       >
-                        <TrashIcon className="h-3.5 w-3.5" /> Remove
+                        <TrashIcon className="h-3.5 w-3.5" /> {tr("Remove")}
                       </button>
                     </div>
                   </div>
@@ -154,13 +156,13 @@ export function CartDrawer() {
 
             <footer className="border-t border-ink-200 px-5 py-4">
               <div className="flex items-baseline justify-between">
-                <span className="text-sm text-ink-600">Subtotal</span>
+                <span className="text-sm text-ink-600">{tr("Subtotal")}</span>
                 <span className="font-display text-xl font-semibold tabular-nums text-ink-950">
                   {formatExact(subtotal)}
                 </span>
               </div>
               <p className="mt-1 text-xs text-ink-500">
-                Shipping, insurance and tax calculated at checkout.
+                {tr("Shipping, insurance and tax calculated at checkout.")}
               </p>
               <div className="mt-4 grid gap-2">
                 <Link
@@ -168,14 +170,14 @@ export function CartDrawer() {
                   onClick={closeCart}
                   className={`${buttonStyles.primary} ${buttonSizes.lg} w-full`}
                 >
-                  Checkout
+                  {tr("Checkout")}
                 </Link>
                 <Link
                   href="/cart"
                   onClick={closeCart}
                   className={`${buttonStyles.outline} ${buttonSizes.md} w-full`}
                 >
-                  View full cart
+                  {tr("View full cart")}
                 </Link>
               </div>
             </footer>
