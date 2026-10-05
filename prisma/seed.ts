@@ -639,6 +639,22 @@ async function seedImportItems() {
 }
 
 /**
+ * The owner asked (2026-10-10) for all approved imported products to be released. The admin
+ * cannot be reached from here, so the request is carried out once by the application: a marker
+ * row makes sure a later deploy does not repeat it. Only products approved before this moment
+ * are covered.
+ */
+async function releaseApprovedOnce() {
+  const key = "imports.once.releaseApproved.2026-10-10";
+  if (await db.setting.findUnique({ where: { key } })) return;
+  const cutoff = new Date();
+  const waiting = await db.importItem.count({ where: { status: { in: ["approved", "ready"] }, reviewedAt: { lte: cutoff } } });
+  await db.setting.create({ data: { key, value: JSON.stringify({ at: cutoff.toISOString(), approved: waiting }) } });
+  if (waiting > 0) await db.job.create({ data: { type: "import_release_approved", payloadJson: JSON.stringify({ cutoff: cutoff.toISOString(), rounds: 0 }), maxAttempts: 3 } });
+  log(`release all approved: ${waiting} product(s) queued for release`);
+}
+
+/**
  * The owner asked for catalogue pages 1–208 of the source to be imported into the review queue.
  * This starts that import exactly once (never again if any page import exists); the application
  * then works through the pages and shows the progress under HipComic import.
@@ -822,6 +838,7 @@ async function main() {
   await seedCatalogQueue();
   await seedImportItems();
   await seedCatalogueCrawl();
+  await releaseApprovedOnce();
   if ((await db.importItem.count({ where: { status: "error", reviewedAt: null, editedJson: "[]" } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: "pending" } })) === 0) {
     await db.job.create({ data: { type: "import_fix", payloadJson: "{}", maxAttempts: 3 } });
     log("import errors: re-check queued");

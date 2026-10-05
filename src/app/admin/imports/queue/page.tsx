@@ -49,7 +49,7 @@ export default async function AdminImportQueuePage({ searchParams }: PageProps<"
   const [rows, total, readyCount] = await Promise.all([
     db.importItem.findMany({ where, orderBy: [{ [p.sort]: p.dir }, { id: "asc" }], skip: p.skip, take: p.per, include: { product: { select: { slug: true, status: true, price: true, stock: true } } } }),
     db.importItem.count({ where }),
-    db.importItem.count({ where: { source: IMPORT_SOURCE, status: "ready" } }),
+    db.importItem.count({ where: { source: IMPORT_SOURCE, status: { in: ["ready", "approved"] } } }),
   ]);
   const base = "/admin/imports/queue";
 
@@ -59,7 +59,7 @@ export default async function AdminImportQueuePage({ searchParams }: PageProps<"
         crumbs={[{ label: "HipComic import", href: "/admin/imports" }, { label: "Review queue" }]}
         title="Review queue"
         lead={`${total.toLocaleString("en-US")} product(s) in this view. Approve what should go on sale, then press Release: only released products are public.`}
-        actions={manage && readyCount > 0 ? <ConfirmButton label={`Release ${readyCount} ready`} title="Release" message={`Publishes the ${Math.min(readyCount, 200)} product(s) that are Ready to Release. They become visible on the store, in the sitemap and in the Merchant Center feed.`} action={releaseAllReadyAction} variant="primary" confirmLabel="Release" /> : undefined}
+        actions={manage && readyCount > 0 ? <ConfirmButton label={`Release all ${readyCount} approved`} title="Release all approved" message="Publishes every approved product, whatever the daily limit. They become visible on the store, in the sitemap and in the Merchant Center feed." action={releaseAllReadyAction} variant="primary" confirmLabel="Release" /> : undefined}
       />
       <FilterBar action={base} reset>
         <Field label="Search">

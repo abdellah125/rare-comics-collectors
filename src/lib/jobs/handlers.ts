@@ -170,6 +170,17 @@ export function registerJobHandlers() {
     else await enqueueJob("import_fix", { phase: "knowledge" }, { runAt: new Date(Date.now() + 2_000), maxAttempts: 3 });
   });
 
+  // "Release all approved": repeats in batches until everything approved before the request is live.
+  registerJobHandler("import_release_approved", async (payload) => {
+    const { releaseApproved } = await import("@/lib/imports/pipeline");
+    const { IMPORT_SOURCE } = await import("@/lib/imports/status");
+    const cutoff = typeof payload.cutoff === "string" ? new Date(payload.cutoff) : new Date();
+    const rounds = typeof payload.rounds === "number" ? payload.rounds : 0;
+    const r = await releaseApproved(IMPORT_SOURCE, cutoff);
+    // Photos that keep failing end up in Error after three tries, so this always finishes; the round cap is a backstop.
+    if (r.remaining > 0 && rounds < 2_000) await enqueueJob("import_release_approved", { cutoff: cutoff.toISOString(), rounds: rounds + 1 }, { runAt: new Date(Date.now() + (r.released > 0 ? 3_000 : 60_000)), maxAttempts: 3 });
+  });
+
   // The daily release rule: a batch per run until the day's quota is met, then a slower check for the next day.
   registerJobHandler("import_auto_release", async () => {
     const { autoRelease } = await import("@/lib/imports/pipeline");

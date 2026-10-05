@@ -249,6 +249,9 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - Left for a person by default: possible duplicates, and auction products whose price comes from the fallback rule (bid × multiplier). Never taken: Error, Rejected, Duplicate, unavailable items. All four switches (per day, include Pending Review, hold duplicates, hold fallback prices) are on the HipComic import page, which also shows "released today / limit".
 - Verified locally with a quota of 120: 100 approved, then 50 + 50 + 20 released, then nothing; the 24 held products were untouched; no product was published without a photo. The browser-test seed switches the rule off so tests that check "not public before release" stay deterministic.
 
+### Imports: release all approved (2026-10-10)
+- Owner asked for every approved product to be released. `releaseApproved()` + job `import_release_approved` publish everything approved up to the moment of the request (photos stored first, same release check, batches of 50, daily limit not applied). The deploy seed runs it once (marker setting `imports.once.releaseApproved.2026-10-10`). The "Release all N approved" button now covers every approved product instead of the first 200. Local test: 130 approved products released in three rounds; a product approved after the cutoff was left alone.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml` (the index; it lists the store and guide sitemaps).

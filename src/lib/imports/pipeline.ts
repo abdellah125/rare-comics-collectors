@@ -737,6 +737,23 @@ export async function autoRelease(source: string, batch = 50): Promise<{ enabled
   return { enabled: true, released, approved, releasedToday: releasedToday + released, perDay, waiting };
 }
 
+/**
+ * "Release all approved": everything an admin or the daily rule had approved up to `cutoff` goes
+ * live now, whatever the daily limit. One call does a batch (photos still to store, then a
+ * release) and reports what is left, so a job can repeat it until nothing remains. Products
+ * approved after the cutoff are not swept in; the same release check applies to each one.
+ */
+export async function releaseApproved(source: string, cutoff: Date, batch = 50): Promise<{ released: number; blocked: number; preparing: number; remaining: number }> {
+  const scope = { source, reviewedAt: { lte: cutoff } };
+  const approved = await db.importItem.findMany({ where: { ...scope, status: "approved" }, orderBy: { reviewedAt: "asc" }, take: 20, select: { id: true } });
+  if (approved.length > 0) await prepareItems({ ids: approved.map((i) => i.id), limit: approved.length });
+  const ready = await db.importItem.findMany({ where: { ...scope, status: "ready" }, orderBy: [{ reviewedAt: "asc" }, { id: "asc" }], take: batch, select: { id: true } });
+  const r = ready.length > 0 ? await releaseItems(ready.map((i) => i.id)) : { released: 0, blocked: 0 };
+  const [preparing, readyLeft] = await Promise.all([db.importItem.count({ where: { ...scope, status: "approved" } }), db.importItem.count({ where: { ...scope, status: "ready" } })]);
+  if (r.released > 0) console.log(`[release-approved] ${r.released} released, ${preparing + readyLeft} left`);
+  return { released: r.released, blocked: r.blocked, preparing, remaining: preparing + readyLeft };
+}
+
 // ───────────────────────────── edit ─────────────────────────────
 
 export type ItemEdit = {

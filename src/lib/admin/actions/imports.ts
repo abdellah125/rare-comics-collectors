@@ -9,7 +9,7 @@ import { assertAdmin, can } from "@/lib/auth/session";
 import { activeCrawl, advanceCrawl, crawlProgress, setCrawlStatus, startCrawl, type CrawlProgress } from "@/lib/imports/crawl";
 import { fetchFeed, checkFeedUrl, FeedAccessError } from "@/lib/imports/feed";
 import { enqueueJob } from "@/lib/jobs/queue";
-import { approveItems, rejectItems, releaseItems, removeItems, reprocessErrors, restoreItems, runImport, updateItem } from "@/lib/imports/pipeline";
+import { approveItems, rejectItems, releaseApproved, releaseItems, removeItems, reprocessErrors, restoreItems, runImport, updateItem } from "@/lib/imports/pipeline";
 import { IMPORT_SOURCE } from "@/lib/imports/status";
 import { getSettings, saveSettings } from "@/lib/settings";
 import { failState, fieldErrors, formToObject, okState, zBool, zSlug, type ActionState } from "@/lib/validation";
@@ -180,15 +180,17 @@ export async function bulkImportAction(actionId: string, ids: string[]): Promise
   });
 }
 
-/** Releases everything that is Ready to Release (up to 200 at a time). */
+/** Releases every approved product: the first batch now, the rest in the background until none is left. */
 export async function releaseAllReadyAction(): Promise<ActionState> {
   return runAdmin("products.manage", async (admin) => {
-    const ready = await db.importItem.findMany({ where: { source: IMPORT_SOURCE, status: "ready" }, select: { id: true }, orderBy: { reviewedAt: "asc" }, take: 200 });
-    if (ready.length === 0) return failState("Nothing is ready to release. Approve products first.");
-    const r = await releaseItems(ready.map((i) => i.id));
-    await audit({ actor: actorOf(admin), action: "import.release", targetType: "import_item", summary: `Released all ready imports: ${r.released} released, ${r.blocked} held back` });
+    const cutoff = new Date();
+    const waiting = await db.importItem.count({ where: { source: IMPORT_SOURCE, status: { in: ["approved", "ready"] } } });
+    if (waiting === 0) return failState("Nothing is approved. Approve products first.");
+    const r = await releaseApproved(IMPORT_SOURCE, cutoff, 100);
+    if (r.remaining > 0) await enqueueJob("import_release_approved", { cutoff: cutoff.toISOString(), rounds: 0 }, { maxAttempts: 3 });
+    await audit({ actor: actorOf(admin), action: "import.release", targetType: "import_item", summary: `Release all approved: ${r.released} released now, ${r.blocked} held back, ${r.remaining} continuing in the background` });
     refresh();
-    return okState(undefined, `${r.released} released and now public${r.blocked ? `, ${r.blocked} held back by the release check` : ""}.`);
+    return okState(undefined, `${r.released} released and now public${r.blocked ? `, ${r.blocked} held back by the release check (see Error)` : ""}${r.remaining ? `. The other ${r.remaining} approved product(s) are being released in the background` : ""}.`);
   });
 }
 
