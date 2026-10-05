@@ -23,7 +23,7 @@ export function ImportUploadForm() {
         <input type="checkbox" name="snapshot" className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
         <span>
           This single file is the complete current catalogue
-          <span className="block text-[12px] text-ink-500">Products missing from it are marked unavailable: queued ones leave the release flow and released ones are set to sold out. Leave this off for partial exports such as search-result pages.</span>
+          <span className="block text-[12px] text-ink-500">Products missing from it are marked unavailable: queued ones leave the release flow and released ones are set to sold out. Leave this off for partial exports such as search-result pages. It is ignored when the file would mark more than a fifth of the catalogue unavailable.</span>
         </span>
       </label>
       {state?.message && (

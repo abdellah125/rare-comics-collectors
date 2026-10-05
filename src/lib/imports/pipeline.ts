@@ -428,7 +428,14 @@ export async function runImport(input: ImportInput): Promise<ImportRun> {
 
     // A complete snapshot: what it no longer lists is no longer for sale at the source.
     if (input.snapshot && rows.length > 0) {
-      const gone = items.filter((i) => i.available && !seen.has(i.sourceId) && !["rejected", "duplicate"].includes(i.status));
+      const tracked = items.filter((i) => i.available && !["rejected", "duplicate"].includes(i.status));
+      const gone = tracked.filter((i) => !seen.has(i.sourceId));
+      // A real full catalogue still contains most of what is already known. A file that would mark
+      // more than a fifth of the catalogue unavailable is a partial export ticked by mistake.
+      if (tracked.length >= 20 && gone.length > tracked.length * 0.2) {
+        say("error", `"Complete catalogue" was ticked, but this file has ${seen.size} products and would mark ${gone.length} of the ${tracked.length} known products unavailable. Nothing was marked unavailable: this looks like a partial export.`);
+        gone.length = 0;
+      }
       for (const item of gone) {
         await db.importItem.update({ where: { id: item.id }, data: await markUnavailable(item, say) });
         counts.unavailable += 1;
@@ -437,7 +444,8 @@ export async function runImport(input: ImportInput): Promise<ImportRun> {
     for (const slug of touchedSlugs) revalidatePathSafe(`/store/${slug}`);
     if (touchedSlugs.size > 0 || counts.unavailable > 0) for (const path of ["/store", "/google-shopping-feed.xml"]) revalidatePathSafe(path);
 
-    const message = `${counts.rows} rows: ${counts.created} new (of which ${counts.duplicates} duplicates and ${counts.errors} with errors), ${counts.updated} updated, ${counts.unchanged} unchanged, ${counts.priceChanges} price changes, ${counts.unavailable} no longer available.`;
+    const refused = log.some((e) => e.text.startsWith('"Complete catalogue" was ticked'));
+    const message = `${refused ? "The complete-catalogue option was ignored (the file is far smaller than the catalogue). " : ""}${counts.rows} rows: ${counts.created} new (of which ${counts.duplicates} duplicates and ${counts.errors} with errors), ${counts.updated} updated, ${counts.unchanged} unchanged, ${counts.priceChanges} price changes, ${counts.unavailable} no longer available.`;
     return await db.importRun.update({ where: { id: run.id }, data: { ...counts, status: "completed", message, logJson: json(log), finishedAt: new Date() } });
   } catch (err) {
     const message = err instanceof SourceFormatError ? err.message : `Import failed: ${err instanceof Error ? err.message : String(err)}`;

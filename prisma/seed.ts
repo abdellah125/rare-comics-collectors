@@ -641,6 +641,41 @@ async function seedImportItems() {
 }
 
 /**
+ * The owner asked (2026-10-12) for every sold-out product to be made available again. A sync had
+ * marked about 1,760 listings sold out in one go. Done once (marker row), with two exceptions that
+ * protect buyers: a product with a live order (reserved or paid) and a product whose bid was
+ * accepted keep their stock at zero, because they really are spoken for.
+ * Queue items that the same sync pushed to Error as "no longer available" go back to review.
+ */
+async function restoreSoldOutOnce() {
+  const key = "imports.once.restoreSoldOut.2026-10-12";
+  if (await db.setting.findUnique({ where: { key } })) return;
+  const soldOut = await db.product.findMany({
+    where: {
+      stock: { lte: 0 },
+      deletedAt: null,
+      soldCount: 0,
+      orderItems: { none: { order: { status: { notIn: ["cancelled", "failed", "refunded"] } } } },
+      bids: { none: { status: "accepted" } },
+    },
+    select: { id: true },
+  });
+  const ids = soldOut.map((p) => p.id);
+  for (let i = 0; i < ids.length; i += 1000) {
+    const chunk = ids.slice(i, i + 1000);
+    await db.product.updateMany({ where: { id: { in: chunk }, stock: { lte: 0 } }, data: { stock: 1 } });
+    await db.inventoryAdjustment.createMany({ data: chunk.map((productId) => ({ productId, delta: 1, reason: "correction", note: "Restored after a sync marked the catalogue sold out (owner's request, 2026-10-12)" })) });
+  }
+  const available = await db.importItem.updateMany({ where: { available: false }, data: { available: true } });
+  // Items pushed out of the queue only because of that sync: back to Pending Review.
+  const reasons = ['["no longer available at the source"]', '["marked unavailable at the source"]'];
+  const requeued = await db.importItem.updateMany({ where: { status: "error", problemsJson: { in: reasons } }, data: { status: "pending_review", problemsJson: "[]", attempts: 0 } });
+  const kept = await db.product.count({ where: { stock: { lte: 0 }, deletedAt: null, status: "published" } });
+  await db.setting.create({ data: { key, value: JSON.stringify({ at: new Date().toISOString(), restored: ids.length, requeued: requeued.count, keptSoldOut: kept }) } });
+  log(`sold-out restore: ${ids.length} product(s) back in stock, ${available.count} queue item(s) marked available, ${requeued.count} back in review, ${kept} left sold out (ordered or bid accepted)`);
+}
+
+/**
  * The owner asked (2026-10-10) for all approved imported products to be released. The admin
  * cannot be reached from here, so the request is carried out once by the application: a marker
  * row makes sure a later deploy does not repeat it. Only products approved before this moment
@@ -829,6 +864,7 @@ async function main() {
   await seedCatalogQueue();
   await seedImportItems();
   await releaseApprovedOnce();
+  await restoreSoldOutOnce();
   if ((await db.importItem.count({ where: { status: "error", OR: [{ reviewedAt: null, editedJson: "[]" }, { problemsJson: { contains: "photo could not be stored" } }] } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: "pending", payloadJson: "{}" } })) === 0) {
     await db.job.create({ data: { type: "import_fix", payloadJson: "{}", maxAttempts: 3 } });
     log("import errors: re-check queued");

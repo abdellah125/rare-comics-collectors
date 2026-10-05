@@ -263,6 +263,11 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - Limits to know: the source's live bids and end times only arrive with a new import or sync, so the bid shown can be behind the source; end time is only known when the data carries it.
 - Owed by the owner (optional): create a Vercel Blob store and set `BLOB_READ_WRITE_TOKEN` so product photos are kept on the site instead of being shown from the source's image host. Manual photo uploads in the admin need it too.
 
+### Sold-out listings restored; complete-catalogue option made safe (2026-10-12)
+- Merchant Center fell from about 1,800 products to 127. Live figures: 2,928 published, 1,763 at stock 0 (the older HipComic listings), 1,038 bidding products (not sent to Merchant Center by design), 127 fixed-price and in stock. The 1,763 were most likely sold out in one go by an upload with "complete current catalogue" ticked on a partial file.
+- Owner asked for all sold-out products to be made available. One-time seed step `restoreSoldOutOnce` (marker `imports.once.restoreSoldOut.2026-10-12`): stock back to 1 with an inventory note, queue items marked available, items pushed to Error as no longer available back to Pending Review. Left at zero on purpose: products with a live order or an accepted bid.
+- The complete-catalogue option is now ignored, with a message in the run log, when the file would mark more than a fifth of the known catalogue unavailable.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml` (the index; it lists the store and guide sitemaps).
