@@ -5,11 +5,9 @@ import { z } from "zod";
 import { audit } from "@/lib/audit";
 import { actorOf, runAdmin } from "@/lib/admin/guard";
 import { db } from "@/lib/db";
-import { assertAdmin, can } from "@/lib/auth/session";
-import { activeCrawl, advanceCrawl, crawlProgress, setCrawlStatus, startCrawl, type CrawlProgress } from "@/lib/imports/crawl";
 import { fetchFeed, checkFeedUrl, FeedAccessError } from "@/lib/imports/feed";
 import { enqueueJob } from "@/lib/jobs/queue";
-import { approveItems, rejectItems, releaseApproved, releaseItems, removeItems, reprocessErrors, restoreItems, runImport, updateItem } from "@/lib/imports/pipeline";
+import { approveItems, rejectItems, releaseApproved, releaseItems, removeItems, reprocessErrors, restoreItems, retryPhotoErrors, runImport, updateItem } from "@/lib/imports/pipeline";
 import { IMPORT_SOURCE } from "@/lib/imports/status";
 import { getSettings, saveSettings } from "@/lib/settings";
 import { failState, fieldErrors, formToObject, okState, zBool, zSlug, type ActionState } from "@/lib/validation";
@@ -63,43 +61,6 @@ export async function syncNowAction(): Promise<ActionState> {
   });
 }
 
-/** Start the page-by-page import of the source's catalogue pages. */
-export async function startCrawlAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
-  return runAdmin("products.manage", async (admin) => {
-    const from = Number(formData.get("startPage"));
-    const to = Number(formData.get("endPage"));
-    if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < from || to > 5000) return failState("Enter a first and last page (for example 1 and 208).");
-    const crawl = await startCrawl(IMPORT_SOURCE, from, to, admin.id);
-    await enqueueJob("import_crawl", {}, { dedupe: true, maxAttempts: 3 });
-    await audit({ actor: actorOf(admin), action: "import.crawl_start", targetType: "import", targetId: crawl.id, summary: `Catalogue import started: pages ${crawl.startPage}–${crawl.endPage}` });
-    refresh();
-    return okState(undefined, `Importing pages ${crawl.startPage}–${crawl.endPage}. Products go to the review queue; nothing is published.`);
-  });
-}
-
-export async function setCrawlStatusAction(id: string, status: "running" | "paused"): Promise<ActionState> {
-  return runAdmin("products.manage", async (admin) => {
-    await setCrawlStatus(id, status);
-    if (status === "running") await enqueueJob("import_crawl", {}, { dedupe: true, maxAttempts: 3 });
-    await audit({ actor: actorOf(admin), action: `import.crawl_${status === "running" ? "resume" : "pause"}`, targetType: "import", targetId: id, summary: `Catalogue import ${status === "running" ? "resumed" : "paused"}` });
-    refresh();
-    return okState(undefined, status === "running" ? "Resumed." : "Paused. Pages already imported are kept.");
-  });
-}
-
-/**
- * Called by the progress panel while it is open: processes the next page when it is due and
- * returns the numbers. The wait between pages is enforced inside advanceCrawl, so polling more
- * often never sends more requests to the source.
- */
-export async function crawlTickAction(): Promise<CrawlProgress | null> {
-  const admin = await assertAdmin("products.view");
-  const before = await activeCrawl(IMPORT_SOURCE);
-  if (!before) return null;
-  const after = before.status === "running" && can(admin, "products.manage") ? ((await advanceCrawl(IMPORT_SOURCE)) ?? before) : before;
-  return crawlProgress(after);
-}
-
 /**
  * Re-checks the products in Error: auctions get a suggested Buy It Now price, raw books are
  * accepted with the condition their listing states, and details that no sales channel requires
@@ -110,13 +71,15 @@ export async function crawlTickAction(): Promise<CrawlProgress | null> {
  */
 export async function fixErrorsAction(): Promise<ActionState> {
   return runAdmin("products.manage", async (admin) => {
+    const photos = await retryPhotoErrors(IMPORT_SOURCE);
     const first = await reprocessErrors(IMPORT_SOURCE, { limit: 300 });
     // More than one batch continues in the background; either way the knowledge pass follows.
     await enqueueJob("import_fix", first.nextCursor ? { cursor: first.nextCursor } : { phase: "knowledge" }, { maxAttempts: 3 });
     await audit({ actor: actorOf(admin), action: "import.fix_errors", targetType: "import", summary: `Import errors re-checked: ${first.fixed} fixed, ${first.duplicates} duplicates, ${first.still} still need a person${first.nextCursor ? " (more in the background)" : ""}` });
     refresh();
+    if (first.checked === 0 && photos > 0) return okState(undefined, `${photos} product(s) whose photo could not be stored are being prepared again; they become Ready to Release in a moment.`);
     if (first.checked === 0) return okState(undefined, "No products in Error to re-check (products you edited or already reviewed are left alone).");
-    return okState(undefined, `${first.fixed} moved to Pending Review, ${first.duplicates} are duplicates, ${first.still} cannot be queued (no title, price or photo, unavailable, or adult content).${first.nextCursor ? " The rest is being checked in the background." : ""} Unknown publishers and years are now being looked up in the background.`);
+    return okState(undefined, `${photos ? `${photos} photo error(s) sent back to preparation. ` : ""}${first.fixed} moved to Pending Review, ${first.duplicates} are duplicates, ${first.still} cannot be queued (no title, price or photo, unavailable, or adult content).${first.nextCursor ? " The rest is being checked in the background." : ""} Unknown publishers and years are now being looked up in the background.`);
   });
 }
 

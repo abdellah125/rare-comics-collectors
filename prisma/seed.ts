@@ -656,18 +656,6 @@ async function releaseApprovedOnce() {
 }
 
 /**
- * The owner asked for catalogue pages 1–208 of the source to be imported into the review queue.
- * This starts that import exactly once (never again if any page import exists); the application
- * then works through the pages and shows the progress under HipComic import.
- */
-async function seedCatalogueCrawl() {
-  if ((await db.importCrawl.count({ where: { source: "hipcomic" } })) > 0) return;
-  await db.importCrawl.create({ data: { source: "hipcomic", startPage: 1, endPage: 208, nextPage: 1, message: "Pages 1–208 queued.", logJson: JSON.stringify([{ at: new Date().toISOString(), level: "info", text: "Import of pages 1–208 started" }]) } });
-  await db.job.create({ data: { type: "import_crawl", payloadJson: "{}", maxAttempts: 3 } });
-  log("catalogue import: pages 1–208 queued");
-}
-
-/**
  * Keyword data bought from OpenSEO during the first research run (prisma/data/seo/keywords.json).
  * Loaded once, into an empty table, so those credits are not spent twice; the weekly seo_sync
  * job then classifies, scores and clusters the rows against the live catalogue.
@@ -838,9 +826,8 @@ async function main() {
   await seedImportedCatalog();
   await seedCatalogQueue();
   await seedImportItems();
-  await seedCatalogueCrawl();
   await releaseApprovedOnce();
-  if ((await db.importItem.count({ where: { status: "error", reviewedAt: null, editedJson: "[]" } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: "pending" } })) === 0) {
+  if ((await db.importItem.count({ where: { status: "error", OR: [{ reviewedAt: null, editedJson: "[]" }, { problemsJson: { contains: "photo could not be stored" } }] } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: "pending", payloadJson: "{}" } })) === 0) {
     await db.job.create({ data: { type: "import_fix", payloadJson: "{}", maxAttempts: 3 } });
     log("import errors: re-check queued");
   }

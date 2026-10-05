@@ -2,14 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm } from "@/components/admin/action-form";
 import { ConfirmButton } from "@/components/admin/confirm-button";
-import { ImportCrawlPanel } from "@/components/admin/import-crawl-panel";
 import { ImportUploadForm } from "@/components/admin/import-upload-form";
 import { AdminPageHeader, Card, EmptyState, Field, Table, Td, Th, Tone, adminButton, adminInput } from "@/components/admin/ui";
 import { can, requireAdmin } from "@/lib/auth/session";
 import { fixErrorsAction, releaseAllReadyAction, saveImportSettingsAction, syncNowAction } from "@/lib/admin/actions/imports";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/i18n";
-import { activeCrawl, crawlProgress } from "@/lib/imports/crawl";
 import { importStats } from "@/lib/imports/pipeline";
 import { IMPORT_SOURCE } from "@/lib/imports/status";
 import { getSettings } from "@/lib/settings";
@@ -32,7 +30,7 @@ export default async function AdminImportsPage() {
   const admin = await requireAdmin("products.view");
   const manage = can(admin, "products.manage");
   const canSettings = can(admin, "settings.manage");
-  const [stats, runs, settings, crawl] = await Promise.all([importStats(IMPORT_SOURCE), db.importRun.findMany({ where: { source: IMPORT_SOURCE }, orderBy: { startedAt: "desc" }, take: 15 }), getSettings(), activeCrawl(IMPORT_SOURCE)]);
+  const [stats, runs, settings] = await Promise.all([importStats(IMPORT_SOURCE), db.importRun.findMany({ where: { source: IMPORT_SOURCE }, orderBy: { startedAt: "desc" }, take: 15 }), getSettings()]);
   const queue = (status?: string) => `/admin/imports/queue${status ? `?status=${status}` : ""}`;
   const tiles: { label: string; value: number; href: string; tone?: "warning" | "gold" | "success" | "danger" | "brand" | "neutral" }[] = [
     { label: "Products discovered", value: stats.discovered, href: queue("all") },
@@ -94,13 +92,6 @@ export default async function AdminImportsPage() {
           </>
         )}
       </p>
-
-      <div className="mt-6">
-        <Card title="Catalogue import, page by page" description="Reads the source's catalogue pages in order, one page at a time, at the pace its robots.txt asks for. Every product goes to the review queue. The importer identifies itself as RareComicsCollectors-Import. If the source refuses a page the import stops and says so.">
-          {/* Re-mounted when another import starts, so the panel never shows a previous run. */}
-          <ImportCrawlPanel key={crawl?.id ?? "none"} initial={crawl ? crawlProgress(crawl) : null} canManage={manage} />
-        </Card>
-      </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         {manage && (

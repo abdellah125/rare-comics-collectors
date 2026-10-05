@@ -141,23 +141,31 @@ export function registerJobHandlers() {
   // Approved imports: store the photo and check the facts, a batch at a time, until none are left.
   registerJobHandler("import_prepare", async () => {
     const { prepareItems } = await import("@/lib/imports/pipeline");
-    const result = await prepareItems({ limit: 20 });
+    const started = Date.now();
+    let result = await prepareItems({ limit: 15 });
+    while (result.ready + result.errors > 0 && Date.now() - started < 18_000) {
+      const more = await prepareItems({ limit: 15 });
+      result = { ready: result.ready + more.ready, errors: result.errors + more.errors, waiting: more.waiting };
+      if (more.ready + more.errors === 0) break;
+    }
     const left = await db.importItem.count({ where: { status: "approved" } });
     if (left > 0 && result.ready + result.errors + result.waiting > 0) await enqueueJob("import_prepare", {}, { runAt: new Date(Date.now() + (result.ready + result.errors > 0 ? 2_000 : 5 * 60_000)), maxAttempts: 3 });
   });
 
-  // The page-by-page catalogue import: one page per run, then the wait the source asks for.
+  // The page-by-page catalogue import was removed at the owner's request; a job left in the queue ends here.
   registerJobHandler("import_crawl", async () => {
-    const { advanceCrawl } = await import("@/lib/imports/crawl");
-    const { IMPORT_SOURCE } = await import("@/lib/imports/status");
-    const crawl = await advanceCrawl(IMPORT_SOURCE);
-    if (crawl && crawl.status === "running") await enqueueJob("import_crawl", {}, { runAt: new Date(Math.max(Date.now() + 2_000, crawl.notBefore.getTime())), dedupe: true, maxAttempts: 3 });
+    await db.importCrawl.updateMany({ where: { status: "running" }, data: { status: "paused", message: "The page-by-page import was removed." } });
   });
 
   // Re-checks items in Error against the current rules, a batch at a time, until every one has been looked at once.
   registerJobHandler("import_fix", async (payload) => {
     const { reprocessErrors } = await import("@/lib/imports/pipeline");
     const { IMPORT_SOURCE } = await import("@/lib/imports/status");
+    // Photos that failed only because the host has no disk: back into preparation.
+    if (!payload.cursor && !payload.phase) {
+      const { retryPhotoErrors } = await import("@/lib/imports/pipeline");
+      await retryPhotoErrors(IMPORT_SOURCE);
+    }
     // Second phase: details still Unknown are looked up from reference knowledge, a small batch at a time.
     if (payload.phase === "knowledge") {
       const { enrichUnknown } = await import("@/lib/imports/pipeline");

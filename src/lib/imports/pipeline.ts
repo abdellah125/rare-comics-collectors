@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import type { ImportItem, ImportRun, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { enqueueJob } from "@/lib/jobs/queue";
-import { saveUpload } from "@/lib/media";
+import { activeStorage, saveUpload } from "@/lib/media";
 import { getSettings } from "@/lib/settings";
 import { adjustmentForDiscount, reprice, retailPrice } from "@/lib/imports/pricing";
 import { loadSeoContext, recommendSeo } from "@/lib/imports/seo";
@@ -512,8 +512,33 @@ async function storeImage(item: Pick<ImportItem, "id" | "sourceImage" | "slug" |
   if (!res.ok) throw new ImageError(`the photo host answered HTTP ${res.status}`, false);
   const buf = Buffer.from(await res.arrayBuffer());
   if (buf.length < 5_000) throw new ImageError("the photo is too small to be a listing photo", true);
-  const saved = await saveUpload(new File([new Uint8Array(buf)], `${item.slug || item.sourceId}.jpg`, { type: res.headers.get("content-type") ?? "image/jpeg" }), { purpose: "product_image", ownerId: null, visibility: "public" });
-  return saved.url;
+  // A serverless host has no disk to keep a copy on. Unless object storage is configured
+  // (BLOB_READ_WRITE_TOKEN), the listing shows the photo from the address the source data gave,
+  // which was just fetched and checked above.
+  const remote = res.url || item.sourceImage;
+  if (activeStorage() === "local" && process.env.VERCEL) return remote;
+  try {
+    const saved = await saveUpload(new File([new Uint8Array(buf)], `${item.slug || item.sourceId}.jpg`, { type: res.headers.get("content-type") ?? "image/jpeg" }), { purpose: "product_image", ownerId: null, visibility: "public" });
+    return saved.url;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException | null)?.code ?? "";
+    // Read-only or missing upload folder: the same situation, found out the hard way.
+    if (["ENOENT", "EROFS", "EACCES", "EPERM"].includes(code)) return remote;
+    throw err;
+  }
+}
+
+/**
+ * Products that ended in Error only because their photo could not be stored go back to Approved,
+ * so the next preparation run gives them their photo and makes them Ready to Release.
+ */
+export async function retryPhotoErrors(source: string): Promise<number> {
+  const stuck = await db.importItem.findMany({ where: { source, status: "error", problemsJson: { contains: "photo could not be stored" } }, select: { id: true, problemsJson: true } });
+  const ids = stuck.filter((i) => list(i.problemsJson).every((p) => p.startsWith("photo could not be stored"))).map((i) => i.id);
+  if (ids.length === 0) return 0;
+  for (let n = 0; n < ids.length; n += 500) await db.importItem.updateMany({ where: { id: { in: ids.slice(n, n + 500) } }, data: { status: "approved", attempts: 0, problemsJson: "[]" } });
+  await enqueueJob("import_prepare", {}, { dedupe: true, maxAttempts: 3 });
+  return ids.length;
 }
 class ImageError extends Error {
   constructor(message: string, public permanent: boolean) {
