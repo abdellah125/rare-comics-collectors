@@ -367,6 +367,10 @@ model Product {
   importSource            String?
   importFile              String?
   releaseAt               DateTime?
+  /// fixed = bought at `price`; auction = sold by bidding: `price` is the current bid and the product cannot go in a cart
+  saleType                String         @default("fixed")
+  auctionEndsAt           DateTime?
+  bidCount                Int            @default(0)
   /// Optional overrides for the page title and meta description (otherwise built from the fields above)
   seoTitle                String?
   seoDescription          String?
@@ -381,6 +385,7 @@ model Product {
   adjustments   InventoryAdjustment[]
   wishlistItems WishlistItem[]
   importItem    ImportItem?
+  bids          Bid[]
 
   @@index([status, publishedAt])
   @@index([importSource, releaseAt])
@@ -422,6 +427,30 @@ model ImportRun {
   items        ImportItem[]
 
   @@index([source, startedAt])
+}
+
+/// A bid placed on the website for a product sold by bidding. Nothing is charged: the store
+/// contacts the bidder it accepts.
+model Bid {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?
+  name      String
+  email     String
+  phone     String?
+  /// base-currency minor units
+  amount    Int
+  /// active | outbid | accepted | rejected | withdrawn
+  status    String   @default("active")
+  note      String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, amount])
+  @@index([status, createdAt])
+  @@index([email])
 }
 
 /// A page-by-page import of the source's catalogue pages, with its progress.
@@ -485,6 +514,7 @@ model ImportItem {
   auction               Boolean    @default(false)
   /// how a suggested price was arrived at (shown to the admin only)
   priceBasis            String?
+  auctionEndsAt         DateTime?
   /// JSON array of field names filled in from reference knowledge (an AI model), for the admin to verify
   knowledgeJson         String     @default("[]")
   knowledgeTriedAt      DateTime?

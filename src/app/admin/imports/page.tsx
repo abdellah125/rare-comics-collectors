@@ -54,7 +54,7 @@ export default async function AdminImportsPage() {
             <Link href="/admin/imports/queue" className={adminButton.primary}>
               Review queue
             </Link>
-            {manage && stats.errors > 0 && <ConfirmButton label={`Fix ${stats.errors} errors`} title="Fix errors automatically" message="Re-checks every product in Error. Auctions get a suggested Buy It Now price, raw books are accepted with the condition their listing states, and details Merchant Center does not require (publisher, year, grade, label, issue number) are set to Unknown, then looked up from reference knowledge where that is certain. Fixed products move to Pending Review; nothing is published. Products you edited are left alone." action={fixErrorsAction} confirmLabel="Fix errors" />}
+            {manage && stats.errors > 0 && <ConfirmButton label={`Fix ${stats.errors} errors`} title="Fix errors automatically" message="Re-checks every product in Error. Auctions are accepted as bidding products at their current bid, raw books are accepted with the condition their listing states, and details Merchant Center does not require (publisher, year, grade, label, issue number) are set to Unknown, then looked up from reference knowledge where that is certain. Fixed products move to Pending Review; nothing is published. Products you edited are left alone." action={fixErrorsAction} confirmLabel="Fix errors" />}
             {manage && stats.ready + stats.approved > 0 && <ConfirmButton label={`Release all ${stats.ready + stats.approved} approved`} title="Release all approved" message={`Publishes every approved product (${stats.ready} ready, ${stats.approved} still having their photo stored), whatever the daily limit. They become visible on the store, in the sitemap and in the Merchant Center feed.`} action={releaseAllReadyAction} confirmLabel="Release" />}
           </>
         }
@@ -123,10 +123,6 @@ export default async function AdminImportsPage() {
                     <input type="checkbox" name="autoReleaseHoldDuplicates" defaultChecked={settings["imports.autoReleaseHoldDuplicates"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
                     <span>Keep possible duplicates for me to check</span>
                   </label>
-                  <label className="flex items-start gap-2 text-[13px] text-ink-800">
-                    <input type="checkbox" name="autoReleaseHoldFallbackPrices" defaultChecked={settings["imports.autoReleaseHoldFallbackPrices"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
-                    <span>Keep auction products whose price comes from the fallback rule (bid × multiplier) for me to check</span>
-                  </label>
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -135,14 +131,6 @@ export default async function AdminImportsPage() {
                 </Field>
                 <Field label="Check the feed every (hours)">
                   <input name="syncHours" type="number" min={1} max={720} defaultValue={settings["imports.syncHours"]} className={adminInput} />
-                </Field>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Auction without comparables: current bid ×" hint="Used only when no other listing of the same book exists to base a Buy It Now price on.">
-                  <input name="auctionMultiplier" type="number" min={1} max={20} step="0.1" defaultValue={settings["imports.auctionBidMultiplierPct"] / 100} className={adminInput} />
-                </Field>
-                <Field label="…and never below (US$)">
-                  <input name="auctionMinPrice" type="number" min={1} step="0.01" defaultValue={(settings["imports.auctionMinPrice"] / 100).toFixed(2)} className={adminInput} />
                 </Field>
               </div>
               <Field label="Authorised feed address (optional)" hint="An https address the source gave you for its data (CSV or JSON). If it needs an access token, set HIPCOMIC_FEED_TOKEN in the hosting environment. Leave empty to sync by file upload only. If the source refuses the request, the sync stops and reports it.">

@@ -62,7 +62,7 @@ export async function syncNowAction(): Promise<ActionState> {
 }
 
 /**
- * Re-checks the products in Error: auctions get a suggested Buy It Now price, raw books are
+ * Re-checks the products in Error: auctions are accepted as bidding products, raw books are
  * accepted with the condition their listing states, and details that no sales channel requires
  * (publisher, year, grade, label, issue number) become Unknown instead of holding the product
  * back. Unknown publishers and years are then looked up from reference knowledge in the
@@ -89,12 +89,9 @@ const SettingsSchema = z.object({
   feedUrl: z.string().trim().max(500),
   feedIsComplete: zBool,
   syncHours: z.coerce.number().int().min(1).max(720),
-  auctionMultiplier: z.coerce.number().min(1).max(20),
-  auctionMinPrice: z.coerce.number().min(1).max(100_000),
   autoReleasePerDay: z.coerce.number().int().min(0).max(20_000),
   autoReleaseIncludePending: zBool,
   autoReleaseHoldDuplicates: zBool,
-  autoReleaseHoldFallbackPrices: zBool,
 });
 
 export async function saveImportSettingsAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
@@ -109,7 +106,7 @@ export async function saveImportSettingsAction(_prev: ActionState | undefined, f
         return failState(err instanceof Error ? err.message : "The feed address is not valid.", { feedUrl: "Not valid" });
       }
     }
-    await saveSettings({ "imports.discountBps": Math.round(d.discountPercent * 100), "imports.autoPriceSync": d.autoPriceSync, "imports.feedUrl": d.feedUrl, "imports.feedIsComplete": d.feedIsComplete, "imports.syncHours": d.syncHours, "imports.auctionBidMultiplierPct": Math.round(d.auctionMultiplier * 100), "imports.auctionMinPrice": Math.round(d.auctionMinPrice * 100), "imports.autoReleasePerDay": d.autoReleasePerDay, "imports.autoReleaseIncludePending": d.autoReleaseIncludePending, "imports.autoReleaseHoldDuplicates": d.autoReleaseHoldDuplicates, "imports.autoReleaseHoldFallbackPrices": d.autoReleaseHoldFallbackPrices }, admin.id);
+    await saveSettings({ "imports.discountBps": Math.round(d.discountPercent * 100), "imports.autoPriceSync": d.autoPriceSync, "imports.feedUrl": d.feedUrl, "imports.feedIsComplete": d.feedIsComplete, "imports.syncHours": d.syncHours, "imports.autoReleasePerDay": d.autoReleasePerDay, "imports.autoReleaseIncludePending": d.autoReleaseIncludePending, "imports.autoReleaseHoldDuplicates": d.autoReleaseHoldDuplicates }, admin.id);
     if (d.autoReleasePerDay > 0) await enqueueJob("import_auto_release", {}, { dedupe: true, maxAttempts: 3 });
     await audit({ actor: actorOf(admin), action: "import.settings", targetType: "setting", summary: `Import settings: daily release ${d.autoReleasePerDay || "off"}${d.autoReleasePerDay ? (d.autoReleaseIncludePending ? " (including Pending Review)" : " (approved only)") : ""}, discount ${d.discountPercent}%, automatic price sync ${d.autoPriceSync ? "on" : "off"}, feed ${d.feedUrl ? "set" : "not set"}` });
     refresh();

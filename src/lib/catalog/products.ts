@@ -35,6 +35,11 @@ export function toSummary(p: ProductRow): ProductSummary {
   if (p.compareAt !== null) s.compareAt = p.compareAt;
   if (p.keyIssue) s.keyIssue = p.keyIssue;
   if (p.featured) s.featured = true;
+  if (p.saleType === "auction") {
+    s.auction = true;
+    s.bidCount = p.bidCount;
+    if (p.auctionEndsAt) s.auctionEndsAt = p.auctionEndsAt.toISOString();
+  }
   const image = p.images[0]?.url;
   if (image) s.image = image;
   return s;

@@ -78,9 +78,9 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
       )}
       {item.auction && item.priceBasis && (
         <div className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 text-[13px] text-ink-800" role="note" data-testid="price-basis">
-          <p className="font-semibold text-ink-950">Suggested price</p>
+          <p className="font-semibold text-ink-950">Sold by bidding</p>
           <p className="mt-1">{item.priceBasis}</p>
-          <p className="mt-1 text-[12px] text-ink-600">A suggestion, not a source price: change the selling price below if you want a different one.</p>
+          <p className="mt-1 text-[12px] text-ink-600">On the store this product shows the current bid and a bid form instead of Buy now. The amount below is the starting bid shown; bids are listed under Bids in the admin.</p>
         </div>
       )}
       {(problems.length > 0 || item.duplicateOf || item.priceChangeNote || !item.available) && (
@@ -161,7 +161,7 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
 
                     <h3 className="mt-2 border-t border-ink-100 pt-4 text-sm font-semibold text-ink-950">Price</h3>
                     <div className="grid gap-4 sm:grid-cols-3">
-                      <Field label="Selling price (US$)" hint={(item.priceManual ? "Set by hand: the sync keeps it unless automatic price synchronisation is on." : "Follows the source price less the discount until you change it.")}>
+                      <Field label={item.auction ? "Current bid shown (US$)" : "Selling price (US$)"} hint={(item.priceManual ? "Set by hand: the sync keeps it unless automatic price synchronisation is on." : "Follows the source price less the discount until you change it.")}>
                         <input name="price" inputMode="decimal" defaultValue={item.retailPrice !== null ? (item.retailPrice / 100).toFixed(2) : ""} required className={adminInput} />
                       </Field>
                       <div className="text-[13px] text-ink-700 sm:col-span-2">
@@ -268,7 +268,7 @@ export default async function AdminImportItemPage({ params }: PageProps<"/admin/
               items={[
                 { label: item.auction ? "Current bid at the source" : "Source price", value: item.sourcePrice !== null ? formatMoney(item.sourcePrice) : "—" },
                 ...(item.priceNote ? [{ label: "Note", value: item.priceNote }] : []),
-                { label: "Price rule", value: item.auction ? "Suggested Buy It Now (auction)" : describeAdjustment(item.markupBps) },
+                { label: "Price rule", value: item.auction ? "Bidding: current bid, no discount" : describeAdjustment(item.markupBps) },
                 { label: "Selling price", value: item.retailPrice !== null ? `${formatMoney(item.retailPrice)}${item.priceManual ? " (set by hand)" : ""}` : "—" },
                 { label: "Against the source price", value: margin ? `${margin.amount < 0 ? "−" : "+"}${formatMoney(Math.abs(margin.amount))} (${(margin.bps / 100).toFixed(1)}%)` : "—" },
               ]}

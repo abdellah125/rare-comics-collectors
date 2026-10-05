@@ -123,12 +123,8 @@ export const settingDefaults = {
   "imports.autoReleasePerDay": 1000,
   /** true: the rule also takes products still in Pending Review; false: only products an admin approved. */
   "imports.autoReleaseIncludePending": true,
-  /** Kept for a person: possible duplicates, and auction prices that come from the fallback rule. */
+  /** Kept for a person: possible duplicates. */
   "imports.autoReleaseHoldDuplicates": true,
-  "imports.autoReleaseHoldFallbackPrices": true,
-  /** Auction with nothing to compare with: suggested Buy It Now = current bid × this (200 = ×2), and never below the minimum. */
-  "imports.auctionBidMultiplierPct": 200,
-  "imports.auctionMinPrice": 499,
   /** The authorised data feed (https address given by the source). Empty = sync by file upload only. */
   "imports.feedUrl": "",
   /** The feed lists everything currently for sale, so a product missing from it is no longer available. */

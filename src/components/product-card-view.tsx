@@ -42,11 +42,12 @@ export function ProductCardView({
 
       <div className="flex flex-1 flex-col p-4">
         {/* Badges live in the body: every corner of the cover plate already carries a chip. */}
-        {(onSale || product.keyIssue || (product.stock === 1 && !soldOut)) && (
+        {(onSale || product.auction || product.keyIssue || (product.stock === 1 && !soldOut)) && (
           <div className="mb-2.5 flex flex-wrap gap-1.5">
+            {product.auction && <Badge tone="brand">{tr("Auction")}</Badge>}
             {onSale && <Badge tone="sale">{tr("Sale")}</Badge>}
             {product.keyIssue && <Badge tone="gold">{tr("Key issue")}</Badge>}
-            {product.stock === 1 && !soldOut && <Badge tone="dark">{tr("Last copy")}</Badge>}
+            {product.stock === 1 && !soldOut && !product.auction && <Badge tone="dark">{tr("Last copy")}</Badge>}
           </div>
         )}
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500">
@@ -83,6 +84,7 @@ export function ProductCardView({
 
         <div className="mt-auto pt-4">
           <div className="flex items-baseline gap-2">
+            {product.auction && <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-500">{tr("Current bid")}</span>}
             <span className="font-display text-xl font-semibold tabular-nums text-ink-950">{priceLabel}</span>
             {onSale && <span className="text-sm text-ink-500 line-through tabular-nums">{compareAtLabel}</span>}
           </div>

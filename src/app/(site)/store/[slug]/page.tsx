@@ -1,3 +1,6 @@
+import { BidPanel } from "@/components/bid-panel";
+import { auctionEnded } from "@/lib/commerce/bids";
+import { getTranslator } from "@/lib/i18n";
 import { NOT_GRADED, UNKNOWN, gradeLabel as gradeLabelOf, isKnown, joinKnown, yearKnown, yearText } from "@/lib/catalog/labels";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -41,11 +44,14 @@ export async function generateMetadata({ params }: PageProps<"/store/[slug]">): 
       type: "article",
       keywords: [`${product.title} ${product.issue}`, `${product.title} ${product.issue} ${product.grader} ${product.grade}`, `${product.publisher} ${product.era}`, "graded comic for sale"],
     }),
-    other: {
-      "product:price:amount": schemaPrice(product.price),
-      "product:price:currency": site.currency,
-      "product:availability": product.stock > 0 ? "in stock" : "out of stock",
-    },
+    // A product sold by bidding has no fixed price to advertise.
+    other: product.auction
+      ? { "product:availability": product.stock > 0 ? "in stock" : "out of stock" }
+      : {
+          "product:price:amount": schemaPrice(product.price),
+          "product:price:currency": site.currency,
+          "product:availability": product.stock > 0 ? "in stock" : "out of stock",
+        },
   };
 }
 
@@ -80,6 +86,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
     select: { id: true, rating: true, title: true, body: true, createdAt: true, isVerifiedPurchase: true, sellerReply: true, user: { select: { name: true } } },
   });
 
+  const tr = await getTranslator();
   const onSale = product.compareAt !== undefined && product.compareAt > product.price;
   const gradeLabel = gradeLabelOf(product.grader, product.grade, " · ");
   const summary = detailToSummary(product);
@@ -118,7 +125,8 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
       ...(isKnown(product.label) ? [{ "@type": "PropertyValue", name: "Label", value: product.label }] : []),
       ...(product.certNumber ? [{ "@type": "PropertyValue", name: "Certification number", value: product.certNumber }] : []),
     ],
-    offers: {
+    // A product sold by bidding carries no Offer: there is no price it can be bought at.
+    ...(product.auction ? {} : { offers: {
       "@type": "Offer",
       "@id": `${site.url}/store/${product.slug}#offer`,
       price: schemaPrice(product.price),
@@ -150,7 +158,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
         returnMethod: "https://schema.org/ReturnByMail",
         returnFees: "https://schema.org/FreeReturn",
       },
-    },
+    } }),
   };
 
   return (
@@ -221,6 +229,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
 
             <div className="mt-7 rounded-xl border border-ink-200 bg-ink-50 p-5">
               <div className="flex flex-wrap items-baseline gap-3">
+                {product.auction && <span className="basis-full text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("Current bid")}{product.bidCount ? ` · ${product.bidCount === 1 ? tr("1 bid here") : tr("{count} bids here", { count: product.bidCount })}` : ""}</span>}
                 <span className="font-display text-3xl font-semibold tabular-nums text-ink-950">{formatExact(product.price)}</span>
                 {onSale && (
                   <>
@@ -232,7 +241,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
 
               <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-600">
                 <span className={product.stock > 0 ? "font-semibold text-brand-700" : "font-semibold text-rose-700"}>
-                  {product.stock > 0 ? `In stock — ${product.stock} available` : "Sold out"}
+                  {product.auction ? (product.stock > 0 && !auctionEnded(product.auctionEndsAt) ? tr("Open for bids") : tr("Bidding closed")) : product.stock > 0 ? `In stock — ${product.stock} available` : "Sold out"}
                 </span>
                 {cheapestShipping && (
                   <>
@@ -244,9 +253,10 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
                 <span>Ships in {product.seller?.handlingDays ?? 2} business days</span>
               </p>
 
-              <div className="mt-5">
-                <PurchasePanel product={summary} />
+              <div className="mt-5" id="bid">
+                {product.auction ? <BidPanel slug={product.slug} currentBid={product.price} closed={product.stock <= 0 || auctionEnded(product.auctionEndsAt)} /> : <PurchasePanel product={summary} />}
               </div>
+              {product.auction && product.auctionEndsAt && !auctionEnded(product.auctionEndsAt) && <p className="mt-3 text-[13px] text-ink-600">{tr("Bidding ends {date}", { date: formatDateTime(product.auctionEndsAt) })}</p>}
 
               <p className="mt-4 text-xs leading-relaxed text-ink-500">
                 Secure checkout · Card, PayPal and bank wire accepted · Need to track an existing order?{" "}

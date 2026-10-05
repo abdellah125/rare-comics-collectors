@@ -99,7 +99,7 @@ export default async function AdminImportQueuePage({ searchParams }: PageProps<"
         <Field label="Price">
           <select name="price" defaultValue={price} className={adminSelect}>
             <option value="">Any</option>
-            <option value="auction">Auction at the source (suggested price)</option>
+            <option value="auction">Sold by bidding</option>
             <option value="manual">Set by hand</option>
             <option value="changed">Source price changed</option>
           </select>
@@ -181,7 +181,7 @@ export default async function AdminImportQueuePage({ searchParams }: PageProps<"
                     </Td>
                     <Td align="right" className="whitespace-nowrap">
                       <span className="font-semibold tabular-nums text-ink-950">{r.retailPrice !== null ? formatMoney(r.retailPrice) : "—"}</span>
-                      {r.auction && <span className="block text-[11px] font-medium text-amber-700" title={r.priceBasis ?? undefined}>suggested Buy It Now</span>}
+                      {r.auction && <span className="block text-[11px] font-medium text-amber-700" title={r.priceBasis ?? undefined}>bidding: current bid</span>}
                       <span className="block text-[11px] text-ink-500">
                         {r.auction ? "current bid" : "source"} {r.sourcePrice !== null ? formatMoney(r.sourcePrice) : "—"}
                         {margin && !r.auction ? ` · ${margin.bps < 0 ? "−" : "+"}${(Math.abs(margin.bps) / 100).toFixed(margin.bps % 100 === 0 ? 0 : 1)}%` : ""}

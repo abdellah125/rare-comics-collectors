@@ -21,6 +21,7 @@ type Listing = {
   quantity?: number;
   current_price?: number;
   buyout_price?: number;
+  end_time?: string | null;
   active?: boolean;
   closed?: boolean;
   deleted?: boolean;
@@ -114,5 +115,6 @@ export function listingToRow(l: Listing, file: string, line: number, canonicalPu
     note,
     slabbed: typeof condition.slabbed === "boolean" ? condition.slabbed : null,
     buyNow: buyNow !== null && buyNow > 0 ? buyNow : null,
+    auctionEndsAt: auction && l.end_time && !Number.isNaN(Date.parse(l.end_time)) ? new Date(l.end_time) : null,
   };
 }

@@ -34,6 +34,8 @@ export type SourceRow = {
   slabbed?: boolean | null;
   /** the source's own Buy It Now price for an auction, in US$ minor units, when it has one */
   buyNow?: number | null;
+  /** when the bidding ends, when the data says */
+  auctionEndsAt?: Date | null;
 };
 
 const ALIASES: Record<string, string[]> = {
@@ -54,6 +56,7 @@ const ALIASES: Record<string, string[]> = {
   description: ["description", "product description", "product_description"],
   variant: ["variant"],
   availability: ["availability", "available", "status", "in stock", "in_stock", "stock", "quantity"],
+  type: ["type", "listing type", "listing_type", "format", "sale type", "sale_type"],
 };
 
 const moneyOf = (value: unknown): { amount: number | null; currency: string | null } => {
@@ -107,7 +110,7 @@ function fromRecord(record: Record<string, unknown>, file: string, line: number)
     price: money.amount,
     approxUsd: null,
     seller: text("seller"),
-    auction: false,
+    auction: /auction|bid/i.test(text("type")),
     problems,
     extra: { publisher: text("publisher"), year: text("year"), series: text("series"), issue: text("issue"), grade: text("grade"), grader: text("grader"), cert: text("cert"), description: text("description"), variant: text("variant") },
     available: availabilityOf(pick("availability")),

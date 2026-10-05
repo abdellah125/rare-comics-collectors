@@ -680,4 +680,34 @@ export const es: Dict = {
     "Los pedidos se envían en doble caja, con entrega con firma y asegurados por su valor total.",
   "You have {days} days from delivery to inspect any book and return it in its original holder for a full refund. Undisclosed restoration is refundable in full with no time limit under our <a>authenticity guarantee</a>.":
     "Dispones de {days} días desde la entrega para inspeccionar cualquier cómic y devolverlo en su cápsula original con reembolso íntegro. Una restauración no declarada se reembolsa por completo y sin límite de tiempo según nuestra <a>garantía de autenticidad</a>.",
+  "Auction":
+    "Subasta",
+  "Current bid":
+    "Puja actual",
+  "Place bid":
+    "Pujar",
+  "Placing bid…":
+    "Enviando la puja…",
+  "Bidding closed":
+    "Subasta cerrada",
+  "Open for bids":
+    "Abierto a pujas",
+  "1 bid here":
+    "1 puja aquí",
+  "{count} bids here":
+    "{count} pujas aquí",
+  "Bidding ends {date}":
+    "La subasta termina el {date}",
+  "Bidding on this product has closed.":
+    "La subasta de este producto ha terminado.",
+  "Bid received":
+    "Puja recibida",
+  "Your bid of {amount} has been received. You are the highest bidder for now. Nothing has been charged: we will contact you if your bid wins.":
+    "Hemos recibido tu puja de {amount}. Por ahora eres el mejor postor. No se ha cobrado nada: te avisaremos si tu puja gana.",
+  "Your bid (US$)":
+    "Tu puja (US$)",
+  "Minimum bid: {amount}":
+    "Puja mínima: {amount}",
+  "A bid is an offer to buy at that price, not a payment. Nothing is charged now; we contact the winning bidder to arrange payment and shipping.":
+    "Una puja es una oferta de compra a ese precio, no un pago. No se cobra nada ahora; contactamos con el ganador para acordar el pago y el envío.",
 };

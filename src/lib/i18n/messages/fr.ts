@@ -680,4 +680,34 @@ export const fr: Dict = {
     "Les commandes sont expédiées en double emballage, remises contre signature et assurées à leur valeur totale.",
   "You have {days} days from delivery to inspect any book and return it in its original holder for a full refund. Undisclosed restoration is refundable in full with no time limit under our <a>authenticity guarantee</a>.":
     "Vous disposez de {days} jours à compter de la livraison pour examiner tout comic et le retourner dans son boîtier d'origine contre un remboursement intégral. Toute restauration non déclarée est remboursée intégralement, sans limite de temps, au titre de notre <a>garantie d'authenticité</a>.",
+  "Auction":
+    "Enchère",
+  "Current bid":
+    "Enchère actuelle",
+  "Place bid":
+    "Enchérir",
+  "Placing bid…":
+    "Envoi de l'enchère…",
+  "Bidding closed":
+    "Enchères closes",
+  "Open for bids":
+    "Ouvert aux enchères",
+  "1 bid here":
+    "1 enchère ici",
+  "{count} bids here":
+    "{count} enchères ici",
+  "Bidding ends {date}":
+    "Fin des enchères : {date}",
+  "Bidding on this product has closed.":
+    "Les enchères sur ce produit sont closes.",
+  "Bid received":
+    "Enchère reçue",
+  "Your bid of {amount} has been received. You are the highest bidder for now. Nothing has been charged: we will contact you if your bid wins.":
+    "Nous avons bien reçu votre enchère de {amount}. Vous êtes pour l'instant le meilleur enchérisseur. Rien n'a été débité : nous vous contacterons si votre enchère l'emporte.",
+  "Your bid (US$)":
+    "Votre enchère (US$)",
+  "Minimum bid: {amount}":
+    "Enchère minimale : {amount}",
+  "A bid is an offer to buy at that price, not a payment. Nothing is charged now; we contact the winning bidder to arrange payment and shipping.":
+    "Une enchère est une offre d'achat à ce prix, pas un paiement. Rien n'est débité maintenant ; nous contactons le gagnant pour organiser le paiement et l'expédition.",
 };

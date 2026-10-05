@@ -680,4 +680,34 @@ export const de: Dict = {
     "Bestellungen werden doppelt verpackt, gegen Unterschrift zugestellt und zum vollen Wert versichert.",
   "You have {days} days from delivery to inspect any book and return it in its original holder for a full refund. Undisclosed restoration is refundable in full with no time limit under our <a>authenticity guarantee</a>.":
     "Sie haben ab Lieferung {days} Tage Zeit, jedes Heft zu prüfen und im Originalholder gegen volle Erstattung zurückzugeben. Nicht angegebene Restaurierung erstatten wir gemäß unserer <a>Echtheitsgarantie</a> vollständig und ohne zeitliche Begrenzung.",
+  "Auction":
+    "Auktion",
+  "Current bid":
+    "Aktuelles Gebot",
+  "Place bid":
+    "Gebot abgeben",
+  "Placing bid…":
+    "Gebot wird abgegeben…",
+  "Bidding closed":
+    "Gebote geschlossen",
+  "Open for bids":
+    "Offen für Gebote",
+  "1 bid here":
+    "1 Gebot hier",
+  "{count} bids here":
+    "{count} Gebote hier",
+  "Bidding ends {date}":
+    "Gebotsende: {date}",
+  "Bidding on this product has closed.":
+    "Die Gebotsphase für dieses Produkt ist beendet.",
+  "Bid received":
+    "Gebot erhalten",
+  "Your bid of {amount} has been received. You are the highest bidder for now. Nothing has been charged: we will contact you if your bid wins.":
+    "Ihr Gebot über {amount} ist eingegangen. Sie sind derzeit Höchstbietender. Es wurde nichts berechnet: Wir melden uns, wenn Ihr Gebot gewinnt.",
+  "Your bid (US$)":
+    "Ihr Gebot (US$)",
+  "Minimum bid: {amount}":
+    "Mindestgebot: {amount}",
+  "A bid is an offer to buy at that price, not a payment. Nothing is charged now; we contact the winning bidder to arrange payment and shipping.":
+    "Ein Gebot ist ein Kaufangebot zu diesem Preis, keine Zahlung. Jetzt wird nichts berechnet; wir kontaktieren den Höchstbietenden, um Zahlung und Versand zu regeln.",
 };

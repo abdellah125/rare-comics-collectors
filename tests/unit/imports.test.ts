@@ -3,8 +3,8 @@ import { adjustmentForDiscount, describeAdjustment, marginOf, reprice, retailPri
 import { catalogPagePath, listingToRow, PageFormatError, readPageState } from "@/lib/imports/catalog-page";
 import { robotsAllows, robotsRules } from "@/lib/imports/robots";
 import { LOOKS_SLABBED, buildRawListing, rawCondition } from "@/lib/imports/raw";
-import { addComp, newCompIndex, numericGrade, suggestBuyNow } from "@/lib/imports/suggest";
-import { bookKey } from "@/lib/imports/status";
+import { auctionEnded, bidIncrement, minimumBid, parseBid } from "@/lib/commerce/bids";
+
 import { buildPlainListing } from "@/lib/imports/plain";
 import { gradeLabel, joinKnown, yearText } from "@/lib/catalog/labels";
 import { candidateKeywords, defaultSeoDescription, defaultSeoTitle, seoChecks, type SeoFacts } from "@/lib/imports/seo-rules";
@@ -186,46 +186,6 @@ describe("catalogue page", () => {
   });
 });
 
-describe("suggested Buy It Now price for auctions", () => {
-  const base = { buyNow: null, bid: 1_700, key: "dc|hawkman|3|8.0|cgc|universal blue|", bookKey: "hawkman|3|cgc", grade: "8.0", adjustmentBps: -2500, bidMultiplierPct: 200, minPrice: 499 };
-  it("uses the source's own Buy It Now price, less the discount, when the auction has one", () => {
-    const s = suggestBuyNow({ ...base, buyNow: 10_000, comps: newCompIndex() });
-    expect(s.price).toBe(7_500);
-    expect(s.estimated).toBe(false);
-    expect(s.basis).toMatch(/own Buy It Now price/);
-  });
-  it("then the median of the same book in the same grade", () => {
-    const comps = newCompIndex();
-    for (const price of [9_000, 12_000, 30_000]) addComp(comps, { key: base.key, bookKey: base.bookKey, grade: "8.0", price });
-    const s = suggestBuyNow({ ...base, comps });
-    expect(s.price).toBe(12_000);
-    expect(s.basis).toMatch(/3 other listings of the same book in the same grade/);
-  });
-  it("then the nearest grade within one point, and says it is an estimate", () => {
-    const comps = newCompIndex();
-    addComp(comps, { key: "other", bookKey: base.bookKey, grade: "7.5", price: 8_000 });
-    addComp(comps, { key: "far", bookKey: base.bookKey, grade: "4.0", price: 2_000 });
-    const s = suggestBuyNow({ ...base, comps });
-    expect(s.price).toBe(8_000);
-    expect(s.estimated).toBe(true);
-    expect(s.basis).toMatch(/nearest grade \(7\.5\); this copy is 8\.0/);
-  });
-  it("falls back to the bid rule with a minimum, and never goes below the current bid", () => {
-    expect(suggestBuyNow({ ...base, comps: newCompIndex() }).price).toBe(3_400);
-    const cheap = suggestBuyNow({ ...base, bid: 99, comps: newCompIndex() });
-    expect(cheap.price).toBe(499);
-    expect(cheap.basis).toMatch(/fallback rule, not a market price/);
-    const comps = newCompIndex();
-    addComp(comps, { key: base.key, bookKey: base.bookKey, grade: "8.0", price: 1_000 });
-    expect(suggestBuyNow({ ...base, comps }).price).toBe(1_700);
-  });
-  it("reads numeric grades and builds the book key", () => {
-    expect(numericGrade("VF+ 8.5")).toBe(8.5);
-    expect(numericGrade("Not graded")).toBeNull();
-    expect(bookKey({ title: "The Avengers", issue: "#57", grader: "Raw" })).toBe("avengers|57|raw");
-  });
-});
-
 describe("raw books", () => {
   it("takes the condition only from what the listing states", () => {
     expect(rawCondition("AMAZING SPIDER-MAN 44 VF+ 8.5 2nd LIZARD")).toBe("VF+ 8.5");
@@ -334,5 +294,32 @@ describe("daily release rule", () => {
     expect(dailyPlan({ perDay: 1000, releasedToday: 990, ready: 0, inPreparation: 4, batch: 50 })).toEqual({ release: 0, approve: 6, remaining: 10 });
     expect(dailyPlan({ perDay: 0, releasedToday: 0, ready: 400, inPreparation: 0, batch: 50 })).toEqual({ release: 0, approve: 0, remaining: 0 });
     expect(utcDayStart(new Date("2026-10-09T23:59:59Z")).toISOString()).toBe("2026-10-09T00:00:00.000Z");
+  });
+});
+
+describe("bidding", () => {
+  it("steps up with the size of the current bid", () => {
+    expect(bidIncrement(99)).toBe(50);
+    expect(minimumBid(99)).toBe(149);
+    expect(minimumBid(1_700)).toBe(1_800);
+    expect(minimumBid(25_000)).toBe(25_500);
+    expect(minimumBid(75_000)).toBe(76_000);
+    expect(minimumBid(250_000)).toBe(252_500);
+    expect(minimumBid(1_000_000)).toBe(1_005_000);
+  });
+  it("accepts a bid at or above the minimum and refuses anything else", () => {
+    expect(parseBid("18", 1_700)).toEqual({ ok: true, amount: 1_800 });
+    expect(parseBid("$1,250.50", 100_000)).toEqual({ ok: true, amount: 125_050 });
+    expect(parseBid("17.50", 1_700)).toMatchObject({ ok: false, message: "Your bid must be at least $18.00." });
+    expect(parseBid("abc", 1_700).ok).toBe(false);
+    expect(parseBid("-5", 1_700).ok).toBe(false);
+    expect(parseBid("12.345", 100).ok).toBe(false);
+    expect(parseBid("99999999", 100).ok).toBe(false);
+  });
+  it("knows when the bidding is over", () => {
+    const now = new Date("2026-10-11T12:00:00Z");
+    expect(auctionEnded(null, now)).toBe(false);
+    expect(auctionEnded("2026-10-11T11:59:59Z", now)).toBe(true);
+    expect(auctionEnded("2026-10-12T00:00:00Z", now)).toBe(false);
   });
 });

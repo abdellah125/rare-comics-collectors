@@ -15,6 +15,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     label: "Commerce",
     items: [
       { href: "/admin/orders", label: "Orders", perm: "orders.view" },
+      { href: "/admin/bids", label: "Bids", perm: "orders.view" },
       { href: "/admin/payments", label: "Payments", perm: "finance.view" },
       { href: "/admin/returns", label: "Returns", perm: "returns.manage" },
       { href: "/admin/disputes", label: "Disputes & chargebacks", perm: "disputes.manage" },

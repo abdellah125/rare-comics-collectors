@@ -57,7 +57,13 @@ export type ProductSummary = Pick<
   | "rating"
   | "reviewCount"
   | "image"
->;
+> & {
+  /** Sold by bidding: `price` is the current bid and the product cannot be put in a cart. */
+  auction?: boolean;
+  bidCount?: number;
+  /** ISO date the bidding ends, when it is known. */
+  auctionEndsAt?: string;
+};
 
 export function toProductSummary(p: Product): ProductSummary {
   const summary: ProductSummary = {

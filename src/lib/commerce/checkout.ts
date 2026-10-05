@@ -103,6 +103,7 @@ export async function resolveLines(lines: CartLineInput[], countryCode?: string)
     }
     let problem: string | null = null;
     if (p.status !== "published" || (p.seller && p.seller.status !== "approved")) problem = "This listing is no longer available.";
+    else if (p.saleType === "auction") problem = "This product is sold by bidding. Place a bid on its page.";
     else if (p.stock <= 0) problem = "Sold out.";
     else if (line.qty > p.stock) problem = `Only ${p.stock} available.`;
     else if (countryCode && !productShipsTo({ restrictedCountries: parseJsonArray(p.restrictedCountriesJson, isString), allowedCountries: parseJsonArray(p.allowedCountriesJson, isString) }, countryCode, p.seller ? { shipsTo: parseJsonArray(p.seller.shipsToJson, isString) } : null)) problem = "The seller doesn't ship this item to your country.";

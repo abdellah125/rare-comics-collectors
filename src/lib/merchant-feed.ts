@@ -19,7 +19,8 @@ export type MerchantFeedResult = { xml: string; included: number; skipped: FeedS
 export async function merchantFeed(): Promise<MerchantFeedResult> {
   const settings = await getSettings();
   const rows = await db.product.findMany({
-    where: { ...publishedWhere, stock: { gt: 0 } },
+    // Merchant Center needs a fixed price: products sold by bidding are not submitted.
+    where: { ...publishedWhere, stock: { gt: 0 }, saleType: "fixed" },
     include: {
       images: { orderBy: { position: "asc" }, select: { url: true } },
       category: { select: { name: true } },

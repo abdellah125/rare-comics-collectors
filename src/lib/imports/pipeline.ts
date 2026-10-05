@@ -9,12 +9,11 @@ import { adjustmentForDiscount, reprice, retailPrice } from "@/lib/imports/prici
 import { loadSeoContext, recommendSeo } from "@/lib/imports/seo";
 import { defaultSeoTitle, type SeoFacts } from "@/lib/imports/seo-rules";
 import { readSource, SourceFormatError, type SourceRow } from "@/lib/imports/source";
-import { bookKey, dedupeKey, issueKey, releaseProblems } from "@/lib/imports/status";
+import { dedupeKey, issueKey, releaseProblems } from "@/lib/imports/status";
 import { LOOKS_SLABBED, RAW_GRADER, RAW_UNSTATED, buildRawListing, rawCondition, type RawParsed } from "@/lib/imports/raw";
 import { buildPlainListing } from "@/lib/imports/plain";
 import { UNKNOWN, isKnown } from "@/lib/catalog/labels";
 import { dailyPlan, utcDayStart } from "@/lib/imports/daily";
-import { addComp, newCompIndex, suggestBuyNow, type CompIndex } from "@/lib/imports/suggest";
 import { ADULT, PALETTES, buildListing, cadRateOf, slugify, usdPrice } from "../../../scripts/lib/hipcomic-listing.mjs";
 import { CGC_GRADES, eraForYear, normSeries, parseTitle, tidyCase } from "../../../scripts/lib/hipcomic-title.mjs";
 
@@ -98,13 +97,10 @@ type ExistingItem = Pick<ImportItem, "id" | "sourceId" | "status" | "certNumber"
 type Env = {
   items: ExistingItem[];
   markupBps: number;
-  bidMultiplierPct: number;
-  minPrice: number;
   takenSlugs: Set<string>;
   certOwner: Map<string, string>;
   keyOwner: Map<string, string>;
   photoOwner: Map<string, string>;
-  comps: CompIndex;
   seriesPublishers: Map<string, { year: number | null; publisher: string }[]>;
   /** publication years other listings state for an issue (title + number) */
   issueYears: Map<string, Set<number>>;
@@ -123,7 +119,6 @@ async function loadEnv(source: string): Promise<Env> {
   const linkedProducts = new Set(items.map((i) => i.productId).filter(Boolean));
   const certOwner = new Map<string, string>();
   const keyOwner = new Map<string, string>();
-  const comps = newCompIndex();
   const seriesPublishers: Env["seriesPublishers"] = new Map();
   const issueYears: Env["issueYears"] = new Map();
   const learnYear = (title: string, issue: string, year: number | null) => {
@@ -151,11 +146,9 @@ async function loadEnv(source: string): Promise<Env> {
     learn(i.title, i.year, i.publisher);
     // A year an AI lookup filled in is not evidence for other listings; only stated or verified years are.
     if (!i.knowledgeJson.includes('"year"')) learnYear(i.title, i.issue, i.year);
-    // Only fixed-price listings are comparables: a suggested price must not feed the next suggestion.
-    if (!i.auction) addComp(comps, { key: i.dedupeKey, bookKey: bookKey(i), grade: i.grade, price: i.retailPrice });
   }
   const photoOwner = new Map<string, string>(items.map((i) => [`${i.sourceSeller}|${i.sourceTitle}|${i.sourceImage}`, i.sourceId]));
-  return { items, markupBps: adjustmentForDiscount(settings["imports.discountBps"]), bidMultiplierPct: settings["imports.auctionBidMultiplierPct"], minPrice: settings["imports.auctionMinPrice"], takenSlugs, certOwner, keyOwner, photoOwner, comps, seriesPublishers, issueYears };
+  return { items, markupBps: adjustmentForDiscount(settings["imports.discountBps"]), takenSlugs, certOwner, keyOwner, photoOwner, seriesPublishers, issueYears };
 }
 
 type Evaluated = { outcome: "ok" | "duplicate" | "error"; facts: (SeoFacts & { era: string }) | null; data: Record<string, unknown> };
@@ -234,12 +227,11 @@ function evaluateNew(row: SourceRow, usd: { price: number | null; priceNote: str
     plain = true;
   }
 
-  // Price: a fixed price follows the formula; an auction gets a suggested Buy It Now price below.
-  let retail: number | null = null;
-  if (!row.auction) {
-    if (usd.reason) reasons.push(usd.reason);
-    retail = usd.price !== null ? retailPrice(usd.price, env.markupBps) : null;
-  }
+  // Price: a fixed price follows the formula. A product the source sells by bidding stays a
+  // bidding product: the price is the current bid as it stands, with no discount and no
+  // made-up Buy It Now figure, and visitors bid on it.
+  if (usd.reason) reasons.push(usd.reason);
+  const retail: number | null = usd.price === null ? null : row.auction ? usd.price : retailPrice(usd.price, env.markupBps);
   if (row.available === false) reasons.push("marked unavailable at the source");
 
   if (reasons.length > 0) {
@@ -256,13 +248,8 @@ function evaluateNew(row: SourceRow, usd: { price: number | null; priceNote: str
     ? buildRawListing({ sourceId: row.sourceId!, p: p as unknown as RawParsed, condition }, env.takenSlugs)
     : (buildListing({ row, p, price: usd.price, priceNote: usd.priceNote }, env.takenSlugs) as unknown as BuiltListing);
   const key = dedupeKey({ ...l, variant: row.extra.variant });
-  const book = bookKey(l);
   let priceBasis: string | null = null;
-  if (row.auction) {
-    const suggestion = suggestBuyNow({ buyNow: row.buyNow ?? null, bid: usd.price, key, bookKey: book, grade: l.grade, comps: env.comps, adjustmentBps: env.markupBps, bidMultiplierPct: env.bidMultiplierPct, minPrice: env.minPrice });
-    retail = suggestion.price;
-    priceBasis = `Sold by auction at the source${usd.price !== null ? ` (current bid ${money(usd.price)})` : ""}. Suggested Buy It Now ${money(suggestion.price)}: ${suggestion.basis}`;
-  }
+  if (row.auction) priceBasis = `Sold by bidding at the source: the price shown is the current bid${usd.price !== null ? ` (${money(usd.price)})` : ""}. Visitors place bids; nothing is bought outright.`;
 
   let status = "pending_review";
   let duplicateStatus = "unique";
@@ -289,7 +276,6 @@ function evaluateNew(row: SourceRow, usd: { price: number | null; priceNote: str
     if (l.certNumber) env.certOwner.set(l.certNumber, `queue item ${row.sourceId}`);
     if (key && !env.keyOwner.has(key)) env.keyOwner.set(key, `queue item ${row.sourceId}`);
     if (row.sourceId) env.photoOwner.set(photoKey, row.sourceId);
-    if (!row.auction) addComp(env.comps, { key, bookKey: book, grade: l.grade, price: retail });
     // What this listing states helps the next ones of the same series or issue.
     if (l.year && derived.length === 0) {
       const k = issueKey(l);
@@ -299,7 +285,7 @@ function evaluateNew(row: SourceRow, usd: { price: number | null; priceNote: str
   return {
     outcome: status === "duplicate" ? "duplicate" : "ok",
     facts: { title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, grader: l.grader, grade: l.grade, label: l.label, keyIssue: l.keyIssue, slug: l.slug, era: l.era },
-    data: { status, problemsJson: "[]", duplicateStatus, duplicateOf, dedupeKey: key, auction: row.auction, retailPrice: retail, priceBasis, knowledgeJson: json(derived), title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, era: l.era, grader: l.grader, grade: l.grade, label: l.label, certNumber: l.certNumber, keyIssue: l.keyIssue, summary: l.summary, description: l.description, highlightsJson: json(l.highlights), attributesJson: json(l.attributes), tagsJson: json(l.tags), slug: l.slug },
+    data: { status, problemsJson: "[]", duplicateStatus, duplicateOf, dedupeKey: key, auction: row.auction, auctionEndsAt: row.auctionEndsAt ?? null, retailPrice: retail, priceBasis, knowledgeJson: json(derived), title: l.title, issue: l.issue, publisher: l.publisher, year: l.year, era: l.era, grader: l.grader, grade: l.grade, label: l.label, certNumber: l.certNumber, keyIssue: l.keyIssue, summary: l.summary, description: l.description, highlightsJson: json(l.highlights), attributesJson: json(l.attributes), tagsJson: json(l.tags), slug: l.slug },
   };
 }
 
@@ -360,8 +346,13 @@ export async function runImport(input: ImportInput): Promise<ImportRun> {
         if (existing.auction) {
           if (usd.price !== null && usd.price !== existing.sourcePrice) {
             changed = true;
-            Object.assign(data, { sourcePrice: usd.price, sourceAmount: row.price });
-            say("info", `${row.sourceId}: current bid ${money(existing.sourcePrice)} → ${money(usd.price)} (the suggested Buy It Now price was left as it is)`);
+            Object.assign(data, { sourcePrice: usd.price, sourceAmount: row.price, ...(existing.priceManual ? {} : { retailPrice: usd.price }) });
+            // The listing follows a higher bid at the source; it never drops below a bid placed on this site.
+            if (existing.product && !existing.priceManual && usd.price > existing.product.price) {
+              await db.product.updateMany({ where: { id: existing.product.id, saleType: "auction", price: { lt: usd.price } }, data: { price: usd.price } });
+              if (existing.product.status === "published") touchedSlugs.add(existing.product.slug);
+            }
+            say("info", `${row.sourceId}: current bid at the source ${money(existing.sourcePrice)} → ${money(usd.price)}`);
           }
         } else if (usd.price !== null && usd.price >= 100 && usd.price !== existing.sourcePrice) {
           changed = true;
@@ -684,6 +675,8 @@ export async function releaseItems(ids: string[]): Promise<ReleaseResult> {
         seoDescription: item.seoManual && item.seoDescription ? item.seoDescription : null,
         importSource: item.source,
         importFile: item.importFile,
+        saleType: item.auction ? "auction" : "fixed",
+        auctionEndsAt: item.auction ? item.auctionEndsAt : null,
         status: "published",
         publishedAt: new Date(),
         moderationNote: null,
@@ -766,8 +759,6 @@ export async function autoRelease(source: string, opts: { batch?: number; budget
           status: "pending_review",
           available: true,
           ...(settings["imports.autoReleaseHoldDuplicates"] ? { duplicateStatus: "unique" } : {}),
-          // (a product without a price note has a null basis, which a bare NOT would also exclude)
-          ...(settings["imports.autoReleaseHoldFallbackPrices"] ? { OR: [{ priceBasis: null }, { NOT: { priceBasis: { contains: "fallback rule" } } }] } : {}),
         },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: Math.min(plan.approve, batch),
