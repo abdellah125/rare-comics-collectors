@@ -9,6 +9,7 @@ import { GoogleTag } from "@/components/google-tag";
 import { JsonLd } from "@/components/json-ld";
 import { WelcomeOffer } from "@/components/welcome-offer";
 import { ChatWidget } from "@/components/chat-widget";
+import { JobBeacon } from "@/components/job-beacon";
 import { I18nProvider } from "@/components/i18n-provider";
 import { getDictionary, getEnabledLocales, getLocale } from "@/lib/i18n";
 import { INTL_LOCALE, isLocale } from "@/lib/i18n/config";
@@ -64,6 +65,7 @@ export async function SiteShell({ children, banner }: { children: ReactNode; ban
             <CartDrawer />
             <WelcomeOffer returningCustomer={returningCustomer} />
             <ChatWidget />
+            <JobBeacon />
           </CartProvider>
         </AuthProvider>
       </CurrencyProvider>
