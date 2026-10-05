@@ -11,6 +11,10 @@ import { driveJobsOnTraffic } from "@/lib/jobs/queue";
  * Storefront layout. Reads marketplace settings at request time so maintenance
  * mode, announcement bars and campaigns take effect immediately.
  */
+// Background jobs are drained after the response on serverless hosts; give that work room to
+// finish instead of the platform's short default, which cut releases off half-way.
+export const maxDuration = 60;
+
 export default async function SiteLayout({ children }: { children: ReactNode }) {
   await connection();
   driveJobsOnTraffic();

@@ -645,7 +645,8 @@ async function seedImportItems() {
  * are covered.
  */
 async function releaseApprovedOnce() {
-  const key = "imports.once.releaseApproved.2026-10-10";
+  // "-b": repeated once after the first attempt was cut off by the function time limit in production.
+  const key = "imports.once.releaseApproved.2026-10-10-b";
   if (await db.setting.findUnique({ where: { key } })) return;
   const cutoff = new Date();
   const waiting = await db.importItem.count({ where: { status: { in: ["approved", "ready"] }, reviewedAt: { lte: cutoff } } });

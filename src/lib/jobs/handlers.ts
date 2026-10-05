@@ -176,7 +176,10 @@ export function registerJobHandlers() {
     const { IMPORT_SOURCE } = await import("@/lib/imports/status");
     const cutoff = typeof payload.cutoff === "string" ? new Date(payload.cutoff) : new Date();
     const rounds = typeof payload.rounds === "number" ? payload.rounds : 0;
-    const r = await releaseApproved(IMPORT_SOURCE, cutoff);
+    // Batches while there is time; each batch is complete in itself, so a cut-off loses nothing.
+    const started = Date.now();
+    let r = await releaseApproved(IMPORT_SOURCE, cutoff);
+    while (r.remaining > 0 && r.released > 0 && Date.now() - started < 18_000) r = await releaseApproved(IMPORT_SOURCE, cutoff);
     // Photos that keep failing end up in Error after three tries, so this always finishes; the round cap is a backstop.
     if (r.remaining > 0 && rounds < 2_000) await enqueueJob("import_release_approved", { cutoff: cutoff.toISOString(), rounds: rounds + 1 }, { runAt: new Date(Date.now() + (r.released > 0 ? 3_000 : 60_000)), maxAttempts: 3 });
   });
@@ -186,8 +189,9 @@ export function registerJobHandlers() {
     const { autoRelease } = await import("@/lib/imports/pipeline");
     const { IMPORT_SOURCE } = await import("@/lib/imports/status");
     const r = await autoRelease(IMPORT_SOURCE);
+    // While there is work the next run is due at once: on a serverless host it happens on the next page view.
     const busy = r.enabled && r.releasedToday < r.perDay && (r.released > 0 || r.approved > 0 || r.waiting > 0);
-    await enqueueJob("import_auto_release", {}, { runAt: new Date(Date.now() + (busy ? 60_000 : 15 * 60_000)), dedupe: true, maxAttempts: 3 });
+    await enqueueJob("import_auto_release", {}, { runAt: new Date(Date.now() + (busy ? 5_000 : 15 * 60_000)), dedupe: true, maxAttempts: 3 });
   });
 
   // SEO recommendations for queue items the seed created without one.

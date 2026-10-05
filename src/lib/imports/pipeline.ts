@@ -699,42 +699,66 @@ export const AUTO_REVIEWER = "auto-release";
  * Every product still passes the same release check as a manual release. Possible duplicates and
  * auction prices from the fallback rule are left for a person unless the settings say otherwise.
  */
-export async function autoRelease(source: string, batch = 50): Promise<{ enabled: boolean; released: number; approved: number; releasedToday: number; perDay: number; waiting: number }> {
+export async function autoRelease(source: string, opts: { batch?: number; budgetMs?: number } = {}): Promise<{ enabled: boolean; released: number; approved: number; releasedToday: number; perDay: number; waiting: number }> {
   const settings = await getSettings();
   const perDay = settings["imports.autoReleasePerDay"];
   if (perDay <= 0) return { enabled: false, released: 0, approved: 0, releasedToday: 0, perDay: 0, waiting: 0 };
+  const batch = opts.batch ?? 20;
+  const budgetMs = opts.budgetMs ?? 18_000;
+  const started = Date.now();
   const since = utcDayStart();
-  const [releasedToday, readyCount, inPreparation] = await Promise.all([
-    db.importItem.count({ where: { source, status: "released", releasedAt: { gte: since } } }),
-    db.importItem.count({ where: { source, status: "ready" } }),
-    db.importItem.count({ where: { source, status: "approved" } }),
-  ]);
-  const plan = dailyPlan({ perDay, releasedToday, ready: readyCount, inPreparation, batch });
   let released = 0;
-  if (plan.release > 0) {
-    const ready = await db.importItem.findMany({ where: { source, status: "ready" }, orderBy: [{ reviewedAt: "asc" }, { id: "asc" }], take: plan.release, select: { id: true } });
-    released = (await releaseItems(ready.map((i) => i.id))).released;
-  }
   let approved = 0;
-  if (plan.approve > 0 && settings["imports.autoReleaseIncludePending"]) {
-    const pending = await db.importItem.findMany({
-      where: {
-        source,
-        status: "pending_review",
-        available: true,
-        ...(settings["imports.autoReleaseHoldDuplicates"] ? { duplicateStatus: "unique" } : {}),
-        // (a product without a price note has a null basis, which a bare NOT would also exclude)
-        ...(settings["imports.autoReleaseHoldFallbackPrices"] ? { OR: [{ priceBasis: null }, { NOT: { priceBasis: { contains: "fallback rule" } } }] } : {}),
-      },
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-      take: plan.approve,
-      select: { id: true },
-    });
-    if (pending.length > 0) approved = (await approveItems(pending.map((i) => i.id), AUTO_REVIEWER)).approved;
+  let releasedToday = 0;
+  // Small steps, repeated while there is time: a run that is cut off loses at most one step,
+  // and whatever it left half-done (approved but not yet checked) is picked up first next time.
+  for (let round = 0; round < 50; round++) {
+    const [today, readyCount, inPreparation] = await Promise.all([
+      db.importItem.count({ where: { source, status: "released", releasedAt: { gte: since } } }),
+      db.importItem.count({ where: { source, status: "ready" } }),
+      db.importItem.count({ where: { source, status: "approved" } }),
+    ]);
+    releasedToday = today;
+    const plan = dailyPlan({ perDay, releasedToday, ready: readyCount, inPreparation, batch });
+    if (plan.remaining === 0) break;
+    let progressed = 0;
+    if (inPreparation > 0) {
+      const done = await prepareItems({ limit: 10 });
+      progressed += done.ready + done.errors;
+    }
+    if (plan.release > 0) {
+      const ready = await db.importItem.findMany({ where: { source, status: "ready" }, orderBy: [{ reviewedAt: "asc" }, { id: "asc" }], take: plan.release, select: { id: true } });
+      const r = await releaseItems(ready.map((i) => i.id));
+      released += r.released;
+      releasedToday += r.released;
+      progressed += r.released + r.blocked;
+    }
+    if (Date.now() - started > budgetMs) break;
+    if (plan.approve > 0 && settings["imports.autoReleaseIncludePending"]) {
+      const pending = await db.importItem.findMany({
+        where: {
+          source,
+          status: "pending_review",
+          available: true,
+          ...(settings["imports.autoReleaseHoldDuplicates"] ? { duplicateStatus: "unique" } : {}),
+          // (a product without a price note has a null basis, which a bare NOT would also exclude)
+          ...(settings["imports.autoReleaseHoldFallbackPrices"] ? { OR: [{ priceBasis: null }, { NOT: { priceBasis: { contains: "fallback rule" } } }] } : {}),
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        take: Math.min(plan.approve, batch),
+        select: { id: true },
+      });
+      if (pending.length > 0) {
+        const done = await approveItems(pending.map((i) => i.id), AUTO_REVIEWER);
+        approved += done.approved;
+        progressed += done.approved;
+      }
+    }
+    if (progressed === 0 || Date.now() - started > budgetMs) break;
   }
   const waiting = await db.importItem.count({ where: { source, status: { in: ["ready", "approved"] } } });
-  if (released > 0 || approved > 0) console.log(`[auto-release] ${released} released (${releasedToday + released}/${perDay} today), ${approved} moved into preparation`);
-  return { enabled: true, released, approved, releasedToday: releasedToday + released, perDay, waiting };
+  if (released > 0 || approved > 0) console.log(`[auto-release] ${released} released (${releasedToday}/${perDay} today), ${approved} moved into preparation`);
+  return { enabled: true, released, approved, releasedToday, perDay, waiting };
 }
 
 /**
@@ -743,9 +767,9 @@ export async function autoRelease(source: string, batch = 50): Promise<{ enabled
  * release) and reports what is left, so a job can repeat it until nothing remains. Products
  * approved after the cutoff are not swept in; the same release check applies to each one.
  */
-export async function releaseApproved(source: string, cutoff: Date, batch = 50): Promise<{ released: number; blocked: number; preparing: number; remaining: number }> {
+export async function releaseApproved(source: string, cutoff: Date, batch = 25): Promise<{ released: number; blocked: number; preparing: number; remaining: number }> {
   const scope = { source, reviewedAt: { lte: cutoff } };
-  const approved = await db.importItem.findMany({ where: { ...scope, status: "approved" }, orderBy: { reviewedAt: "asc" }, take: 20, select: { id: true } });
+  const approved = await db.importItem.findMany({ where: { ...scope, status: "approved" }, orderBy: { reviewedAt: "asc" }, take: 10, select: { id: true } });
   if (approved.length > 0) await prepareItems({ ids: approved.map((i) => i.id), limit: approved.length });
   const ready = await db.importItem.findMany({ where: { ...scope, status: "ready" }, orderBy: [{ reviewedAt: "asc" }, { id: "asc" }], take: batch, select: { id: true } });
   const r = ready.length > 0 ? await releaseItems(ready.map((i) => i.id)) : { released: 0, blocked: 0 };

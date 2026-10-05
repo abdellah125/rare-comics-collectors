@@ -186,7 +186,7 @@ export async function releaseAllReadyAction(): Promise<ActionState> {
     const cutoff = new Date();
     const waiting = await db.importItem.count({ where: { source: IMPORT_SOURCE, status: { in: ["approved", "ready"] } } });
     if (waiting === 0) return failState("Nothing is approved. Approve products first.");
-    const r = await releaseApproved(IMPORT_SOURCE, cutoff, 100);
+    const r = await releaseApproved(IMPORT_SOURCE, cutoff, 60);
     if (r.remaining > 0) await enqueueJob("import_release_approved", { cutoff: cutoff.toISOString(), rounds: 0 }, { maxAttempts: 3 });
     await audit({ actor: actorOf(admin), action: "import.release", targetType: "import_item", summary: `Release all approved: ${r.released} released now, ${r.blocked} held back, ${r.remaining} continuing in the background` });
     refresh();

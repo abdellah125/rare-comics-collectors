@@ -15,6 +15,9 @@ export const metadata: Metadata = {
  * not re-run on client navigation; this layout only chooses whether to draw
  * the shell or the bare canvas used by the sign-in pages.
  */
+// Admin pages also drain the job queue after their response (see src/lib/jobs/queue.ts).
+export const maxDuration = 60;
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const { user, gate } = await adminAccessState();
   if (gate !== "ok" || !user) return <div className="flex min-h-screen flex-col bg-ink-50">{children}</div>;

@@ -118,7 +118,10 @@ export function driveJobsAfterResponse(): void {
   }
 }
 
-const STALE_LOCK_MS = 10 * 60_000;
+/** A job whose function was cut off stays "running"; after this long it is taken to be dead and picked up again. */
+const STALE_LOCK_MS = 3 * 60_000;
+/** One drain starts no new job after this long, so the last one still has time to finish inside the function's limit. */
+const DRAIN_BUDGET_MS = 25_000;
 
 /** Claims and runs due jobs. Safe to call concurrently: claiming is an atomic conditional update. */
 export async function processJobs(limit = 25): Promise<{ processed: number; failed: number }> {
@@ -136,7 +139,16 @@ export async function processJobs(limit = 25): Promise<{ processed: number; fail
     select: { id: true, type: true, payloadJson: true, attempts: true, maxAttempts: true, lockedAt: true },
   });
 
+  const started = Date.now();
   for (const job of due) {
+    if (Date.now() - started > DRAIN_BUDGET_MS) break; // the rest is due on the next drain
+    // Cut off (never reported back) as often as it may be tried: give up on this row. A recurring
+    // job is scheduled afresh by ensureRecurringJobs on the next drain.
+    if (job.lockedAt && job.attempts >= job.maxAttempts) {
+      await db.job.updateMany({ where: { id: job.id, lockedAt: job.lockedAt }, data: { status: "failed", lockedAt: null, lastError: "The job was cut off before it finished (function time limit) on every attempt." } });
+      failed += 1;
+      continue;
+    }
     const claimed = await db.job.updateMany({
       where: { id: job.id, lockedAt: job.lockedAt, status: { in: ["pending", "running"] } },
       data: { status: "running", lockedAt: new Date(), attempts: { increment: 1 } },
