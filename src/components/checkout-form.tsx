@@ -17,6 +17,7 @@ import type { Quote } from "@/lib/commerce/checkout";
 import type { Address } from "@/lib/commerce/pricing";
 import type { CountryOption } from "@/lib/commerce/countries";
 import { formatMoney } from "@/lib/money";
+import { NETWORK_WARNING } from "@/lib/crypto-payments/assets";
 
 type SavedAddress = Address & { id: string; label: string | null };
 
@@ -58,6 +59,9 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
   // PayPal invoice request. null = not edited yet: the field follows the contact and shipping details above.
   const [invoiceName, setInvoiceName] = useState<string | null>(null);
   const [paypalEmail, setPaypalEmail] = useState<string | null>(null);
+  // Crypto: nothing is preselected for the network when a coin has several, so it is always a deliberate choice.
+  const [coin, setCoin] = useState("");
+  const [network, setNetwork] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
@@ -104,6 +108,13 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
   const setBill = (patch: Partial<Address>) => setBilling((s) => ({ ...s, ...patch }));
 
   const byInvoice = providerId === "paypal";
+  const byCrypto = providerId === "crypto";
+  const cryptoOptions = quote?.crypto?.options ?? [];
+  const coins = cryptoOptions.filter((o, i, all) => all.findIndex((x) => x.coin === o.coin) === i);
+  const networks = cryptoOptions.filter((o) => o.coin === coin);
+  // A coin with one network needs no second choice; the pair is still sent, and checked, as a pair.
+  const chosenNetwork = networks.length === 1 ? networks[0].network : network;
+  const cryptoChoice = cryptoOptions.find((o) => o.coin === coin && o.network === chosenNetwork) ?? null;
   const invoice = {
     name: invoiceName ?? [shipping.firstName, shipping.lastName].filter(Boolean).join(" "),
     paypalEmail: paypalEmail ?? email,
@@ -129,6 +140,7 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
         couponCode,
         customerNote: note || undefined,
         invoice: byInvoice ? invoice : undefined,
+        crypto: byCrypto && cryptoChoice ? { coin: cryptoChoice.coin, network: cryptoChoice.network } : undefined,
         idempotencyKey: idemKey.current,
       });
     } catch {
@@ -225,7 +237,7 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
   }
 
   const good = quote?.lines.filter((l) => !l.problem) ?? [];
-  const canSubmit = Boolean(quote && !quoting && quote.warnings.length === 0 && good.length > 0 && providerId && (!quote.hasPhysical || quote.shipping));
+  const canSubmit = Boolean(quote && !quoting && quote.warnings.length === 0 && good.length > 0 && providerId && (!quote.hasPhysical || quote.shipping) && (!byCrypto || cryptoChoice));
 
   return (
     <form onSubmit={onSubmit} className="grid gap-10 lg:grid-cols-12 lg:gap-12" aria-busy={submitting}>
@@ -333,6 +345,7 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
                       {p.id === "stripe" && "Visa, Mastercard, Amex and more. You'll enter card details on the next step."}
                       {p.id === "paypal" && "Pay by PayPal invoice. Nothing is charged now: submit your details and we'll send you a PayPal invoice for the order total."}
                       {p.id === "bank_transfer" && `Your books are reserved for ${quote?.bankTransfer?.reserveHours ?? 48} hours while the wire arrives. Details below and in your confirmation email.`}
+                      {p.id === "crypto" && "Pay with USDT, Bitcoin, BNB, Ethereum or Litecoin from your own wallet or exchange. The exact amount and our address appear on the next step."}
                       {p.id === "test" && "Sandbox: no money moves."}
                     </span>
                   </span>
@@ -369,6 +382,74 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
                 <a href={whatsappChatUrl("Hello, I have a question about paying by PayPal invoice.")} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 underline-offset-2 hover:underline" data-testid="checkout-whatsapp">
                   Message us on WhatsApp ({INVOICE_WHATSAPP.display})
                 </a>
+              </p>
+            </div>
+          )}
+          {byCrypto && quote?.crypto && (
+            <div className="mt-4 rounded-lg border border-ink-200 bg-ink-50 p-4" data-testid="crypto-form">
+              <p className="text-sm font-semibold text-ink-950">Pay with cryptocurrency</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-ink-600">Your order is priced in US dollars and converted when you place it. The amount is then held for {quote.crypto.quoteMinutes} minutes.</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <SelectField
+                  label="Coin"
+                  name="crypto-coin"
+                  required
+                  value={coin}
+                  onChange={(e) => {
+                    setCoin(e.target.value);
+                    setNetwork("");
+                  }}
+                >
+                  <option value="">Choose a coin</option>
+                  {coins.map((o) => (
+                    <option key={o.coin} value={o.coin}>
+                      {o.coinName}
+                    </option>
+                  ))}
+                </SelectField>
+                {coin && networks.length > 1 && (
+                  <SelectField label="Network" name="crypto-network" required value={network} onChange={(e) => setNetwork(e.target.value)}>
+                    <option value="">Choose a network</option>
+                    {networks.map((o) => (
+                      <option key={o.network} value={o.network}>
+                        {o.networkLabel}
+                      </option>
+                    ))}
+                  </SelectField>
+                )}
+                {coin && networks.length === 1 && (
+                  <div>
+                    <p className="text-sm font-medium text-ink-800">Network</p>
+                    <p className="mt-1.5 flex h-11 items-center rounded-lg border border-ink-200 bg-white px-3.5 text-[15px] text-ink-900" data-testid="crypto-single-network">
+                      {networks[0].networkLabel}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {cryptoChoice && (
+                <dl className="mt-4 grid gap-2 rounded-lg border border-ink-200 bg-white p-4 text-sm" data-testid="crypto-estimate">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-ink-600">Order total</dt>
+                    <dd className="font-semibold tabular-nums text-ink-950">{formatMoney(quote.total, "USD")} USD</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-ink-600">You pay (approx.)</dt>
+                    <dd className="font-semibold tabular-nums text-ink-950">
+                      {cryptoChoice.estimate} {cryptoChoice.coin}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-ink-600">Network</dt>
+                    <dd className="font-semibold text-ink-950">{cryptoChoice.networkLabel}</dd>
+                  </div>
+                </dl>
+              )}
+              {cryptoChoice?.note && <p className="mt-3 rounded-lg border border-gold-400/50 bg-gold-400/10 px-3.5 py-2.5 text-[13px] leading-relaxed text-gold-800">{cryptoChoice.note}</p>}
+              <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-[13px] font-medium leading-relaxed text-rose-800" role="note">
+                {NETWORK_WARNING}
+              </p>
+              <p className="mt-3 text-[13px] leading-relaxed text-ink-600">
+                Placing the order fixes the exact amount and shows our address{cryptoChoice ? ` for ${cryptoChoice.coin} on ${cryptoChoice.networkLabel}` : ""}, with a QR code. {cryptoChoice && !cryptoChoice.automatic ? "After sending you will be asked for the transaction hash, which we verify on the blockchain. " : ""}Your order is confirmed once the network has confirmed the payment.
               </p>
             </div>
           )}
@@ -451,7 +532,13 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
             {quoteError && <p className="mt-3 text-sm text-rose-700">{quoteError}</p>}
 
             <button type="submit" disabled={!canSubmit || submitting} className={`${buttonStyles.primary} ${buttonSizes.lg} mt-6 w-full`}>
-              {byInvoice
+              {byCrypto
+                ? submitting
+                  ? "Placing order…"
+                  : cryptoChoice
+                    ? `Place order and pay with ${cryptoChoice.coin}`
+                    : "Choose a coin to continue"
+                : byInvoice
                 ? submitting
                   ? "Sending request…"
                   : quote

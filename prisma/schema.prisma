@@ -831,6 +831,7 @@ model Order {
   redemptions   CouponRedemption[]
   ledgerEntries LedgerEntry[]
   chargebacks   Chargeback[]
+  cryptoPayments CryptoPayment[]
 
   @@index([userId, placedAt])
   @@index([status])
@@ -916,11 +917,11 @@ model Payment {
   id                  String    @id @default(cuid())
   orderId             String
   order               Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  /// stripe | paypal | bank_transfer | test
+  /// stripe | paypal | bank_transfer | crypto | test
   provider            String
   providerRef         String?
   providerCustomerRef String?
-  /// card | paypal | bank_transfer | test
+  /// card | paypal | bank_transfer | crypto | test
   method              String?
   /// pending | requires_action | authorized | succeeded | failed | cancelled | refunded | partially_refunded
   status              String    @default("pending")
@@ -946,6 +947,58 @@ model Payment {
   @@index([orderId])
   @@index([provider, providerRef])
   @@index([status, createdAt])
+}
+
+/// A cryptocurrency payment for one order: what was quoted, where it must arrive and what the
+/// blockchain shows. Only public data is stored; the site never holds a private key.
+model CryptoPayment {
+  id                    String    @id @default(cuid())
+  orderId               String
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// the Payment row this settles
+  paymentId             String    @unique
+  /// USDT | BTC | BNB | ETH | LTC
+  coin                  String
+  /// BSC | ETHEREUM | SOLANA | TRON | BITCOIN | LITECOIN
+  network               String
+  /// receiving address shown to the buyer (copied from the configuration when the quote was made)
+  address               String
+  /// token contract or mint; null for a chain's own coin
+  contract              String?
+  decimals              Int
+  /// order total in US cents the quote was made for
+  usdCents              Int
+  /// US dollars per coin used for the quote, and where it came from
+  rate                  String
+  rateSource            String
+  /// amounts in the smallest on-chain unit, as decimal strings: the converted total, and the
+  /// total plus the two digits that tell this payment apart from others to the same address
+  baseAtomic            String
+  expectedAtomic        String
+  /// the amount as shown to the buyer, e.g. "1250.0037"
+  expectedDisplay       String
+  /// waiting | detected | confirming | paid | expired | underpaid | review
+  status                String    @default("waiting")
+  txHash                String?
+  /// who supplied the hash: chain (found by amount) | buyer | admin
+  txSource              String?
+  receivedAtomic        String?
+  confirmations         Int       @default(0)
+  requiredConfirmations Int
+  /// why staff need to look (late, order cancelled, wrong amount) or the last check problem
+  note                  String?
+  quoteCount            Int       @default(1)
+  detectedAt            DateTime?
+  paidAt                DateTime?
+  expiresAt             DateTime
+  lastCheckedAt         DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([network, txHash])
+  @@index([orderId])
+  @@index([status, expiresAt])
+  @@index([coin, network, status])
 }
 
 model Refund {

@@ -2,6 +2,8 @@ import Link from "@/components/link";
 import { notFound, redirect } from "next/navigation";
 import { BankDetails } from "@/components/bank-details";
 import { ClearCart } from "@/components/clear-cart";
+import { CryptoPayPanel } from "@/components/crypto-pay-panel";
+import { checkCryptoPayment, cryptoView } from "@/lib/crypto-payments/service";
 import { CheckIcon, ClockIcon } from "@/components/icons";
 import { PurchaseEvent } from "@/components/purchase-event";
 import { Container, buttonSizes, buttonStyles } from "@/components/ui";
@@ -25,12 +27,23 @@ export async function CheckoutOutcome({ number, expect }: { number: string; expe
   if (!number) redirect("/cart");
   const order = await db.order.findUnique({
     where: { number },
-    include: { items: true, payments: { orderBy: { createdAt: "desc" }, take: 1 } },
+    include: { items: true, payments: { orderBy: { createdAt: "desc" }, take: 1 }, cryptoPayments: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
   if (!order) notFound();
   const user = await getCurrentUser();
   const allowed = (user && order.userId === user.id) || (await hasRecentOrderCookie(number));
   if (!allowed) redirect(`/track-order?ref=${encodeURIComponent(number)}`);
+
+  // Crypto: look at the chain before rendering (the service limits how often), so a reload shows the latest state.
+  let cryptoRow = order.cryptoPayments[0] ?? null;
+  if (cryptoRow && order.status === "pending_payment") {
+    cryptoRow = (await checkCryptoPayment(cryptoRow.id)) ?? cryptoRow;
+    if (cryptoRow.status === "paid") {
+      const fresh = await db.order.findUnique({ where: { number }, select: { status: true, paymentStatus: true } });
+      if (fresh) Object.assign(order, fresh);
+    }
+  }
+  const crypto = cryptoRow ? await cryptoView(cryptoRow, order.status) : null;
 
   const failed = ["failed", "cancelled"].includes(order.status);
   if (failed && expect === "placed") redirect(`/checkout/failed?order=${encodeURIComponent(number)}`);
@@ -49,17 +62,21 @@ export async function CheckoutOutcome({ number, expect }: { number: string; expe
   const invoiceAmount = formatMoney(order.presentmentTotal, order.currency);
 
   let title = "Payment processing";
-  if (failed) title = invoice && !paid ? "Order request cancelled" : "Payment didn’t go through";
+  if (failed) title = (invoice && !paid) || cryptoRow ? (cryptoRow ? "Order cancelled" : "Order request cancelled") : "Payment didn’t go through";
   else if (paid) title = "Order placed";
   else if (invoice) title = invoiceSent ? "Your PayPal invoice has been sent" : "Request received — your PayPal invoice is on its way";
   else if (bank) title = "Order reserved — awaiting your transfer";
+  else if (crypto) title = crypto.status === "waiting" || crypto.status === "expired" ? `Send your ${crypto.coin} payment` : crypto.status === "underpaid" || crypto.status === "review" ? "Payment received — being checked" : "Payment found — confirming";
 
   let body: string;
   if (failed && invoice && !paid) body = `This PayPal invoice request was cancelled${order.cancelReason ? ` (${order.cancelReason})` : ""}. Nothing was charged and the items have been returned to stock.`;
+  else if (failed && cryptoRow) body = `This order was cancelled${order.cancelReason ? ` (${order.cancelReason})` : ""} and the items have been returned to stock. If you did send a payment, do not send it again: contact us with the transaction hash and we will sort it out.`;
   else if (failed) body = message ?? "Your card wasn’t charged and the items have been returned to stock. You can try again from your cart.";
   else if (paid) body = `Thank you. A confirmation is on its way to ${order.email}. Books are pulled, photographed and double-boxed within one business day.`;
   else if (invoice && invoiceSent) body = `We sent a PayPal invoice for ${invoiceAmount} to ${order.paypalEmail}. Open it from PayPal’s email or from your PayPal account to pay. Your order is confirmed once the invoice is paid.`;
   else if (invoice) body = `We have received your order and payment request. We will contact you and send a PayPal invoice for ${invoiceAmount} to ${order.paypalEmail}. Nothing has been charged: your order is confirmed once that invoice is paid. Your books are reserved for ${holdLabel(settings["payments.paypal.invoiceHoldHours"])}.`;
+  else if (crypto && (crypto.status === "underpaid" || crypto.status === "review")) body = "Your books stay reserved while a member of our team checks the payment. Nothing more is needed from you right now.";
+  else if (crypto) body = `Your books are reserved while you pay. Send the exact amount below to our ${crypto.coin} address on ${crypto.networkLabel}. Your order is confirmed once the blockchain has confirmed the payment; the details are also in your email.`;
   else if (bank) body = `Your books are reserved for ${settings["commerce.autoCancelUnpaidHours"]} hours. Wire the order total using the details below — they are also in your confirmation email.`;
   else body = "We’re waiting for the payment provider to confirm. This page updates once it clears — you’ll also get an email.";
 
@@ -79,7 +96,9 @@ export async function CheckoutOutcome({ number, expect }: { number: string; expe
           : "PayPal"
         : payment.provider === "bank_transfer"
           ? "Bank transfer"
-          : "Test payment";
+          : payment.provider === "crypto"
+            ? `${cryptoRow?.coin ?? "Crypto"}${crypto ? ` · ${crypto.networkShort}` : ""}${paid ? " — confirmed on chain" : failed ? "" : " — not yet confirmed"}`
+            : "Test payment";
 
   return (
     <Container className="py-12 lg:py-16">
@@ -113,6 +132,7 @@ export async function CheckoutOutcome({ number, expect }: { number: string; expe
             </a>
           </div>
         )}
+        {crypto && awaiting && <CryptoPayPanel orderNumber={order.number} initial={crypto} />}
         {bank && awaiting && (
           <div className="mx-auto mt-6 max-w-md rounded-xl border border-gold-400/50 bg-gold-400/10 p-5 text-left">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold-800">Wire details</p>

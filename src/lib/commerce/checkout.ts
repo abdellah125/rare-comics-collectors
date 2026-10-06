@@ -20,6 +20,8 @@ import { queueRawEmail, queueTemplateEmail } from "@/lib/mail";
 import { notifyAdmins } from "@/lib/notifications";
 import { INVOICE_WHATSAPP, holdLabel, parseInvoiceRequest, type InvoiceRequest } from "@/lib/payments/paypal-invoice";
 import { zId } from "@/lib/validation";
+import { getAsset } from "@/lib/crypto-payments/assets";
+import { cryptoOptions, type CryptoOption } from "@/lib/crypto-payments/service";
 
 export const CartLineSchema = z.object({
   kind: z.enum(["comic", "service"]),
@@ -72,6 +74,8 @@ export type Quote = {
   providers: ProviderStatus[];
   /** Wire details when bank transfer is one of the offered methods. */
   bankTransfer: { lines: BankTransferLine[]; note: string; reserveHours: number } | null;
+  /** Coins and networks on offer when crypto is one of the methods, with approximate amounts. */
+  crypto: { options: CryptoOption[]; quoteMinutes: number } | null;
   warnings: string[];
 };
 
@@ -161,8 +165,14 @@ export async function quoteCheckout(input: z.infer<typeof QuoteSchema>): Promise
   const tax = await taxFor({ countryCode, region: input.region ?? null }, Math.max(0, subtotal - discount), shippingTotal);
   const total = Math.max(0, subtotal - discount) + shippingTotal + (tax.inclusive ? 0 : tax.amount);
   const presentmentTotal = currency.isBase ? total : convertFromBase(total, currency);
-  const providers = await availableProviders({ currency: currency.code, countryCode, amountMinor: presentmentTotal });
+  let providers = await availableProviders({ currency: currency.code, countryCode, amountMinor: presentmentTotal });
   const bank = providers.some((p) => p.id === "bank_transfer") ? bankTransferDetails(settings) : null;
+  // Crypto is offered only while there is a trustworthy price to convert the total with.
+  let cryptoChoices: CryptoOption[] = [];
+  if (providers.some((p) => p.id === "crypto")) {
+    cryptoChoices = total > 0 ? await cryptoOptions(total).catch(() => []) : [];
+    if (cryptoChoices.length === 0) providers = providers.filter((p) => p.id !== "crypto");
+  }
 
   return {
     lines,
@@ -180,6 +190,7 @@ export async function quoteCheckout(input: z.infer<typeof QuoteSchema>): Promise
     hasPhysical,
     providers,
     bankTransfer: bank ? { lines: bank.lines, note: bank.note, reserveHours: bank.reserveHours } : null,
+    crypto: cryptoChoices.length > 0 ? { options: cryptoChoices, quoteMinutes: settings["payments.crypto.quoteMinutes"] } : null,
     warnings,
   };
 }
@@ -197,6 +208,8 @@ export const PlaceOrderSchema = z.object({
   customerNote: z.string().trim().max(1000).optional(),
   /** PayPal invoice request details; required (and validated) when the provider is PayPal. */
   invoice: z.object({ name: z.string().max(200), paypalEmail: z.string().max(300) }).optional(),
+  /** Coin and network; required (and validated against the configuration) when the provider is crypto. */
+  crypto: z.object({ coin: z.string().max(12), network: z.string().max(20) }).optional(),
   idempotencyKey: zId,
   simulate: z.string().max(20).optional(),
 });
@@ -298,6 +311,11 @@ export async function placeOrder(
       if (!parsed.ok) return fail(parsed.message, parsed.field);
       invoice = parsed.value;
     }
+
+    // Crypto: the exact coin and network must exist together. An unknown pair is refused, never replaced.
+    const cryptoAsset = provider.id === "crypto" ? getAsset(input.crypto?.coin, input.crypto?.network) : null;
+    if (provider.id === "crypto" && !cryptoAsset) return fail("Choose a cryptocurrency and a network.", "crypto");
+    if (cryptoAsset && !quote.crypto?.options.some((o) => o.coin === cryptoAsset.coin && o.network === cryptoAsset.network)) return fail(`${cryptoAsset.coin} on ${cryptoAsset.networkLabel} is not available right now. Choose another coin or network.`, "crypto");
 
     const [priorOrders, recentFailures] = await Promise.all([
       ctx.userId ? db.order.count({ where: { userId: ctx.userId, paymentStatus: "paid" } }) : db.order.count({ where: { email: input.email, paymentStatus: "paid" } }),
@@ -417,7 +435,7 @@ export async function placeOrder(
         description: `${settings["marketplace.name"]} order ${order.number}`,
         returnUrl: `${env.siteUrl}/checkout/return?order=${order.number}&provider=${provider.id}`,
         cancelUrl: `${env.siteUrl}/checkout/return?order=${order.number}&provider=${provider.id}&cancelled=1`,
-        metadata: { simulate: input.simulate ?? "" },
+        metadata: { simulate: input.simulate ?? "", ...(cryptoAsset ? { coin: cryptoAsset.coin, network: cryptoAsset.network } : {}) },
         idempotencyKey: `pay_${input.idempotencyKey}`,
       });
     } catch (err) {
@@ -469,6 +487,9 @@ export async function placeOrder(
         ].join("\n"),
         meta: { orderId: order.id, kind: "invoice_request" },
       });
+    } else if (intent.kind === "instructions" && cryptoAsset) {
+      await addOrderEvent(db, order.id, "payment.awaiting", `Awaiting crypto payment: ${cryptoAsset.coin} on ${cryptoAsset.networkLabel}`);
+      await queueTemplateEmail("crypto_payment_instructions", input.email, { name: input.shippingAddress.firstName, orderNumber: order.number, total: `${formatMoney(quote.total, "USD")} USD`, instructions: intent.instructions }, { userId: ctx.userId });
     } else if (intent.kind === "instructions") {
       await addOrderEvent(db, order.id, "payment.awaiting", `Awaiting ${provider.displayName}`);
       await queueTemplateEmail("order_awaiting_payment", input.email, {

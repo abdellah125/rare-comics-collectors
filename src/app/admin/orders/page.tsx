@@ -93,6 +93,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
             <option value="stripe">Stripe</option>
             <option value="paypal">PayPal</option>
             <option value="bank_transfer">Bank transfer</option>
+            <option value="crypto">Crypto</option>
             <option value="test">Test</option>
           </select>
         </Field>

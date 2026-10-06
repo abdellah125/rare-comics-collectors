@@ -75,6 +75,13 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
           </p>
         </Panel>
       )}
+      {order.status === "pending_payment" && payment?.provider === "crypto" && (
+        <Panel tone="muted" title="Awaiting your crypto payment" description="The address, the exact amount and the live status of the payment are on the payment page.">
+          <Link href={`/checkout/complete?order=${order.number}`} className="text-sm font-semibold text-brand-700 underline-offset-4 hover:underline">
+            Open the payment page
+          </Link>
+        </Panel>
+      )}
       {order.status === "pending_payment" && payment?.provider === "bank_transfer" && (
         <Panel tone="muted" title="Awaiting your bank transfer" description="Wire the order total using these details. The reservation is released if the funds don't arrive in time.">
           <BankDetails {...(({ lines, note }) => ({ lines, note }))(bankTransferDetails(settings, order.number))} compact />
@@ -159,7 +166,7 @@ export default async function OrderDetailPage({ params }: PageProps<"/account/or
           <Panel title="Payment">
             <DescriptionList
               items={[
-                { label: "Method", value: payment ? (payment.provider === "stripe" ? `Card${payment.cardLast4 ? ` •••• ${payment.cardLast4}` : ""}` : payment.provider === "paypal" ? (order.invoiceStatus ? "PayPal invoice" : "PayPal") : payment.provider === "bank_transfer" ? "Bank transfer" : "Test") : "—" },
+                { label: "Method", value: payment ? (payment.provider === "stripe" ? `Card${payment.cardLast4 ? ` •••• ${payment.cardLast4}` : ""}` : payment.provider === "paypal" ? (order.invoiceStatus ? "PayPal invoice" : "PayPal") : payment.provider === "bank_transfer" ? "Bank transfer" : payment.provider === "crypto" ? "Cryptocurrency" : "Test") : "—" },
                 { label: "Status", value: statusLabel(order.paymentStatus) },
                 ...(payment?.refundedAmount ? [{ label: "Refunded", value: formatMoney(payment.refundedAmount) }] : []),
               ]}

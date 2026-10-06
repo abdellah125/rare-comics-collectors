@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { CryptoHealth } from "@/components/admin/crypto-health";
 import type { Metadata } from "next";
 import { ActionForm } from "@/components/admin/action-form";
 import { AdminPageHeader, Card, Field, Tone, adminInput, adminTextarea } from "@/components/admin/ui";
@@ -27,10 +29,19 @@ export default async function AdminPaymentProvidersPage() {
               <label className="flex items-center gap-2 text-[13px] text-ink-800">
                 <input type="checkbox" name="enabled" defaultChecked={p.enabled} className="h-4 w-4 rounded border-ink-300 accent-brand-600" /> Offer at checkout
               </label>
-              {p.id !== "test" && (
+              {p.id !== "test" && p.id !== "crypto" && (
                 <Field label="Currencies (ISO codes)" hint="Buyers paying in other currencies won't see this method.">
                   <input name="currencies" defaultValue={p.currencies.join(", ")} className={adminInput} />
                 </Field>
+              )}
+              {p.id === "crypto" && (
+                <div className="rounded-lg border border-ink-200 bg-ink-50 p-3">
+                  <p className="mb-2 text-[13px] font-semibold text-ink-950">Coins, addresses and blockchain access</p>
+                  <Suspense fallback={<p className="text-[13px] text-ink-600">Checking the blockchain APIs…</p>}>
+                    <CryptoHealth />
+                  </Suspense>
+                  <p className="mt-2 text-[12px] text-ink-600">Addresses are set in the code (src/lib/crypto-payments/assets.ts), not here, so they cannot be changed from a browser. The site holds no private keys.</p>
+                </div>
               )}
               {p.id === "bank_transfer" && (
                 <>

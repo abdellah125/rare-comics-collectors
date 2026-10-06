@@ -4,8 +4,8 @@
  * so adding a gateway means adding one file under providers/ and registering
  * it in registry.ts.
  */
-export type PaymentProviderId = "stripe" | "paypal" | "bank_transfer" | "test";
-export type PaymentMethodKind = "card" | "paypal" | "bank_transfer" | "test";
+export type PaymentProviderId = "stripe" | "paypal" | "bank_transfer" | "crypto" | "test";
+export type PaymentMethodKind = "card" | "paypal" | "bank_transfer" | "crypto" | "test";
 
 export type PaymentIntentInput = {
   orderId: string;

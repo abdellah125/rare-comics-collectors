@@ -79,6 +79,9 @@ export const settingDefaults = {
   "payments.paypal.enabled": true,
   /** How long a PayPal invoice request holds the stock while the invoice is sent and paid. */
   "payments.paypal.invoiceHoldHours": 168,
+  "payments.crypto.enabled": true,
+  /** How long a quoted crypto amount is held at its rate (10–60). */
+  "payments.crypto.quoteMinutes": 30,
   "payments.bank_transfer.enabled": true,
   "payments.bank_transfer.minAmount": 500_000,
   // Bank wire details: entered under Finance › Payment providers; BANK_* environment

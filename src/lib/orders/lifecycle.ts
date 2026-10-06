@@ -229,11 +229,20 @@ export async function expireUnpaidOrders(): Promise<number> {
         { invoiceStatus: { not: null }, placedAt: { lt: invoiceCutoff } },
       ],
     },
-    select: { id: true, placedAt: true, invoiceStatus: true, payments: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } } },
+    select: { id: true, placedAt: true, invoiceStatus: true, payments: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, provider: true } } },
   });
   const { reconcilePayment } = await import("@/lib/payments/reconcile");
   for (const o of stale) {
     try {
+      // Crypto: a transfer that is detected, confirming or waiting for staff holds the order, and so
+      // does the window in which the buyer can ask for a new quote. The chain is checked once more first.
+      const crypto = o.payments[0]?.provider === "crypto";
+      if (crypto) {
+        const { cryptoHoldsOrder } = await import("@/lib/crypto-payments/service");
+        if (await cryptoHoldsOrder(o.id)) continue;
+        await cancelOrder(o.id, "The crypto payment was not received in time", { id: null, type: "job" });
+        continue;
+      }
       // A buyer who paid at the gateway but never came back must not lose the order: ask first.
       if (o.payments[0] && (await reconcilePayment(o.payments[0].id, { id: null, type: "job" })) === "succeeded") continue;
       await cancelOrder(o.id, o.invoiceStatus ? "The PayPal invoice was not paid in time" : o.placedAt < offlineCutoff ? "Payment was not received in time" : "Payment was not completed and the reservation expired", { id: null, type: "job" });

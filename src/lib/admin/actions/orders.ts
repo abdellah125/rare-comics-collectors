@@ -246,3 +246,51 @@ export async function setRiskAction(_prev: ActionState | undefined, formData: Fo
     return okState(undefined, "Risk score saved.");
   });
 }
+
+/* ------------------------------------------------------------ crypto payments */
+
+/** Staff ask the blockchain about an order's crypto payment right now. It only ever reports what the chain shows. */
+export async function checkCryptoPaymentAction(orderId: string): Promise<ActionState> {
+  return runAdmin("orders.manage", async (admin) => {
+    const row = await db.cryptoPayment.findFirst({ where: { orderId }, orderBy: { createdAt: "desc" } });
+    if (!row) return failState("This order has no crypto payment.");
+    const { checkCryptoPayment } = await import("@/lib/crypto-payments/service");
+    const fresh = await checkCryptoPayment(row.id, { force: true, actor: { id: admin.id, type: "admin" } });
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath("/admin/orders");
+    const s = fresh?.status ?? row.status;
+    if (s === "paid") return okState(undefined, "The payment is confirmed on chain and the order is paid.");
+    if (s === "detected" || s === "confirming") return okState(undefined, `Transaction found: ${fresh?.confirmations ?? 0} of ${row.requiredConfirmations} confirmations.`);
+    if (s === "review" || s === "underpaid") return okState(undefined, "A transfer was found but needs your decision: see the note on the crypto payment.");
+    return okState(undefined, "No matching transfer on the blockchain yet.");
+  });
+}
+
+/** Staff point at the transaction that paid an order (for example from the wallet's history). It is verified on chain like a buyer's. */
+export async function attachCryptoTxAction(orderId: string, hash?: string): Promise<ActionState> {
+  return runAdmin("orders.manage", async (admin) => {
+    const row = await db.cryptoPayment.findFirst({ where: { orderId }, orderBy: { createdAt: "desc" } });
+    if (!row) return failState("This order has no crypto payment.");
+    if (!hash?.trim()) return failState("Enter the transaction hash.");
+    const { submitTxHash } = await import("@/lib/crypto-payments/service");
+    const res = await submitTxHash(row.id, hash, "admin", { id: admin.id, type: "admin" });
+    if (!res.ok) return failState(res.message);
+    await audit({ actor: actorOf(admin), action: "order.crypto_tx_attached", targetType: "order", targetId: orderId, summary: `Crypto transaction ${res.payment.txHash} attached (${res.payment.status})` });
+    revalidatePath(`/admin/orders/${orderId}`);
+    return okState(undefined, res.payment.status === "paid" ? "Verified on chain: the order is paid." : `Transaction found on chain. Status: ${res.payment.status}.`);
+  });
+}
+
+/**
+ * Finance accepts a crypto payment the automatic rules did not settle (late, short, over, or
+ * the blockchain API could not be reached): the person has looked at the wallet and takes the
+ * decision. Recorded in the audit log with their name and the reason they give.
+ */
+export async function markCryptoPaidAction(orderId: string, reason?: string): Promise<ActionState> {
+  const row = await db.cryptoPayment.findFirst({ where: { orderId }, orderBy: { createdAt: "desc" } });
+  if (!row) return failState("This order has no crypto payment.");
+  if (!row.txHash && !reason?.trim()) return failState("Enter the transaction hash you checked in your wallet, or the reason this order is accepted without one.");
+  const res = await markPaidManuallyAction(orderId, `crypto ${row.txHash ? `tx ${row.txHash}` : "accepted by hand"}${reason?.trim() ? ` — ${reason.trim()}` : ""}`);
+  if (res.ok) await db.cryptoPayment.update({ where: { id: row.id }, data: { status: "paid", paidAt: new Date(), note: `Accepted by staff${reason?.trim() ? `: ${reason.trim()}` : ""}` } });
+  return res;
+}

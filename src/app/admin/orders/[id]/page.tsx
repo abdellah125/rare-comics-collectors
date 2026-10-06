@@ -10,6 +10,9 @@ import { CaseThread } from "@/components/account/case-thread";
 import { ShipForm } from "@/components/seller/ship-form";
 import { ShipmentStatusButtons } from "@/components/seller/shipment-status-buttons";
 import { requireAdmin, can } from "@/lib/auth/session";
+import { attachCryptoTxAction, checkCryptoPaymentAction, markCryptoPaidAction } from "@/lib/admin/actions/orders";
+import { getAsset } from "@/lib/crypto-payments/assets";
+import { groupDecimal, receivedDecimal } from "@/lib/crypto-payments/amounts";
 import { addOrderNoteAction, adminShipAction, adminShipmentStatusAction, cancelOrderAdminAction, completeManualRefundAction, markPaidManuallyAction, reconcilePaymentAction, resendConfirmationAction, setInvoiceStatusAction, setOrderStatusAction, setRiskAction } from "@/lib/admin/actions/orders";
 import { adminCaseMessageAction } from "@/lib/admin/actions/cases";
 import { db } from "@/lib/db";
@@ -42,6 +45,8 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
     ...order.disputes.map(async (d) => ({ kind: "dispute" as const, id: d.id, title: `Dispute — ${statusLabel(d.reason)}`, status: d.status, messages: await caseMessages("dispute", d.id, { includeInternal: true }) })),
     ...order.returns.map(async (r) => ({ kind: "return" as const, id: r.id, title: `Return — ${statusLabel(r.reason)} (qty ${r.qty})`, status: r.status, messages: await caseMessages("return", r.id, { includeInternal: true }) })),
   ]);
+  const crypto = await db.cryptoPayment.findFirst({ where: { orderId: id }, orderBy: { createdAt: "desc" } });
+  const cryptoAsset = crypto ? getAsset(crypto.coin, crypto.network) : null;
   const wire = order.payments.some((p) => p.provider === "bank_transfer") ? bankTransferDetails(await getSettings(), order.number) : null;
   // Invoice requests have no gateway record to verify: staff settle them by hand.
   const gatewayOrder = order.payments.some((p) => ["paypal", "stripe"].includes(p.provider) && !isInvoiceRef(p.providerRef));
@@ -154,6 +159,33 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
             </Card>
           )}
 
+          {crypto && (
+            <Card title="Crypto payment" description="The buyer pays to your wallet. The site reads the blockchain and marks the order paid once the transfer has enough confirmations; nothing the buyer says is taken on trust.">
+              <Kv
+                items={[
+                  { label: "Status", value: <Tone tone={crypto.status === "paid" ? "success" : ["review", "underpaid"].includes(crypto.status) ? "danger" : crypto.status === "expired" ? "neutral" : "warning"}>{{ waiting: "Waiting for payment", detected: "Payment detected", confirming: "Confirming", paid: "Paid", expired: "Quote expired", underpaid: "Underpaid: needs review", review: "Needs review" }[crypto.status] ?? crypto.status}</Tone> },
+                  { label: "Coin and network", value: `${crypto.coin} · ${cryptoAsset?.networkLabel ?? crypto.network}` },
+                  { label: "Expected amount", value: <span className="font-mono">{groupDecimal(crypto.expectedDisplay)} {crypto.coin}</span> },
+                  { label: "Order total quoted", value: `${formatMoney(crypto.usdCents, "USD")} at ${crypto.rate} USD per ${crypto.coin} (${crypto.rateSource})` },
+                  { label: "Receiving address", value: <span className="break-all font-mono text-[12px]">{crypto.address}</span> },
+                  { label: "Transaction hash", value: crypto.txHash ? (cryptoAsset ? <a href={`${cryptoAsset.explorerTx}${crypto.txHash}`} target="_blank" rel="noopener noreferrer" className="break-all font-mono text-[12px] text-brand-700 underline">{crypto.txHash}</a> : <span className="break-all font-mono text-[12px]">{crypto.txHash}</span>) : "—" },
+                  ...(crypto.receivedAtomic ? [{ label: "Received", value: `${receivedDecimal(BigInt(crypto.receivedAtomic), crypto.decimals, 2)} ${crypto.coin}${crypto.txSource ? ` · found by ${crypto.txSource === "chain" ? "amount on chain" : `the ${crypto.txSource}'s hash`}` : ""}` }] : []),
+                  { label: "Confirmations", value: `${crypto.confirmations} of ${crypto.requiredConfirmations} required` },
+                  { label: "Quoted", value: `${formatDateTime(crypto.createdAt)}${crypto.quoteCount > 1 ? ` · re-quoted ${crypto.quoteCount - 1}×` : ""}` },
+                  { label: "Quote expires", value: formatDateTime(crypto.expiresAt) },
+                  ...(crypto.paidAt ? [{ label: "Paid", value: formatDateTime(crypto.paidAt) }] : []),
+                ]}
+              />
+              {crypto.note && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[13px] text-rose-800">{crypto.note}</p>}
+              {crypto.status !== "paid" && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {manage && <ConfirmButton label="Check the blockchain now" message="Looks for this payment on the blockchain. If it is there with enough confirmations and inside the quote window, the order becomes paid." action={checkCryptoPaymentAction.bind(null, order.id)} size="sm" />}
+                  {manage && !crypto.txHash && <ConfirmButton label="Attach transaction hash" message="Enter the hash of the transaction that paid this order. It is verified on the blockchain: it must pay this address, in this coin, after the order was placed." action={attachCryptoTxAction.bind(null, order.id)} withReason reasonLabel="Transaction hash" size="sm" />}
+                  {finance && order.status !== "cancelled" && <ConfirmButton label="Accept and mark paid by hand" message="Only do this after you have seen the money in your own wallet. It overrides the automatic blockchain check: the order becomes paid and the buyer gets the confirmation. Your name and the note below are recorded." action={markCryptoPaidAction.bind(null, order.id)} withReason reasonLabel={crypto.txHash ? "Why it is accepted" : "Transaction hash you checked, and why"} variant={["review", "underpaid"].includes(crypto.status) ? "primary" : "outline"} size="sm" />}
+                </div>
+              )}
+            </Card>
+          )}
           {order.invoiceStatus && (
             <Card title="PayPal invoice request" description="The buyer chose PayPal and was not charged. Send an invoice for the amount below from your PayPal account, then record each step here. The order becomes paid only when you mark the invoice as paid.">
               <Kv

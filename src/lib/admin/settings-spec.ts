@@ -29,6 +29,7 @@ export const SETTING_GROUPS: SettingGroup[] = [
     fields: [
       { key: "commerce.guestCheckout", label: "Allow guest checkout", kind: "bool" },
       { key: "commerce.autoCancelUnpaidHours", label: "Cancel unpaid orders after (hours)", kind: "number", min: 1, max: 720 },
+      { key: "payments.crypto.quoteMinutes", label: "Hold a crypto quote for (minutes)", kind: "number", min: 10, max: 60, hint: "The amount a buyer is asked to send stays fixed this long. After that they can ask for a new amount at the current rate." },
       { key: "payments.paypal.invoiceHoldHours", label: "Hold PayPal invoice requests for (hours)", kind: "number", min: 1, max: 1440, hint: "Stock stays reserved this long while the PayPal invoice is sent and paid; then the request is cancelled." },
       { key: "commerce.autoCompleteDays", label: "Auto-complete delivered orders after (days)", kind: "number", min: 1, max: 90 },
       { key: "commerce.returnWindowDays", label: "Return window (days)", kind: "number", min: 0, max: 365 },

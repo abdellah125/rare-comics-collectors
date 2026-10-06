@@ -105,6 +105,14 @@ export function registerJobHandlers() {
     await enqueueJob("catalog_release", {}, { runAt: nextReleaseRun(), dedupe: true });
   });
 
+  // Every two minutes while the queue is being driven: look at the blockchain for every open crypto
+  // payment, so an order is settled even when the buyer has closed the payment page.
+  registerJobHandler("crypto_check", async () => {
+    const { sweepCryptoPayments } = await import("@/lib/crypto-payments/service");
+    await sweepCryptoPayments();
+    await enqueueJob("crypto_check", {}, { runAt: new Date(Date.now() + 2 * 60_000), dedupe: true });
+  });
+
   // Every 30 minutes: book gateway payments that the return leg or a webhook missed (PayPal captures, Stripe intents).
   registerJobHandler("reconcile_payments", async () => {
     const { reconcileRecentPayments } = await import("@/lib/payments/reconcile");
@@ -258,6 +266,7 @@ export async function ensureRecurringJobs() {
   await enqueueJob("indexnow_sync", {}, { dedupe: true });
   await enqueueJob("catalog_release", {}, { dedupe: true });
   await enqueueJob("reconcile_payments", {}, { dedupe: true });
+  await enqueueJob("crypto_check", {}, { dedupe: true });
   await enqueueJob("seo_sync", {}, { dedupe: true });
   await enqueueJob("import_sync", {}, { dedupe: true });
   await enqueueJob("import_auto_release", {}, { dedupe: true });

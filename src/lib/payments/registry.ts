@@ -2,6 +2,7 @@ import "server-only";
 import { env } from "@/lib/env";
 import { getSettings, type Settings } from "@/lib/settings";
 import { bankTransferProvider } from "@/lib/payments/providers/bank-transfer";
+import { cryptoProvider } from "@/lib/payments/providers/crypto";
 import { paypalProvider } from "@/lib/payments/providers/paypal";
 import { stripeProvider } from "@/lib/payments/providers/stripe";
 import { testProvider } from "@/lib/payments/providers/test";
@@ -11,6 +12,7 @@ const PROVIDERS: Record<PaymentProviderId, PaymentProvider> = {
   stripe: stripeProvider,
   paypal: paypalProvider,
   bank_transfer: bankTransferProvider,
+  crypto: cryptoProvider,
   test: testProvider,
 };
 
@@ -44,6 +46,7 @@ export async function providerStatuses(): Promise<ProviderStatus[]> {
     let note: string | null = null;
     if (id === "stripe" && !p.isConfigured()) note = "Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in the environment.";
     if (id === "paypal") note = "PayPal invoice requests: the buyer is not charged at checkout. They leave their name and PayPal email, you send the invoice from PayPal and mark the order paid once it is settled.";
+    if (id === "crypto") note = "Buyers pay to your own wallets (USDT, BTC, BNB, ETH, LTC). The site holds no keys: it reads the blockchain and marks an order paid once the transfer is confirmed. Orders are priced in US dollars and converted when the order is placed.";
     if (id === "test") note = env.isProd ? "Sandbox gateway — keep disabled in production." : "Sandbox gateway for local testing; never charges.";
     return {
       id,
@@ -51,7 +54,8 @@ export async function providerStatuses(): Promise<ProviderStatus[]> {
       method: p.method,
       configured: p.isConfigured(),
       enabled: Boolean(settings[enabledKey(id)]),
-      currencies: id === "test" ? ["*"] : currencies,
+      // Crypto is quoted from the US-dollar total, so the currency the buyer browses in does not matter.
+      currencies: id === "test" || id === "crypto" ? ["*"] : currencies,
       minAmount: id === "bank_transfer" ? settings["payments.bank_transfer.minAmount"] : 0,
       note,
     };

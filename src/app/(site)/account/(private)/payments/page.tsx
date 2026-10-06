@@ -22,7 +22,7 @@ export default async function PaymentsPage() {
     db.payment.findMany({ where: { order: { userId: user.id } }, orderBy: { createdAt: "desc" }, take: 100, include: { order: { select: { number: true } } } }),
     db.refund.findMany({ where: { order: { userId: user.id } }, orderBy: { createdAt: "desc" }, take: 100, include: { order: { select: { number: true } } } }),
   ]);
-  const method = (p: (typeof payments)[number]) => (p.provider === "stripe" ? `Card${p.cardLast4 ? ` •••• ${p.cardLast4}` : ""}` : p.provider === "paypal" ? "PayPal" : p.provider === "bank_transfer" ? "Bank transfer" : "Test");
+  const method = (p: (typeof payments)[number]) => (p.provider === "stripe" ? `Card${p.cardLast4 ? ` •••• ${p.cardLast4}` : ""}` : p.provider === "paypal" ? "PayPal" : p.provider === "bank_transfer" ? "Bank transfer" : p.provider === "crypto" ? "Cryptocurrency" : "Test");
   return (
     <div className="grid gap-8">
       <PageHeader title="Payments & refunds" lead="We never store card numbers — payments are processed by the provider you chose at checkout." />

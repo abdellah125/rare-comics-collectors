@@ -25,6 +25,7 @@ export type JobType =
   | "indexnow_sync"
   | "catalog_release"
   | "reconcile_payments"
+  | "crypto_check"
   | "seo_sync"
   | "seo_audit"
   | "import_prepare"
