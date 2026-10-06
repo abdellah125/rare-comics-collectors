@@ -16,6 +16,9 @@ import { site } from "@/lib/site";
  * startup. Only the production deployment renders it; NEXT_PUBLIC_GOOGLE_TAG_ID
  * overrides the default id (public by nature — it is in every page source).
  *
+ * The Google Ads tag (AW-…, NEXT_PUBLIC_GOOGLE_ADS_TAG_ID overrides it) is a second
+ * `config` on the same queue: one copy of the library serves both ids.
+ *
  * Consent Mode v2: visitors in the EEA, UK and Switzerland start with storage
  * denied (cookieless pings until `gtag('consent', 'update', …)` grants it);
  * everywhere else analytics storage is on. Defaults must precede `config`.
@@ -31,6 +34,8 @@ export function GoogleTag() {
   const id = (process.env.NEXT_PUBLIC_GOOGLE_TAG_ID || site.googleTagId).trim();
   const isProduction = process.env.NODE_ENV === "production" && process.env.VERCEL_ENV !== "preview";
   if (!id || !isProduction) return null;
+  const adsId = (process.env.NEXT_PUBLIC_GOOGLE_ADS_TAG_ID || site.googleAdsTagId).trim();
+  const ids = [id, ...(adsId && adsId !== id ? [adsId] : [])];
   const libraryUrl = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
   const eager = process.env.NEXT_PUBLIC_GOOGLE_TAG_EAGER === "true";
   return (
@@ -40,7 +45,7 @@ function gtag(){dataLayer.push(arguments);}
 gtag('consent', 'default', {ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied', region: ${JSON.stringify(CONSENT_REGIONS)}});
 gtag('consent', 'default', {ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted', analytics_storage: 'granted'});
 gtag('js', new Date());
-gtag('config', ${JSON.stringify(id)});
+${ids.map((tag) => `gtag('config', ${JSON.stringify(tag)});`).join(" ")}
 (function(){
   var loaded = false;
   function load(){ if (loaded) return; loaded = true; var s = document.createElement('script'); s.async = true; s.src = ${JSON.stringify(libraryUrl)}; document.head.appendChild(s); }

@@ -12,6 +12,8 @@ export const site = {
   locale: "en_US",
   /** Google tag (gtag.js) id; NEXT_PUBLIC_GOOGLE_TAG_ID overrides it. Public by nature. */
   googleTagId: "GT-NGWX2GTZ",
+  /** Google Ads tag, configured on the same gtag.js library as the tag above. */
+  googleAdsTagId: "AW-18492141724",
   currency: "USD",
   twitter: "@rarecomicscol",
   founded: "2011",
