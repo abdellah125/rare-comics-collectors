@@ -268,6 +268,26 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - Owner asked for all sold-out products to be made available. One-time seed step `restoreSoldOutOnce` (marker `imports.once.restoreSoldOut.2026-10-12`): stock back to 1 with an inventory note, queue items marked available, items pushed to Error as no longer available back to Pending Review. Left at zero on purpose: products with a live order or an accepted bid.
 - The complete-catalogue option is now ignored, with a message in the run log, when the file would mark more than a fifth of the known catalogue unavailable.
 
+### Performance pass after Speed Insights reported FCP 8.0 s / LCP 10.1 s / INP 544 ms (2026-10-06)
+- **Measured causes** (live site, Lighthouse mobile, and the HTML itself):
+  - `/store` sent the whole catalogue to the browser: 3.2 MB of HTML (291 KB compressed) for 3,928 listings, 2.5 MB of it props for the client-side filter and 447 KB a JSON-LD list of every product address. The server read every product twice per request (1.0–1.3 s to first byte). It had grown with the imports.
+  - Third-party scripts ran during startup: two Google tag libraries (one per tag id, about 150 KB each) and Clarity, together about 2 s of main-thread time on the simulated phone; the Google library was also fetched in the instant of the first tap.
+  - Every `<Link>` prefetched as it came into view. All pages are rendered per request, so each prefetch was a server function call returning nothing reusable: about 60 per store page view.
+  - Imported photos are served from the source's image host at 800 px (about 140 KB each) in every slot.
+  - Storefront page renders started background job drains on the same server instance.
+  - Speed Insights also measured `/admin` pages, which are heavy and not what shoppers see.
+- **Changes:**
+  - Store search runs in the database (`src/lib/catalog/store-search.ts`); filters, sort and paging live in the address (`store-filters.ts`: `q`, `era`, `publisher`, `grader`, `price`, `keys`, `sort`, `show`). `StoreBrowser` only edits the address (search box waits 300 ms after typing) and shows the cards the server returns. A search now matches every word in any order. JSON-LD lists the cards shown. `storeFacets` uses grouped counts. `listPublishedProducts` is gone.
+  - Google tag and Clarity are fetched 2 s after the first interaction or 3.5 s after load, when the main thread is idle. The purchase event still loads the tag immediately.
+  - `src/components/link.tsx` wraps next/link with `prefetch={false}`; every import of next/link in `src` now goes through it.
+  - `.below-fold` (content-visibility: auto) on the footer and on sections below the first screen of the home and store pages.
+  - Imported photos carry a `srcset` with the source's 300 px file (about 25 KB); product-page thumbnails use it.
+  - `driveJobsOnTraffic()` removed from the storefront layout (the browser beacon, the admin pages and the daily cron still drive the queue).
+  - Speed Insights renders only on Vercel (elsewhere its script 404s) and drops `/admin` and `/dashboard` measurements.
+- **Result on the live site** (same tool and machine before and after; the machine is slower than Lighthouse's reference, so absolute scores are pessimistic): home 41 → 73–76, store 40 → 78–82, imported product page 55 → 67–77. `/store` HTML 3.2 MB → 382 KB (31 KB compressed), first byte 1.0–1.3 s → about 0.5 s. CLS stayed 0. Part of the lab gain is that the tags now load after the lab stops measuring; for visitors they still load, later.
+- **Not done, and why:** product photos are not re-encoded (no storage on the host, and Vercel image optimisation has a monthly quota that 4,000 products could exhaust: owner's decision); pages are still rendered per request (currency, language and session are read on the server), so there is no CDN caching of HTML; React hydration (about 350 ms on the simulated phone) remains.
+- Tests: `tests/unit/store-filters.test.ts`, `tests/e2e/store-browser.spec.ts`.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml` (the index; it lists the store and guide sitemaps).
