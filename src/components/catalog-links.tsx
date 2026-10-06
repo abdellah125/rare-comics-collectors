@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import type { Collection, Publisher } from "@/lib/catalog/collections";
 import { getTranslator } from "@/lib/i18n";
 

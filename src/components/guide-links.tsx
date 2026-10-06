@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import type { GuideSummary } from "@/lib/guides/data";
 import { GUIDE_TOPICS } from "@/lib/guides/topics";
 import { formatDateTime, getTranslator } from "@/lib/i18n";

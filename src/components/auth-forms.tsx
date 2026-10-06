@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { useActionState, type ReactNode } from "react";
 import { TextField } from "@/components/form-fields";
 import { CheckIcon, ShieldIcon } from "@/components/icons";

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 import { redirect } from "next/navigation";
 import { DashboardNav } from "@/components/seller/dashboard-nav";
 import { Container } from "@/components/ui";

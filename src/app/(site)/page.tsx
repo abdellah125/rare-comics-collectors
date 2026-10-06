@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import type { Metadata } from "next";
 
 import { CoverArt } from "@/components/cover-art";
@@ -293,7 +293,7 @@ export default async function HomePage() {
       </Section>
 
       {/* -------------------------------------------------------- services */}
-      <Section tone="muted" id="services">
+      <Section tone="muted" id="services" belowFold>
         <SectionHeading
           eyebrow={tr("Collector services")}
           title={tr("Everything that happens after you own the book")}
@@ -333,7 +333,7 @@ export default async function HomePage() {
       </Section>
 
       {/* ----------------------------------------------------------- steps */}
-      <Section tone="dark">
+      <Section tone="dark" belowFold>
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5">
             <SectionHeading
@@ -365,7 +365,7 @@ export default async function HomePage() {
       </Section>
 
       {/* -------------------------------------------------------- location */}
-      <Section tone="white" id="visit">
+      <Section tone="white" id="visit" belowFold>
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-14">
           <div>
             <SectionHeading
@@ -437,7 +437,7 @@ export default async function HomePage() {
       </Section>
 
       {/* --------------------------------------------------------- reviews */}
-      <Section tone="muted">
+      <Section tone="muted" belowFold>
         <SectionHeading
           eyebrow={tr("What collectors say")}
           title={tr("Trusted with collections from one book to forty thousand")}
@@ -460,7 +460,7 @@ export default async function HomePage() {
       </Section>
 
       {/* ------------------------------------------------------------- cta */}
-      <section className="bg-ink-950">
+      <section className="below-fold bg-ink-950">
         <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-brand-800 via-ink-900 to-ink-950 px-6 py-12 text-center sm:px-14 lg:py-16">
             <Eyebrow tone="dark">{tr("Free, no-obligation")}</Eyebrow>

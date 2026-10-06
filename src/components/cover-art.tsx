@@ -1,3 +1,4 @@
+import { preconnect } from "react-dom";
 import type { ProductSummary } from "@/lib/products";
 import coverMap from "@/lib/gocovers-map.json";
 
@@ -8,7 +9,9 @@ import coverMap from "@/lib/gocovers-map.json";
  * Source order: a local scan from `gocovers-map.json` (WebP under /public/covers
  * with 192/256/384/640 px WebP and AVIF siblings from scripts/optimize-covers.mjs),
  * then a release-queue photo (/covers/q/, WebP at full size plus a 256 px sibling from
- * scripts/import-hipcomic-csv.mjs), then any other product image (uploads, remote URLs) served as-is. The gradient
+ * scripts/import-hipcomic-csv.mjs), then a photo on the import source's image host (it publishes each
+ * photo 300 and 800 px wide, so small slots take the small file: about 25 KB instead of 140 KB),
+ * then any other product image (uploads, remote URLs) served as-is. The gradient
  * palette sits underneath, so a missing or failed image still leaves a finished
  * plate with the title, issue and grade.
  */
@@ -18,6 +21,12 @@ const variantUrl = (src: string, width: number, ext: "webp" | "avif") => (width 
 const srcSetFor = (src: string, ext: "webp" | "avif") => WIDTHS.map((w) => `${variantUrl(src, w, ext)} ${w}w`).join(", ");
 const isQueuePhoto = (src: string) => /^\/covers\/q\/[^/]+\.webp$/.test(src);
 const queueSrcSet = (src: string) => `${src.replace(/\.webp$/, "-256.webp")} 256w, ${src} 600w`;
+
+const SOURCE_PHOTO = /^https:\/\/img\.hipcomic\.com\/p\/[0-9a-f]+-800\.jpg$/;
+const SOURCE_PHOTO_ORIGIN = "https://img.hipcomic.com";
+/** The 300 px file of an imported photo, or the address unchanged when it is not one. */
+export const smallPhoto = (src: string) => (SOURCE_PHOTO.test(src) ? src.replace(/-800\.jpg$/, "-300.jpg") : src);
+const sourceSrcSet = (src: string) => `${smallPhoto(src)} 300w, ${src} 800w`;
 
 export const DEFAULT_COVER_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px";
 
@@ -38,6 +47,9 @@ export function CoverArt({
   const slabbed = product.grader !== "Raw";
   const src = (coverMap as Record<string, string>)[product.slug] ?? product.image ?? null;
   const responsive = src !== null && isLocalScan(src);
+  const sourcePhoto = src !== null && SOURCE_PHOTO.test(src);
+  // The page's main photo on another host: open the connection while the HTML is still arriving.
+  if (priority && sourcePhoto) preconnect(SOURCE_PHOTO_ORIGIN);
   const imgProps = {
     decoding: "async" as const,
     loading: priority ? ("eager" as const) : ("lazy" as const),
@@ -64,6 +76,9 @@ export function CoverArt({
         ) : isQueuePhoto(src) ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} srcSet={queueSrcSet(src)} sizes={sizes} alt="" {...imgProps} />
+        ) : sourcePhoto ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} srcSet={sourceSrcSet(src)} sizes={sizes} alt="" {...imgProps} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt="" {...imgProps} />

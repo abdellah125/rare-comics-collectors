@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { AdminPageHeader, Card, EmptyState, StatusBadge } from "@/components/admin/ui";
 import { requireAdmin, can } from "@/lib/auth/session";
 import { db } from "@/lib/db";

@@ -2,12 +2,12 @@ import { BidPanel } from "@/components/bid-panel";
 import { auctionEnded } from "@/lib/commerce/bids";
 import { getTranslator } from "@/lib/i18n";
 import { NOT_GRADED, UNKNOWN, gradeLabel as gradeLabelOf, isKnown, joinKnown, yearKnown, yearText } from "@/lib/catalog/labels";
-import Link from "next/link";
+import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import type { Metadata } from "next";
 
-import { CoverArt } from "@/components/cover-art";
+import { CoverArt, smallPhoto } from "@/components/cover-art";
 import { PurchasePanel } from "@/components/buy-buttons";
 import { ProductCard } from "@/components/product-card";
 import { Badge, Breadcrumbs, Container, Stars, ButtonLink, type Crumb } from "@/components/ui";
@@ -178,7 +178,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
                   {product.images.slice(1, 6).map((img, i) => (
                     <li key={i} className="shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img.url} alt={img.alt ?? `${product.title} ${product.issue} photo ${i + 2}`} className="h-24 w-16 rounded-md object-cover ring-1 ring-ink-200" loading="lazy" />
+                      <img src={smallPhoto(img.url)} alt={img.alt ?? `${product.title} ${product.issue} photo ${i + 2}`} width={64} height={96} decoding="async" className="h-24 w-16 rounded-md object-cover ring-1 ring-ink-200" loading="lazy" />
                     </li>
                   ))}
                 </ul>

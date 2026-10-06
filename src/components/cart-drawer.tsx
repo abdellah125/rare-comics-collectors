@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { useEffect, useRef, type KeyboardEvent } from "react";
 import { useCart } from "@/components/cart-provider";
 import { CartThumb } from "@/components/cart-thumb";

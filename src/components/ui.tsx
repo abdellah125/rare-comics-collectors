@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import type { ComponentProps, ReactNode } from "react";
 import { StarIcon } from "@/components/icons";
 
@@ -41,11 +41,14 @@ export function Section({
   className = "",
   id,
   tone = "white",
+  belowFold = false,
 }: {
   children: ReactNode;
   className?: string;
   id?: string;
   tone?: "white" | "muted" | "dark";
+  /** Starts below the first screen: its layout and paint wait until the visitor scrolls near it. */
+  belowFold?: boolean;
 }) {
   const tones = {
     white: "bg-white",
@@ -53,7 +56,7 @@ export function Section({
     dark: "bg-ink-950 text-white",
   } as const;
   return (
-    <section id={id} className={`${tones[tone]} ${className}`}>
+    <section id={id} className={`${tones[tone]} ${belowFold ? "below-fold" : ""} ${className}`}>
       <div className="mx-auto w-full max-w-7xl px-5 py-16 sm:px-8 lg:py-24">{children}</div>
     </section>
   );

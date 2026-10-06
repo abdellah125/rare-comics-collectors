@@ -1,6 +1,6 @@
 import { INVOICE_WHATSAPP, whatsappChatUrl } from "@/lib/payments/paypal-invoice";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { OrderActionsPanel } from "@/components/account/order-actions-panel";
 import { CaseThread } from "@/components/account/case-thread";

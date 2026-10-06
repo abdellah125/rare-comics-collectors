@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { GuideGrid } from "@/components/guide-links";
 import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { notFound, redirect } from "next/navigation";
 import { BankDetails } from "@/components/bank-details";
 import { ClearCart } from "@/components/clear-cart";

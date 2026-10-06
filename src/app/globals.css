@@ -204,6 +204,15 @@ body {
 .welcome-offer-backdrop {
   animation: welcome-offer-fade 0.35s ease-out both;
 }
+/*
+ * Sections that start below the first screen: the browser skips their layout and paint until the
+ * visitor scrolls near them, which is most of the work of a long page on a phone. The remembered
+ * size ("auto") keeps the scrollbar steady once a section has been seen; nothing on screen moves.
+ */
+.below-fold {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 700px;
+}
 .animate-fade-up {
   animation: vc-fade-up 0.45s ease-out both;
 }

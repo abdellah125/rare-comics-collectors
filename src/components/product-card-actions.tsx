@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { AddToCartButton, BuyNowButton } from "@/components/buy-buttons";
 import { useT } from "@/components/i18n-provider";
 import { buttonSizes, buttonStyles } from "@/components/ui";

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/admin/action-form";
 import { AdminPageHeader, Card, Field, Kv, StatusBadge, adminSelect, adminTextarea } from "@/components/admin/ui";

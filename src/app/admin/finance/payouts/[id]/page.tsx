@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { AdminPageHeader, Card, Kv, StatusBadge, Table, Td, Th } from "@/components/admin/ui";

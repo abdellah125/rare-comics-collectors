@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { Pagination } from "@/components/admin/pagination";
 import { AdminPageHeader, Card, EmptyState, Field, FilterBar, Kv, StatusBadge, Table, Td, Th, adminButton, adminSelect } from "@/components/admin/ui";

@@ -1,7 +1,7 @@
 "use client";
 
 import { INVOICE_WHATSAPP, whatsappChatUrl } from "@/lib/payments/paypal-invoice";
-import Link from "next/link";
+import Link from "@/components/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useCart } from "@/components/cart-provider";

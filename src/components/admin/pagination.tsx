@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 
 function withParams(base: string, params: Record<string, string | undefined>, overrides: Record<string, string | undefined>): string {
   const sp = new URLSearchParams();

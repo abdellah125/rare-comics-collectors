@@ -6,7 +6,7 @@ import { site } from "@/lib/site";
 import { brandStyle } from "@/lib/brand-color";
 import { getSettings } from "@/lib/settings";
 import { env } from "@/lib/env";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { SpeedInsightsTag } from "@/components/speed-insights-tag";
 import { ClarityTag } from "@/components/clarity-tag";
 import { getLocale } from "@/lib/i18n";
 
@@ -100,8 +100,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col bg-white">
         {children}
-        {/* Vercel Speed Insights: real-visitor performance data; it only reports from a Vercel deployment. */}
-        <SpeedInsights />
+        {/* Its script only exists on a Vercel deployment; anywhere else the request would 404. */}
+        {process.env.VERCEL ? <SpeedInsightsTag /> : null}
       </body>
     </html>
   );

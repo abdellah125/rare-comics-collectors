@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { PERMISSIONS, type Permission } from "@/lib/permissions";
 import { requireAdmin } from "@/lib/auth/session";
 

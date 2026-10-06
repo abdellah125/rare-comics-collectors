@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { ActionForm } from "@/components/admin/action-form";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { AdminPageHeader, Card, Field, Table, Td, Th, Tone, adminButton, adminInput, adminTextarea } from "@/components/admin/ui";

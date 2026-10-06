@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { Pagination, SortLink } from "@/components/admin/pagination";
 import { AdminPageHeader, EmptyState, Field, FilterBar, Table, Td, Th, adminButton, adminInput, adminSelect } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/auth/session";

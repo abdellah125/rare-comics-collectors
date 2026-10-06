@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { ListingRowActions } from "@/components/seller/listing-row-actions";
 import { EmptyState, PageHeader } from "@/components/account/ui";
 import { Badge, ButtonLink } from "@/components/ui";

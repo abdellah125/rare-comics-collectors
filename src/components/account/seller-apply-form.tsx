@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { useActionState, useState } from "react";
 import { FormError, FormSuccess } from "@/components/auth-forms";
 import { SelectField, TextAreaField, TextField } from "@/components/form-fields";

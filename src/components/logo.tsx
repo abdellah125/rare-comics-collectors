@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { site } from "@/lib/site";
 
 export type Brand = { name: string; logoUrl: string | null };

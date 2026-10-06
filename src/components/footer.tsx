@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { Logo } from "@/components/logo";
 import { MailIcon, PhoneIcon, PinIcon, ClockIcon, WhatsAppIcon } from "@/components/icons";
 import { LanguageSelect } from "@/components/language-select";
@@ -33,7 +33,7 @@ export async function Footer({
   const tr = await getTranslator();
 
   return (
-    <footer className="border-t border-ink-800 bg-ink-950 text-ink-300">
+    <footer className="below-fold border-t border-ink-800 bg-ink-950 text-ink-300">
       <div className="mx-auto max-w-7xl px-5 pb-32 pt-14 sm:px-8 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
           {/* Brand + NAP block */}

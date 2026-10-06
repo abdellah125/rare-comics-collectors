@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { EmptyState, PageHeader, Panel } from "@/components/account/ui";
 import { ReviewReplyForm } from "@/components/seller/review-reply-form";
 import { Stars } from "@/components/ui";

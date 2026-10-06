@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { CHART_INK, SERIES } from "@/components/charts/tokens";
 
 /**

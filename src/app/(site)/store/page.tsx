@@ -5,8 +5,9 @@ import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components
 import { CollectionCards, PublisherChips } from "@/components/catalog-links";
 import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
 import { listCollections, listPublishers } from "@/lib/catalog/collections";
-import { listPublishedProducts, storeFacets } from "@/lib/catalog/products";
-import type { Era } from "@/lib/products";
+import { storeFacets } from "@/lib/catalog/products";
+import { parseStoreFilters } from "@/lib/catalog/store-filters";
+import { searchStore } from "@/lib/catalog/store-search";
 import { formatPrice } from "@/lib/format";
 import { getSettings } from "@/lib/settings";
 import { Rich } from "@/components/rich";
@@ -33,23 +34,28 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function StorePage({ searchParams }: PageProps<"/store">) {
-  // Deep links like /store?q=… or /store?era=Golden+Age (footer links, SearchAction
-  // structured data) are read on the server so the first page of results is in
-  // the HTML rather than rendered client-side after hydration.
+  // The filters live in the address (/store?q=…&era=…&sort=…) and the search runs here, in the
+  // database: the page carries only the cards it shows, however large the catalogue is.
   const sp = await searchParams;
   const tr = await getTranslator();
   const crumbs: Crumb[] = [
     { name: tr("Home"), href: "/" },
     { name: tr("Store"), href: "/store" },
   ];
-  const [summaries, facets, settings, collections, publisherPages] = await Promise.all([listPublishedProducts(), storeFacets(), getSettings(), listCollections(), listPublishers()]);
+  const asked = parseStoreFilters(sp);
+  const [facets, settings, collections, publisherPages] = await Promise.all([storeFacets(), getSettings(), listCollections(), listPublishers()]);
+  // A filter value the catalogue does not have (an old or mistyped link) is dropped, not matched against nothing.
+  const filters = {
+    ...asked,
+    era: (facets.eras as string[]).includes(asked.era) ? asked.era : "",
+    publisher: facets.publishers.includes(asked.publisher) ? asked.publisher : "",
+    grader: (facets.graders as string[]).includes(asked.grader) ? asked.grader : "",
+  };
+  const { products: shown, total } = await searchStore(filters);
   const freeShippingThreshold = settings["commerce.freeShippingThreshold"];
   const returnWindowDays = settings["commerce.returnWindowDays"];
   const { eras, publishers, graders, lowestPrice } = facets;
-  const inventoryCount = summaries.length;
-  const initialQuery = typeof sp.q === "string" ? sp.q : "";
-  const eraParam = typeof sp.era === "string" ? sp.era : null;
-  const initialEra: Era | "all" = eraParam !== null && eras.includes(eraParam as Era) ? (eraParam as Era) : "all";
+  const inventoryCount = facets.count;
 
 
   const collectionJsonLd = {
@@ -60,7 +66,8 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
     url: `${site.url}/store`,
     isPartOf: { "@id": `${site.url}/#website` },
     // Summary-page pattern: each entry links to the product page that carries the full Product/Offer markup.
-    mainEntity: itemListJsonLd(summaries.map((p) => ({ url: `${site.url}/store/${p.slug}` }))),
+    // Every product is also in the sitemap; listing thousands of addresses here only made the page heavy.
+    mainEntity: itemListJsonLd(shown.map((p) => ({ url: `${site.url}/store/${p.slug}` }))),
   };
 
   return (
@@ -99,19 +106,10 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
       </section>
 
       <Container className="py-10 lg:py-14">
-        {/* Keyed on the deep-link params so following a new link while on /store resets the filters. */}
-        <StoreBrowser
-          key={`${initialQuery} ${initialEra}`}
-          products={summaries}
-          eras={[...eras]}
-          publishers={publishers}
-          graders={[...graders]}
-          initialQuery={initialQuery}
-          initialEra={initialEra}
-        />
+        <StoreBrowser products={shown} total={total} filters={filters} eras={[...eras]} publishers={publishers} graders={[...graders]} />
       </Container>
 
-      <section className="border-t border-ink-200">
+      <section className="below-fold border-t border-ink-200">
         <Container className="py-12">
           <CollectionCards collections={collections} />
           <div className="mt-10">
@@ -121,7 +119,7 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
       </section>
 
       {/* SEO copy — real, useful context for the category page */}
-      <section className="border-t border-ink-200 bg-ink-50">
+      <section className="below-fold border-t border-ink-200 bg-ink-50">
         <Container className="py-14">
           <div className="prose-doc max-w-3xl">
             <h2>{tr("Buying graded comic books online")}</h2>

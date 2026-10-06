@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { Breadcrumbs, Container, Stars, type Crumb } from "@/components/ui";

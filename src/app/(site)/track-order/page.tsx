@@ -6,7 +6,7 @@ import { JsonLd, breadcrumbJsonLd } from "@/components/json-ld";
 import { pageMetadata } from "@/lib/seo";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSettings } from "@/lib/settings";
-import Link from "next/link";
+import Link from "@/components/link";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({

@@ -5,19 +5,17 @@ import { MaintenancePage } from "@/components/maintenance-page";
 import { SiteBanners } from "@/components/site-banners";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSettings } from "@/lib/settings";
-import { driveJobsOnTraffic } from "@/lib/jobs/queue";
 
 /**
  * Storefront layout. Reads marketplace settings at request time so maintenance
  * mode, announcement bars and campaigns take effect immediately.
  */
-// Background jobs are drained after the response on serverless hosts; give that work room to
-// finish instead of the platform's short default, which cut releases off half-way.
+// Background jobs are not started from here: they would share the server with the pages visitors
+// are waiting for. The storefront's JobBeacon pings /api/jobs/tick and the daily cron does the rest.
 export const maxDuration = 60;
 
 export default async function SiteLayout({ children }: { children: ReactNode }) {
   await connection();
-  driveJobsOnTraffic();
   const settings = await getSettings();
   if (settings["system.maintenanceMode"]) {
     const user = await getCurrentUser();

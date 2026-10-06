@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { BulkActionsBar, BulkProvider, RowCheckbox, SelectAllCheckbox } from "@/components/admin/bulk";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { Pagination, SortLink } from "@/components/admin/pagination";

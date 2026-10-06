@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { Pagination } from "@/components/admin/pagination";
 import { Card, FilterBar, Field, Kv, Table, Td, Th, Tone, adminInput, adminSelect } from "@/components/admin/ui";
 import { listParams, pageCount } from "@/lib/admin/query";

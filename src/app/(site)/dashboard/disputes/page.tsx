@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { EmptyState, PageHeader, Panel } from "@/components/account/ui";
 import { Badge } from "@/components/ui";
 import { requireSeller } from "@/lib/auth/session";

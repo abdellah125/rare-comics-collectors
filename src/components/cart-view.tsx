@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/link";
 import { useCart } from "@/components/cart-provider";
 import { CartThumb } from "@/components/cart-thumb";
 import { usePrice } from "@/components/currency-provider";

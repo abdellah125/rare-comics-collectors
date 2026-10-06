@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { KeywordResearchForm } from "@/components/admin/keyword-research-form";
 import { AdminPageHeader, Card, DownloadLink, Kv, Table, Td, Th, Tone } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/auth/session";

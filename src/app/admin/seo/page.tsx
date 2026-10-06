@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { Pagination } from "@/components/admin/pagination";
 import { SeoActionsPanel, StatusSelect } from "@/components/admin/seo-controls";
 import { AdminPageHeader, Card, FilterBar, Field, Kv, Table, Td, Th, Tone, adminButton, adminInput, adminSelect } from "@/components/admin/ui";

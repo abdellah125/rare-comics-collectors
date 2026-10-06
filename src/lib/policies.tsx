@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 
 import { policyPages, type PolicySlug } from "@/lib/nav";
 import { fullAddress, site } from "@/lib/site";

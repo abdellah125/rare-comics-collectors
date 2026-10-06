@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { TicketThread } from "@/components/support/ticket-thread";
 import { PageHeader, Panel } from "@/components/account/ui";

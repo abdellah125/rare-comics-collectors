@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { CaseThread } from "@/components/account/case-thread";
 import { EmptyState, PageHeader, Panel } from "@/components/account/ui";
 import { ReturnDecisionForm } from "@/components/seller/return-decision-form";

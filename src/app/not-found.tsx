@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 
 import { SiteShell } from "@/components/site-shell";
 import { ButtonLink, Container } from "@/components/ui";

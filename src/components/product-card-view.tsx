@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import type { ReactNode } from "react";
 import { CoverArt } from "@/components/cover-art";
 import { Badge, Stars } from "@/components/ui";

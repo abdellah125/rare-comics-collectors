@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { ActionForm } from "@/components/admin/action-form";
 import { BulkActionsBar, BulkProvider, RowCheckbox, SelectAllCheckbox } from "@/components/admin/bulk";
 import { AdminPageHeader, Card, Field, FilterBar, Table, Td, Th, Tone, adminInput, adminSelect } from "@/components/admin/ui";

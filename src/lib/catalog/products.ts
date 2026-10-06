@@ -126,16 +126,6 @@ export function detailToSummary(d: ProductDetail): ProductSummary {
   return s;
 }
 
-/** Everything currently buyable, for the store grid. */
-export const listPublishedProducts = cache(async (): Promise<ProductSummary[]> => {
-  const rows = await db.product.findMany({
-    where: publishedWhere,
-    include: summaryInclude,
-    orderBy: [{ featured: "desc" }, { publishedAt: "desc" }],
-  });
-  return rows.map(toSummary);
-});
-
 export const getPublishedProduct = cache(async (slug: string): Promise<ProductDetail | null> => {
   const row = await db.product.findFirst({ where: { slug, ...publishedWhere }, include: detailInclude });
   if (!row) return null;
@@ -160,14 +150,19 @@ export async function relatedProducts(product: ProductDetail, limit = 4): Promis
   return [...sameTitle, ...sameEra].slice(0, limit).map(toSummary);
 }
 
+/** The store's filter choices and headline figures, counted by the database (no rows are read). */
 export const storeFacets = cache(async () => {
-  const rows = await db.product.findMany({ where: publishedWhere, select: { era: true, publisher: true, grader: true } });
+  const [eraRows, publisherRows, graderRows, totals] = await Promise.all([
+    db.product.groupBy({ by: ["era"], where: publishedWhere }),
+    db.product.groupBy({ by: ["publisher"], where: publishedWhere }),
+    db.product.groupBy({ by: ["grader"], where: publishedWhere }),
+    db.product.aggregate({ _min: { price: true }, _count: { _all: true }, where: publishedWhere }),
+  ]);
   const order = ["Golden Age", "Silver Age", "Bronze Age", "Copper Age", "Modern Age"];
-  const eras = order.filter((e) => rows.some((r) => r.era === e)) as ProductSummary["era"][];
-  const publishers = [...new Set(rows.map((r) => r.publisher))].filter((p) => p !== "Unknown").sort();
-  const graders = ["CGC", "CBCS", "Raw"].filter((g) => rows.some((r) => r.grader === g)) as ProductSummary["grader"][];
-  const lowestPrice = await db.product.aggregate({ _min: { price: true }, where: publishedWhere });
-  return { eras, publishers, graders, count: rows.length, lowestPrice: lowestPrice._min.price ?? 0 };
+  const eras = order.filter((e) => eraRows.some((r) => r.era === e)) as ProductSummary["era"][];
+  const publishers = publisherRows.map((r) => r.publisher).filter((p) => p !== "Unknown").sort();
+  const graders = ["CGC", "CBCS", "Raw"].filter((g) => graderRows.some((r) => r.grader === g)) as ProductSummary["grader"][];
+  return { eras, publishers, graders, count: totals._count._all, lowestPrice: totals._min.price ?? 0 };
 });
 
 export const homeProducts = cache(async () => {

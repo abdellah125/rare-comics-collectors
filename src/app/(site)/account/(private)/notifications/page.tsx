@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { NotificationPrefsForm } from "@/components/account/notification-prefs-form";
 import { MarkAllRead } from "@/components/account/mark-all-read";
 import { EmptyState, PageHeader, Panel } from "@/components/account/ui";

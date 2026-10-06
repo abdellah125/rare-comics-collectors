@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/link";
 import { AdminPageHeader, Card, Kv, Table, Td, Th, adminButton, adminInput, DownloadLink } from "@/components/admin/ui";
 import { BarChart } from "@/components/charts/bar-chart";
 import { LineChart } from "@/components/charts/line-chart";
