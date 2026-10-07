@@ -29,6 +29,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       { href: "/admin/imports", label: "HipComic import", perm: "products.view" },
       { href: "/admin/catalog", label: "Categories & brands", perm: "catalog.manage" },
       { href: "/admin/guides", label: "Guides & articles", perm: "content.manage" },
+      { href: "/admin/content", label: "Content pipeline", perm: "content.manage" },
       { href: "/admin/indexnow", label: "IndexNow (Bing)", perm: "content.manage" },
       { href: "/admin/seo", label: "SEO intelligence", perm: "content.manage" },
       { href: "/admin/keywords", label: "Keyword research (Semrush)", perm: "content.manage" },

@@ -28,6 +28,7 @@ function toRecord(v: ArticleInputValues, slug: string) {
     status: v.status,
     eventDate: v.eventDate ?? null,
     authorName: v.authorName || null,
+    wordCount: v.body.trim().split(/\s+/).filter(Boolean).length,
   };
 }
 

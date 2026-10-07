@@ -1,15 +1,23 @@
 import Link from "@/components/link";
 import type { GuideSummary } from "@/lib/guides/data";
-import { GUIDE_TOPICS } from "@/lib/guides/topics";
+import { CLAIM_LEVELS, categoryOf, type ClaimLevel } from "@/lib/content/categories";
 import { formatDateTime, getTranslator } from "@/lib/i18n";
 
-const topicShort = (slug: string) => GUIDE_TOPICS.find((t) => t.slug === slug)?.short ?? slug;
+/** "Confirmed", "Reported" or "Analysis": every news item says which it is. */
+export function ClaimBadge({ level }: { level: string | null }) {
+  if (!level || !(level in CLAIM_LEVELS)) return null;
+  const tone = level === "confirmed" ? "bg-emerald-50 text-emerald-800 ring-emerald-200" : level === "analysis" ? "bg-sky-50 text-sky-800 ring-sky-200" : "bg-gold-400/15 text-gold-800 ring-gold-400/40";
+  return <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] ring-1 ${tone}`}>{CLAIM_LEVELS[level as ClaimLevel]}</span>;
+}
 
 /** A question-style card linking to a guide; the direct answer is the excerpt. */
 export function GuideCard({ guide, compact = false }: { guide: GuideSummary; compact?: boolean }) {
   return (
     <article className="group relative flex h-full flex-col rounded-xl border border-ink-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lift">
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">{topicShort(guide.topic)}</p>
+      <p className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">
+        {categoryOf(guide).short}
+        <ClaimBadge level={guide.claimLevel} />
+      </p>
       <h3 className={`mt-2 font-display font-semibold leading-snug text-ink-950 ${compact ? "text-[17px]" : "text-lg"}`}>
         <Link href={`/guides/${guide.slug}`} className="hover:text-brand-700">
           <span className="absolute inset-0" aria-hidden />
@@ -17,7 +25,7 @@ export function GuideCard({ guide, compact = false }: { guide: GuideSummary; com
         </Link>
       </h3>
       <p className={`mt-2 flex-1 text-[14px] leading-relaxed text-ink-600 ${compact ? "line-clamp-3" : "line-clamp-4"}`}>{guide.answer}</p>
-      {guide.publishedAt && <p className="mt-4 text-[12px] text-ink-500">Updated {formatDateTime(guide.updatedAt, { dateOnly: true })}</p>}
+      {guide.publishedAt && <p className="mt-4 text-[12px] text-ink-500">{guide.format === "news" ? formatDateTime(guide.eventDate ?? guide.publishedAt, { dateOnly: true }) : `Updated ${formatDateTime(guide.updatedAt, { dateOnly: true })}`}</p>}
     </article>
   );
 }

@@ -5,6 +5,8 @@ import { publishedWhere } from "@/lib/catalog/products";
 import { db } from "@/lib/db";
 import { listCharacters, publishedGuideWhere } from "@/lib/guides/data";
 import { GUIDE_TOPICS } from "@/lib/guides/topics";
+import { CATEGORIES } from "@/lib/content/categories";
+import { categoryCounts } from "@/lib/guides/data";
 import { policies } from "@/lib/policies";
 import { services } from "@/lib/services";
 import { getSettings } from "@/lib/settings";
@@ -66,6 +68,9 @@ export async function sitemapEntries(): Promise<MetadataRoute.Sitemap> {
     ...publishers.map((p) => ({ url: url(`/publishers/${p.slug}`), lastModified: storeChanged, changeFrequency: "weekly" as const, priority: 0.7 })),
   ];
   const topicUrls: MetadataRoute.Sitemap = GUIDE_TOPICS.map((t) => ({ url: url(`/guides/topics/${t.slug}`), lastModified: guidesChanged, changeFrequency: "weekly" as const, priority: 0.75 }));
+  // Category pages exist for search engines only once they have something in them.
+  const counts = await categoryCounts();
+  const categoryUrls: MetadataRoute.Sitemap = CATEGORIES.filter((c) => (counts[c.slug] ?? 0) > 0).map((c) => ({ url: url(`/guides/category/${c.slug}`), lastModified: guidesChanged, changeFrequency: c.fresh ? ("daily" as const) : ("weekly" as const), priority: 0.75 }));
   const characterUrls: MetadataRoute.Sitemap = characters.map((c) => ({ url: url(`/characters/${c.slug}`), lastModified: guidesChanged, changeFrequency: "weekly" as const, priority: 0.7 }));
   const productUrls: MetadataRoute.Sitemap = products.map((p) => ({
     url: url(`/store/${p.slug}`),
@@ -84,7 +89,7 @@ export async function sitemapEntries(): Promise<MetadataRoute.Sitemap> {
     TRANSLATED_PATHS.map((p) => ({ url: url(localizePath(p, l)), lastModified: storeChanged, changeFrequency: "weekly" as const, priority: 0.6 })),
   );
 
-  return [...core, ...localizedUrls, ...collectionUrls, ...publisherUrls, ...topicUrls, ...characterUrls, ...productUrls, ...sellerUrls, ...serviceUrls, ...policyUrls];
+  return [...core, ...localizedUrls, ...collectionUrls, ...publisherUrls, ...topicUrls, ...categoryUrls, ...characterUrls, ...productUrls, ...sellerUrls, ...serviceUrls, ...policyUrls];
 }
 
 export async function guideSitemapPages(): Promise<number> {
@@ -96,6 +101,12 @@ export async function guideSitemapPages(): Promise<number> {
 export async function guideSitemapEntries(page: number): Promise<MetadataRoute.Sitemap> {
   const rows = await db.article.findMany({ where: publishedGuideWhere, select: { slug: true, updatedAt: true }, orderBy: [{ publishedAt: "asc" }, { id: "asc" }], skip: (page - 1) * GUIDE_SITEMAP_SIZE, take: GUIDE_SITEMAP_SIZE });
   return rows.map((g) => ({ url: url(`/guides/${g.slug}`), lastModified: g.updatedAt, changeFrequency: "monthly" as const, priority: 0.7 }));
+}
+
+/** News articles published in the last two days, newest first (the window a news sitemap covers). */
+export async function newsSitemapItems(): Promise<{ url: string; title: string; publishedAt: Date }[]> {
+  const rows = await db.article.findMany({ where: { ...publishedGuideWhere, format: "news", publishedAt: { gte: new Date(Date.now() - 2 * 86_400_000), lte: new Date() } }, select: { slug: true, title: true, publishedAt: true }, orderBy: { publishedAt: "desc" }, take: 1000 });
+  return rows.map((r) => ({ url: url(`/guides/${r.slug}`), title: r.title, publishedAt: r.publishedAt! }));
 }
 
 /** Everything, for the IndexNow sync. */

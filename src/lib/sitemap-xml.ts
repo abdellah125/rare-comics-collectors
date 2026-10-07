@@ -17,4 +17,10 @@ export function sitemapIndexXml(files: { loc: string; lastModified?: Date }[]): 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${items}\n</sitemapindex>\n`;
 }
 
+/** Google News sitemap: news articles of the last two days only, as the format requires. */
+export function newsSitemapXml(items: { url: string; title: string; publishedAt: Date }[], publication: string): string {
+  const rows = items.map((i) => `<url><loc>${escapeXml(i.url)}</loc><news:news><news:publication><news:name>${escapeXml(publication)}</news:name><news:language>en</news:language></news:publication><news:publication_date>${i.publishedAt.toISOString()}</news:publication_date><news:title>${escapeXml(i.title)}</news:title></news:news></url>`).join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">\n${rows}\n</urlset>\n`;
+}
+
 export const sitemapHeaders = { "content-type": "application/xml; charset=utf-8", "cache-control": "public, s-maxage=3600, stale-while-revalidate=86400", "x-robots-tag": "noindex" };

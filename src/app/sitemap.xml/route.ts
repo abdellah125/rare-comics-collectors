@@ -12,6 +12,6 @@ export const revalidate = 3600;
 export async function GET() {
   const pages = await guideSitemapPages();
   const now = new Date();
-  const files = [{ loc: `${site.url}/sitemaps/site.xml`, lastModified: now }, ...Array.from({ length: pages }, (_, i) => ({ loc: `${site.url}/sitemaps/guides-${i + 1}.xml`, lastModified: now }))];
+  const files = [{ loc: `${site.url}/sitemaps/site.xml`, lastModified: now }, { loc: `${site.url}/sitemaps/news.xml`, lastModified: now }, ...Array.from({ length: pages }, (_, i) => ({ loc: `${site.url}/sitemaps/guides-${i + 1}.xml`, lastModified: now }))];
   return new Response(sitemapIndexXml(files), { headers: sitemapHeaders });
 }

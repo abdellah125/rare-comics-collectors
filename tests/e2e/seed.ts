@@ -69,6 +69,8 @@ async function main() {
   await db.setting.upsert({ where: { key: "payments.paypal.enabled" }, create: { key: "payments.paypal.enabled", value: JSON.stringify(true) }, update: { value: JSON.stringify(true) } });
   // The daily release rule would publish queue items while a test is still checking that they are not public.
   await db.setting.upsert({ where: { key: "imports.autoReleasePerDay" }, create: { key: "imports.autoReleasePerDay", value: JSON.stringify(0) }, update: { value: JSON.stringify(0) } });
+  // The content pipeline calls a paid AI service: it must never run while tests are driving the site.
+  await db.setting.upsert({ where: { key: "content.enabled" }, create: { key: "content.enabled", value: JSON.stringify(false) }, update: { value: JSON.stringify(false) } });
   await db.session.deleteMany({ where: { userId: { in: [admin.id, support.id, buyer.id, sellerUser.id] } } });
   await db.loginChallenge.deleteMany({ where: { userId: { in: [admin.id, support.id] } } });
   console.log(`e2e seed ready: admin=${admin.email} support=${support.email} buyer=${buyer.email} seller=${sellerUser.email} product=${product.slug}`);

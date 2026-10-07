@@ -2006,17 +2006,101 @@ model Article {
   relatedJson    String    @default("[]")
   /// JSON array of { label, url? }
   sourcesJson    String    @default("[]")
-  /// draft | published
+  /// draft | pending_review | published | rejected. A published article whose publishedAt is in
+  /// the future is scheduled: it appears on the site when that time comes.
   status         String    @default("draft")
   /// For news and history entries: the date of the event described
   eventDate      DateTime?
   authorName     String?
   publishedAt    DateTime?
   viewCount      Int       @default(0)
+  /// content category (src/lib/content/categories.ts); "" for articles filed by topic only
+  category       String    @default("")
+  /// news | faq | article | guide | longform | profile | list | comparison | market
+  format         String    @default("guide")
+  /// manual | seed | auto (written by the content pipeline)
+  origin         String    @default("manual")
+  primaryKeyword String?
+  /// JSON arrays of phrases
+  secondaryJson  String    @default("[]")
+  semanticJson   String    @default("[]")
+  /// informational | commercial | transactional | navigational
+  intent         String?
+  /// search-result title and description when they differ from the headline and the short answer
+  seoTitle       String?
+  metaDescription String?
+  ogTitle        String?
+  ogDescription  String?
+  imageAlt       String?
+  wordCount      Int       @default(0)
+  /// 0–100 from the quality gate, with the checks behind it
+  seoScore       Int?
+  qualityJson    String    @default("{}")
+  /// figures from SEO Intelligence at the time the topic was chosen
+  searchVolume   Int?
+  keywordDifficulty Float?
+  opportunityScore Int?
+  clusterKey     String?
+  /// news only: confirmed | reported | analysis | rumor
+  claimLevel     String?
+  /// why the article is waiting for a person, or why it was rejected
+  reviewNote     String?
+  /// when the address was last submitted to search engines (IndexNow)
+  indexedAt      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   @@index([status, publishedAt])
   @@index([topic, status])
+  @@index([category, status, publishedAt])
+  @@index([origin, createdAt])
   @@index([eventDate])
+}
+
+/// One topic the content pipeline decided to write (or rewrite), from choice to result.
+model ContentTask {
+  id          String   @id @default(cuid())
+  /// UTC day the topic was planned for, YYYY-MM-DD
+  day         String
+  /// new | update | news
+  kind        String   @default("new")
+  /// planned | writing | written | checking | done | failed | skipped
+  status      String   @default("planned")
+  keyword     String
+  /// normalised keyword: one task per keyword per day, and the duplicate check across days
+  norm        String
+  clusterKey  String?
+  intent      String   @default("informational")
+  volume      Int?
+  difficulty  Float?
+  /// opportunity score 0–100 and the components behind it
+  score       Int      @default(0)
+  scoreJson   String   @default("{}")
+  category    String
+  format      String
+  /// why this topic was chosen, in a sentence
+  reason      String   @default("")
+  /// everything the writer was given: keywords, verified facts, link candidates, outline
+  briefJson   String   @default("{}")
+  /// Anthropic batch ids of the writing and the fact-checking request
+  batchId     String?
+  checkBatchId String?
+  /// the parsed draft and the quality report
+  draftJson   String?
+  /// the fact-checker's verdict
+  verdictJson String?
+  /// for updates: the article being revised; for all: the article that was created
+  articleId   String?
+  error       String?
+  attempts    Int      @default(0)
+  /// tokens used (input, output, searches), for cost tracking
+  usageJson   String   @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([day, norm])
+  @@index([status, updatedAt])
+  @@index([batchId])
+  @@index([checkBatchId])
+  @@index([norm])
 }

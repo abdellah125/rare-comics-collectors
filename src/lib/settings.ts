@@ -133,6 +133,21 @@ export const settingDefaults = {
   /** The feed lists everything currently for sale, so a product missing from it is no longer available. */
   "imports.feedIsComplete": false,
   "imports.syncHours": 24,
+  // Content pipeline (Guides / News / Stories). Keys stay in the environment; these are editorial dials.
+  "content.enabled": true,
+  /** Most articles planned per day. Fewer are written when fewer topics qualify. */
+  "content.dailyTarget": 100,
+  /** Start small: 10 on the first day, then 25, 50, and the full target from the fourth day. */
+  "content.rampUp": true,
+  /** Opportunity score (0–100) a topic needs before it is written. */
+  "content.minScore": 45,
+  "content.newsPerDay": 4,
+  /** Publish articles that pass the quality gate and the fact check without waiting for a person. */
+  "content.autoPublish": true,
+  /** Quality score (0–100) an article needs to be published automatically. */
+  "content.minQuality": 75,
+  /** News reported by one outlet only (no official source) is held for review unless this is on. */
+  "content.publishReportedNews": false,
   "seo.openseoProjectId": "",
   "seo.openseoReserveCredits": 100,
   "seo.autoSync": true,

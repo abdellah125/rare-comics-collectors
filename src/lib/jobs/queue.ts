@@ -26,6 +26,7 @@ export type JobType =
   | "catalog_release"
   | "reconcile_payments"
   | "crypto_check"
+  | "content_tick"
   | "seo_sync"
   | "seo_audit"
   | "import_prepare"

@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Link from "@/components/link";
-import { notFound } from "next/navigation";
-import { GuideGrid } from "@/components/guide-links";
+import { notFound, permanentRedirect } from "next/navigation";
+import { after } from "next/server";
+import { ClaimBadge, GuideGrid } from "@/components/guide-links";
+import { categoryOf, schemaTypeFor } from "@/lib/content/categories";
+import { hubTarget } from "@/lib/content/hubs";
+import { validateJsonLd } from "@/lib/content/quality";
 import { JsonLd, breadcrumbJsonLd, faqJsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { Breadcrumbs, Container, type Crumb } from "@/components/ui";
 import { slugify } from "@/lib/validation";
-import { getGuide, productsForGuide, relatedGuides, topicName } from "@/lib/guides/data";
+import { getGuide, listCharacters, productsForGuide, recordGuideView, relatedGuides } from "@/lib/guides/data";
 import { characterFact } from "@/lib/guides/characters";
 import { Markdown, outline, plainText } from "@/lib/guides/markdown";
 import { formatDateTime } from "@/lib/i18n";
@@ -19,16 +23,28 @@ export async function generateMetadata({ params }: PageProps<"/guides/[slug]">):
   const { slug } = await params;
   const guide = await getGuide(slug);
   if (!guide) return pageMetadata({ title: "Guide not found", description: "This guide is not available.", path: `/guides/${slug}`, noIndex: true });
+  const description = guide.metaDescription || (guide.answer.length > 160 ? `${guide.answer.slice(0, 157).replace(/\s+\S*$/, "")}…` : guide.answer);
+  const base = pageMetadata({ title: guide.seoTitle || guide.title, description, path: `/guides/${guide.slug}`, type: "article", keywords: [...new Set([guide.primaryKeyword ?? "", ...guide.secondaryKeywords, ...guide.tags, ...guide.characters, ...guide.titles].filter(Boolean))].slice(0, 12) });
+  const image = { url: `/api/og?title=${encodeURIComponent(guide.title)}`, width: 1200, height: 630, alt: guide.imageAlt || guide.title };
   return {
-    ...pageMetadata({ title: guide.title, description: guide.answer.length > 160 ? `${guide.answer.slice(0, 157).replace(/\s+\S*$/, "")}…` : guide.answer, path: `/guides/${guide.slug}`, type: "article", keywords: [...guide.tags, ...guide.characters, ...guide.titles].slice(0, 10) }),
-    other: { "article:published_time": guide.publishedAt?.toISOString() ?? "", "article:modified_time": guide.updatedAt.toISOString(), "article:section": topicName(guide.topic) },
+    ...base,
+    openGraph: { ...base.openGraph, title: guide.ogTitle || guide.title, description: guide.ogDescription || description, images: [image] },
+    other: { "article:published_time": guide.publishedAt?.toISOString() ?? "", "article:modified_time": guide.updatedAt.toISOString(), "article:section": categoryOf(guide).name },
   };
 }
 
 export default async function GuidePage({ params }: PageProps<"/guides/[slug]">) {
   const { slug } = await params;
   const guide = await getGuide(slug);
-  if (!guide) notFound();
+  if (!guide) {
+    // A hub address such as /guides/cgc-grading or /guides/spider-man leads to the page that is the hub.
+    const target = hubTarget(slug, (await listCharacters()).map((c) => c.slug));
+    if (target) permanentRedirect(target);
+    notFound();
+  }
+  after(() => recordGuideView(guide.id));
+  const category = categoryOf(guide);
+  const isNews = guide.format === "news";
   const [related, products] = await Promise.all([relatedGuides(guide), productsForGuide(guide)]);
   const toc = outline(guide.body).filter((h) => h.level === 2);
   const words = plainText(guide.body).split(" ").length;
@@ -37,18 +53,18 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
   const crumbs: Crumb[] = [
     { name: "Home", href: "/" },
     { name: "Guides", href: "/guides" },
-    { name: topicName(guide.topic), href: `/guides/topics/${guide.topic}` },
+    { name: category.name, href: `/guides/category/${category.slug}` },
     { name: guide.title, href: `/guides/${guide.slug}` },
   ];
 
   const articleJsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": schemaTypeFor(guide.format),
     "@id": `${site.url}/guides/${guide.slug}#article`,
-    headline: guide.title,
-    description: guide.answer,
-    articleSection: topicName(guide.topic),
-    keywords: [...guide.tags, ...guide.characters, ...guide.titles].join(", ") || undefined,
+    headline: guide.title.slice(0, 110),
+    description: guide.metaDescription || guide.answer,
+    articleSection: category.name,
+    keywords: [...new Set([guide.primaryKeyword ?? "", ...guide.tags, ...guide.characters, ...guide.titles].filter(Boolean))].join(", ") || undefined,
     wordCount: words,
     inLanguage: "en-US",
     datePublished: guide.publishedAt?.toISOString(),
@@ -59,23 +75,39 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
     image: [`${site.url}/api/og?title=${encodeURIComponent(guide.title)}`],
     isPartOf: { "@id": `${site.url}/#website` },
     ...(guide.characters.length ? { about: guide.characters.map((c) => ({ "@type": "Thing", name: c })) } : {}),
+    ...(isNews && guide.sources.some((s) => s.url) ? { citation: guide.sources.filter((s) => s.url).map((s) => s.url) } : {}),
   };
+  // Structured data is emitted only when it is complete; a broken block helps nobody.
+  const articleProblems = validateJsonLd(articleJsonLd);
+  const faqData = guide.faq.length > 0 ? faqJsonLd(guide.faq) : null;
+  const faqProblems = faqData ? validateJsonLd(faqData as Record<string, unknown>) : [];
+  if (articleProblems.length || faqProblems.length) console.error(`[guides] structured data left out on /guides/${guide.slug}: ${[...articleProblems, ...faqProblems].join("; ")}`);
 
   return (
     <>
       <JsonLd id="guide-breadcrumbs" data={breadcrumbJsonLd(crumbs)} />
-      <JsonLd id="guide-article" data={articleJsonLd} />
-      {guide.faq.length > 0 && <JsonLd id="guide-faq" data={faqJsonLd(guide.faq)} />}
+      {articleProblems.length === 0 && <JsonLd id="guide-article" data={articleJsonLd} />}
+      {faqData && faqProblems.length === 0 && <JsonLd id="guide-faq" data={faqData} />}
 
       <Container className="py-8 lg:py-10">
         <Breadcrumbs items={crumbs} />
         <article className="mt-8 grid gap-10 lg:grid-cols-12 lg:gap-14">
           <div className="lg:col-span-8">
             <header>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-700">
-                <Link href={`/guides/topics/${guide.topic}`} className="hover:underline">
-                  {topicName(guide.topic)}
+              {/* The header image is drawn by the page itself (no file to download): a plate in the brand colours with the category. */}
+              <div role="img" aria-label={guide.imageAlt || `${category.name}: ${guide.title}`} className="relative flex aspect-[16/5] items-end overflow-hidden rounded-xl bg-ink-950 p-5 sm:p-6" style={{ backgroundImage: "radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--color-brand-600) 55%, transparent), transparent 60%), radial-gradient(120% 140% at 100% 100%, color-mix(in srgb, var(--color-gold-500) 35%, transparent), transparent 55%)" }}>
+                <span aria-hidden className="absolute right-4 top-3 text-5xl opacity-90 sm:text-6xl">
+                  {category.icon}
+                </span>
+                <span aria-hidden className="font-display text-lg font-semibold text-white/95 sm:text-xl">
+                  {category.name}
+                </span>
+              </div>
+              <p className="mt-6 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-700">
+                <Link href={`/guides/category/${category.slug}`} className="hover:underline">
+                  {category.name}
                 </Link>
+                <ClaimBadge level={guide.claimLevel} />
               </p>
               <h1 className="mt-3 font-display text-3xl font-semibold leading-tight text-ink-950 sm:text-4xl">{guide.title}</h1>
               <p className="mt-3 text-[13px] text-ink-500">
@@ -83,10 +115,19 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
                 {guide.eventDate && <> · Event date {formatDateTime(guide.eventDate, { dateOnly: true })}</>} · {Math.max(1, Math.round(words / 220))} min read
               </p>
               <p className="mt-6 rounded-xl border border-brand-200 bg-brand-50 p-5 text-[16px] leading-relaxed text-ink-900">
-                <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">Short answer</span>
+                <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">{isNews ? "What happened" : "Short answer"}</span>
                 <span className="mt-1.5 block">{guide.answer}</span>
               </p>
             </header>
+
+            {isNews && guide.claimLevel && (
+              <p className="mt-4 rounded-lg border border-ink-200 bg-ink-50 px-4 py-3 text-[13px] leading-relaxed text-ink-700" data-testid="claim-note">
+                {guide.claimLevel === "confirmed" && "Confirmed: the facts in this update are stated by the official or primary sources listed below."}
+                {guide.claimLevel === "reported" && "Reported: this update rests on the news outlet listed below. We have not seen an official statement."}
+                {guide.claimLevel === "analysis" && "Analysis: this piece is our reading of the sources listed below, not a statement of fact."}
+                {" "}Anything under “What it means for collectors” is our analysis.
+              </p>
+            )}
 
             {toc.length >= 3 && (
               <nav aria-label="In this guide" className="mt-6 rounded-xl border border-ink-200 bg-ink-50 p-4 text-[14px]">
@@ -126,7 +167,7 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
             {guide.sources.length > 0 && (
               <section className="mt-10" aria-labelledby="guide-sources-heading">
                 <h2 id="guide-sources-heading" className="text-sm font-semibold text-ink-950">
-                  Sources and further reading
+                  {isNews ? "Sources" : "Sources and further reading"}
                 </h2>
                 <ul className="mt-2 grid gap-1 text-[14px] text-ink-700">
                   {guide.sources.map((s) => (
@@ -145,7 +186,7 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
             )}
 
             <p className="mt-10 text-[13px] text-ink-500">
-              Written by the {site.name} grading team. Spotted an error or have a question this guide does not answer?{" "}
+              {guide.origin === "auto" ? `Drafted with AI assistance from the facts and keywords the ${site.name} team maintains, then put through an automated fact check and our editorial rules.` : `Written by the ${site.name} grading team.`} Spotted an error or have a question this guide does not answer?{" "}
               <Link href="/contact" className="font-medium text-brand-700 underline-offset-2 hover:underline">
                 Tell us
               </Link>

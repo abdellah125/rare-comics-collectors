@@ -113,6 +113,17 @@ export function registerJobHandlers() {
     await enqueueJob("crypto_check", {}, { runAt: new Date(Date.now() + 2 * 60_000), dedupe: true });
   });
 
+  // Every five minutes while the queue is being driven: one turn of the content pipeline (plan the
+  // day once, send topics to be written, collect finished batches, check, publish what is due).
+  registerJobHandler("content_tick", async () => {
+    const { contentTick } = await import("@/lib/content/engine");
+    try {
+      await contentTick();
+    } finally {
+      await enqueueJob("content_tick", {}, { runAt: new Date(Date.now() + 5 * 60_000), dedupe: true });
+    }
+  });
+
   // Every 30 minutes: book gateway payments that the return leg or a webhook missed (PayPal captures, Stripe intents).
   registerJobHandler("reconcile_payments", async () => {
     const { reconcileRecentPayments } = await import("@/lib/payments/reconcile");
@@ -267,6 +278,7 @@ export async function ensureRecurringJobs() {
   await enqueueJob("catalog_release", {}, { dedupe: true });
   await enqueueJob("reconcile_payments", {}, { dedupe: true });
   await enqueueJob("crypto_check", {}, { dedupe: true });
+  await enqueueJob("content_tick", {}, { dedupe: true });
   await enqueueJob("seo_sync", {}, { dedupe: true });
   await enqueueJob("import_sync", {}, { dedupe: true });
   await enqueueJob("import_auto_release", {}, { dedupe: true });

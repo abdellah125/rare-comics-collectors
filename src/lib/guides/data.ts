@@ -7,6 +7,7 @@ import { isString, parseJsonArray } from "@/lib/json";
 import { slugify } from "@/lib/validation";
 import { CHARACTER_FACTS, type CharacterFact } from "@/lib/guides/characters";
 import { GUIDE_TOPICS } from "@/lib/guides/topics";
+import { TOPIC_DEFAULT_CATEGORY } from "@/lib/content/categories";
 
 export type Faq = { q: string; a: string };
 export type Source = { label: string; url?: string };
@@ -24,6 +25,11 @@ export type GuideSummary = {
   publishedAt: Date | null;
   updatedAt: Date;
   eventDate: Date | null;
+  /** content category slug ("" on older articles: see categoryOf) */
+  category: string;
+  format: string;
+  /** news only: confirmed | reported | analysis */
+  claimLevel: string | null;
 };
 
 export type Guide = GuideSummary & {
@@ -32,17 +38,36 @@ export type Guide = GuideSummary & {
   related: string[];
   sources: Source[];
   authorName: string | null;
+  /** manual | seed | auto */
+  origin: string;
+  seoTitle: string | null;
+  metaDescription: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  imageAlt: string | null;
+  primaryKeyword: string | null;
+  secondaryKeywords: string[];
+  wordCount: number;
 };
 
-export const publishedGuideWhere: Prisma.ArticleWhereInput = { status: "published", publishedAt: { lte: new Date() } };
+/**
+ * Published and due. The time is read each time the filter is used (spread or passed), so an
+ * article scheduled for later appears when its time comes, without a restart.
+ */
+export const publishedGuideWhere: Prisma.ArticleWhereInput = {
+  status: "published",
+  get publishedAt() {
+    return { lte: new Date() };
+  },
+};
 
-const summarySelect = { id: true, slug: true, title: true, answer: true, topic: true, tagsJson: true, charactersJson: true, titlesJson: true, publishersJson: true, publishedAt: true, updatedAt: true, eventDate: true } as const;
+const summarySelect = { id: true, slug: true, title: true, answer: true, topic: true, tagsJson: true, charactersJson: true, titlesJson: true, publishersJson: true, publishedAt: true, updatedAt: true, eventDate: true, category: true, format: true, claimLevel: true } as const;
 type SummaryRow = Prisma.ArticleGetPayload<{ select: typeof summarySelect }>;
 
 const strings = (json: string) => parseJsonArray(json, isString);
 
 export function toGuideSummary(r: SummaryRow): GuideSummary {
-  return { id: r.id, slug: r.slug, title: r.title, answer: r.answer, topic: r.topic, tags: strings(r.tagsJson), characters: strings(r.charactersJson), titles: strings(r.titlesJson), publishers: strings(r.publishersJson), publishedAt: r.publishedAt, updatedAt: r.updatedAt, eventDate: r.eventDate };
+  return { id: r.id, slug: r.slug, title: r.title, answer: r.answer, topic: r.topic, tags: strings(r.tagsJson), characters: strings(r.charactersJson), titles: strings(r.titlesJson), publishers: strings(r.publishersJson), publishedAt: r.publishedAt, updatedAt: r.updatedAt, eventDate: r.eventDate, category: r.category, format: r.format, claimLevel: r.claimLevel };
 }
 
 const isFaq = (v: unknown): v is Faq => typeof v === "object" && v !== null && typeof (v as Faq).q === "string" && typeof (v as Faq).a === "string";
@@ -51,12 +76,28 @@ const isSource = (v: unknown): v is Source => typeof v === "object" && v !== nul
 export const getGuide = cache(async (slug: string): Promise<Guide | null> => {
   const r = await db.article.findFirst({ where: { slug, ...publishedGuideWhere } });
   if (!r) return null;
-  return { ...toGuideSummary(r), body: r.body, faq: parseJsonArray(r.faqJson, isFaq), related: strings(r.relatedJson), sources: parseJsonArray(r.sourcesJson, isSource), authorName: r.authorName };
+  return { ...toGuideSummary(r), body: r.body, faq: parseJsonArray(r.faqJson, isFaq), related: strings(r.relatedJson), sources: parseJsonArray(r.sourcesJson, isSource), authorName: r.authorName, origin: r.origin, seoTitle: r.seoTitle, metaDescription: r.metaDescription, ogTitle: r.ogTitle, ogDescription: r.ogDescription, imageAlt: r.imageAlt, primaryKeyword: r.primaryKeyword, secondaryKeywords: strings(r.secondaryJson), wordCount: r.wordCount };
 });
 
-export async function listGuides(opts: { topic?: string; q?: string; character?: string; title?: string; publisher?: string; tag?: string; take?: number; skip?: number; order?: "latest" | "event" } = {}): Promise<{ items: GuideSummary[]; total: number }> {
+/** Counts a reading of a guide. Never throws: a counter must not break a page. */
+export async function recordGuideView(id: string) {
+  await db.article.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+}
+
+/** Articles of a category: those filed under it, plus older ones filed only under the topic it is the default for. */
+export function categoryWhere(slug: string): Prisma.ArticleWhereInput {
+  const legacyTopic = (Object.entries(TOPIC_DEFAULT_CATEGORY) as [string, string][]).find(([, c]) => c === slug)?.[0];
+  return legacyTopic ? { OR: [{ category: slug }, { category: "", topic: legacyTopic }] } : { category: slug };
+}
+
+export async function listGuides(opts: { topic?: string; category?: string; categories?: string[]; format?: string; q?: string; character?: string; title?: string; publisher?: string; tag?: string; take?: number; skip?: number; order?: "latest" | "event" | "popular" } = {}): Promise<{ items: GuideSummary[]; total: number }> {
+  const and: Prisma.ArticleWhereInput[] = [];
+  if (opts.category) and.push(categoryWhere(opts.category));
+  if (opts.categories?.length) and.push({ OR: opts.categories.map(categoryWhere) });
   const where: Prisma.ArticleWhereInput = {
     ...publishedGuideWhere,
+    ...(and.length ? { AND: and } : {}),
+    ...(opts.format ? { format: opts.format } : {}),
     ...(opts.topic ? { topic: opts.topic } : {}),
     ...(opts.character ? { charactersJson: { contains: `"${opts.character}"` } } : {}),
     ...(opts.title ? { titlesJson: { contains: `"${opts.title}"` } } : {}),
@@ -66,7 +107,7 @@ export async function listGuides(opts: { topic?: string; q?: string; character?:
       ? { OR: [{ title: { contains: opts.q, mode: "insensitive" } }, { answer: { contains: opts.q, mode: "insensitive" } }, { body: { contains: opts.q, mode: "insensitive" } }, { tagsJson: { contains: opts.q, mode: "insensitive" } }, { charactersJson: { contains: opts.q, mode: "insensitive" } }, { titlesJson: { contains: opts.q, mode: "insensitive" } }] }
       : {}),
   };
-  const orderBy: Prisma.ArticleOrderByWithRelationInput[] = opts.order === "event" ? [{ eventDate: "desc" }, { publishedAt: "desc" }] : [{ publishedAt: "desc" }];
+  const orderBy: Prisma.ArticleOrderByWithRelationInput[] = opts.order === "event" ? [{ eventDate: "desc" }, { publishedAt: "desc" }] : opts.order === "popular" ? [{ viewCount: "desc" }, { publishedAt: "desc" }] : [{ publishedAt: "desc" }, { id: "asc" }];
   const [rows, total] = await Promise.all([db.article.findMany({ where, select: summarySelect, orderBy, take: opts.take ?? 24, skip: opts.skip ?? 0 }), db.article.count({ where })]);
   return { items: rows.map(toGuideSummary), total };
 }
@@ -77,6 +118,33 @@ export const topicCounts = cache(async (): Promise<Record<string, number>> => {
 });
 
 export const guideCount = cache(async () => db.article.count({ where: publishedGuideWhere }));
+
+/** Published articles per content category (older articles count under their topic's default category). */
+export const categoryCounts = cache(async (): Promise<Record<string, number>> => {
+  const rows = await db.article.groupBy({ by: ["category", "topic"], where: publishedGuideWhere, _count: { _all: true } });
+  const out: Record<string, number> = {};
+  for (const r of rows) {
+    const slug = r.category || TOPIC_DEFAULT_CATEGORY[r.topic as keyof typeof TOPIC_DEFAULT_CATEGORY] || "collecting-guides";
+    out[slug] = (out[slug] ?? 0) + r._count._all;
+  }
+  return out;
+});
+
+/** Guides the editors put forward: the most complete evergreen pieces, best first. */
+export async function featuredGuides(take = 3): Promise<GuideSummary[]> {
+  const rows = await db.article.findMany({ where: { ...publishedGuideWhere, format: { notIn: ["news", "faq", "market"] }, topic: { not: "news" } }, select: summarySelect, orderBy: [{ wordCount: "desc" }, { viewCount: "desc" }, { publishedAt: "desc" }], take: take * 6 });
+  // One per category, so the row is not three takes on grading.
+  const seen = new Set<string>();
+  const out: GuideSummary[] = [];
+  for (const r of rows) {
+    const key = r.category || r.topic;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(toGuideSummary(r));
+    if (out.length >= take) break;
+  }
+  return out;
+}
 
 /** Same topic first, then shared tags/characters/titles; never the article itself. */
 export async function relatedGuides(guide: Guide, take = 6): Promise<GuideSummary[]> {
