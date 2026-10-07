@@ -4,6 +4,8 @@ import { ActionForm } from "@/components/admin/action-form";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { Pagination } from "@/components/admin/pagination";
 import { AdminPageHeader, Card, EmptyState, Field, FilterBar, Table, Td, Th, Tone, adminInput, adminSelect } from "@/components/admin/ui";
+import { refreshBacklogAction, removeTopicAction } from "@/lib/admin/actions/content";
+import { BACKLOG_DAY, backlogSummary } from "@/lib/content/backlog";
 import { approveContentAction, planContentAction, regenerateContentAction, rejectContentAction, retryTaskAction, runContentAction, saveContentSettingsAction, scheduleContentAction, unpublishContentAction } from "@/lib/admin/actions/content";
 import { listParams, pageCount } from "@/lib/admin/query";
 import { requireAdmin } from "@/lib/auth/session";
@@ -20,11 +22,12 @@ export const maxDuration = 60;
 
 const TABS = [
   ["articles", "Articles"],
+  ["backlog", "Backlog"],
   ["topics", "Topics & failures"],
   ["settings", "Settings"],
 ] as const;
 const STATUS_LABEL: Record<string, string> = { published: "Published", scheduled: "Scheduled", pending_review: "Pending review", draft: "Draft", rejected: "Rejected" };
-const TASK_LABEL: Record<string, string> = { planned: "Planned", writing: "Being written", written: "Written", checking: "Fact check", done: "Done", failed: "Failed", skipped: "Declined" };
+const TASK_LABEL: Record<string, string> = { queued: "Queued", planned: "Planned", writing: "Being written", written: "Written", checking: "Fact check", done: "Done", failed: "Failed", skipped: "Declined" };
 const tone = (s: string) => (s === "published" || s === "done" ? "success" : s === "scheduled" || s === "written" || s === "checking" || s === "writing" ? "brand" : s === "pending_review" || s === "planned" ? "warning" : s === "rejected" || s === "failed" ? "danger" : "neutral");
 
 export default async function ContentPage({ searchParams }: PageProps<"/admin/content">) {
@@ -104,6 +107,7 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
       </nav>
 
       {tab === "articles" && <Articles p={p} base={base} />}
+      {tab === "backlog" && <Backlog p={p} base={base} minScore={settings["content.minScore"]} requireDemand={settings["content.requireDemand"]} />}
       {tab === "topics" && <Topics p={p} base={base} lastPlan={lastPlan ? { summary: lastPlan.summary ?? "", at: lastPlan.startedAt } : null} plan={plan} />}
       {tab === "settings" && (
         <div className="grid gap-5 lg:grid-cols-2">
@@ -126,6 +130,12 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
                   <input type="checkbox" name="rampUp" defaultChecked={settings["content.rampUp"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
                   <span>
                     Ramp up<span className="block text-[12px] text-ink-500">10 on the first day, then 25, then 50, then the full target.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-ink-800">
+                  <input type="checkbox" name="requireDemand" defaultChecked={settings["content.requireDemand"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
+                  <span>
+                    Only write topics with measured demand<span className="block text-[12px] text-ink-500">On: a queued topic waits until its keyword has a search volume or Search Console impressions. Off: relevant topics are written without that evidence, best score first.</span>
                   </span>
                 </label>
                 <label className="flex items-start gap-2 text-sm text-ink-800">
@@ -298,9 +308,176 @@ async function Articles({ p, base }: { p: ReturnType<typeof listParams>; base: s
   );
 }
 
+async function Backlog({ p, base, minScore, requireDemand }: { p: ReturnType<typeof listParams>; base: string; minScore: number; requireDemand: boolean }) {
+  const kind = p.get("kind") === "update" ? "update" : "new";
+  const priority = p.get("priority");
+  const category = p.get("category");
+  const format = p.get("format");
+  const where: Prisma.ContentTaskWhereInput = { day: BACKLOG_DAY, kind, status: "queued", ...(priority ? { priority } : {}), ...(category ? { category } : {}), ...(format ? { format } : {}), ...(p.q ? { OR: [{ keyword: { contains: p.q, mode: "insensitive" as const } }, { title: { contains: p.q, mode: "insensitive" as const } }] } : {}) };
+  const [sum, rows, total] = await Promise.all([
+    backlogSummary(minScore),
+    db.contentTask.findMany({ where, orderBy: [{ score: "desc" }, { norm: "asc" }], skip: p.skip, take: p.per, select: { id: true, title: true, keyword: true, secondaryJson: true, intent: true, format: true, category: true, priority: true, volume: true, difficulty: true, score: true, source: true, status: true, reason: true } }),
+    db.contentTask.count({ where }),
+  ]);
+  const s = sum.state;
+  const chips = (title: string, counts: Record<string, number>, label: (k: string) => string) => (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-500">{title}</p>
+      <ul className="mt-1.5 flex flex-wrap gap-1.5">
+        {Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .map(([k, n]) => (
+            <li key={k} className="rounded-full bg-ink-100 px-2.5 py-0.5 text-[12px] text-ink-800">
+              {label(k)} <span className="tabular-nums text-ink-500">{n.toLocaleString("en-US")}</span>
+            </li>
+          ))}
+      </ul>
+    </div>
+  );
+  return (
+    <>
+      <Card
+        title="Topic backlog"
+        description="Every content opportunity SEO Intelligence currently supports, queued for the pipeline. One topic per page SEO Intelligence recommends; a keyword the site already answers becomes an entry to improve that page instead."
+        className="mb-5"
+        actions={<ConfirmButton label="Refresh from SEO Intelligence" message="Reads the keyword clusters again and queues any new opportunity. Existing topics, drafts and articles are not changed or removed. No AI or paid API is used." action={refreshBacklogAction} size="sm" />}
+      >
+        <div className="grid gap-4 p-5">
+          <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {(
+              [
+                ["Topics queued", sum.queued, "waiting for the pipeline"],
+                ["Ready to write now", requireDemand ? sum.eligibleNow : sum.queued, requireDemand ? `measured demand and a score of ${minScore}+` : "demand evidence not required"],
+                ["Improve existing pages", sum.updates, "the site already answers these keywords"],
+                ["Taken by the pipeline", sum.taken, `${sum.removed} removed by staff`],
+              ] as [string, number, string][]
+            ).map(([label, value, sub]) => (
+              <div key={label} className="rounded-lg border border-ink-200 p-3">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-500">{label}</dt>
+                <dd className="mt-0.5 text-xl font-semibold tabular-nums text-ink-950">{value.toLocaleString("en-US")}</dd>
+                <dd className="text-[12px] text-ink-600">{sub}</dd>
+              </div>
+            ))}
+          </dl>
+          {s ? (
+            <p className="text-[13px] leading-relaxed text-ink-700" data-testid="backlog-state">
+              {s.finishedAt ? `Last pass finished ${formatDateTime(new Date(s.finishedAt))}` : `Pass in progress: ${s.cursor.toLocaleString("en-US")} of ${s.total.toLocaleString("en-US")} read; it continues from there`}. SEO Intelligence held {s.clusters.toLocaleString("en-US")} guide recommendations ({s.total.toLocaleString("en-US")} distinct pages): {s.added.toLocaleString("en-US")} queued in this pass, {s.duplicates.toLocaleString("en-US")} dropped as duplicates of a topic or page that exists, {s.updates.toLocaleString("en-US")} turned into improve-existing entries, {s.notRelevant.toLocaleString("en-US")} left out as not about collectible comics.
+            </p>
+          ) : (
+            <p className="text-[13px] text-ink-700" data-testid="backlog-state">The backlog has not been built yet. It is built by the scheduled job, or now with the button above.</p>
+          )}
+          <p className="rounded-lg bg-ink-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink-700">
+            The backlog is as large as the evidence: it holds one topic for every page SEO Intelligence can justify today and grows by itself as more keywords are researched or appear in Search Console. It is not padded with invented variations.
+          </p>
+          <div className="grid gap-4 md:grid-cols-3">
+            {chips("By content type", sum.byFormat, (k) => (isFormat(k) ? FORMATS[k].name : k))}
+            {chips("By category", sum.byCategory, (k) => categoryBySlug(k)?.short ?? k)}
+            {chips("By SEO priority", sum.byPriority, (k) => (k === "unmeasured" ? "No demand figure yet" : k[0].toUpperCase() + k.slice(1)))}
+          </div>
+        </div>
+      </Card>
+      <FilterBar action={base} reset>
+        <input type="hidden" name="tab" value="backlog" />
+        <Field label="Search" className="min-w-[200px] flex-1">
+          <input name="q" defaultValue={p.q} placeholder="Topic or keyword" className={adminInput} />
+        </Field>
+        <Field label="Show">
+          <select name="kind" defaultValue={kind} className={adminSelect}>
+            <option value="new">New topics</option>
+            <option value="update">Improve existing pages</option>
+          </select>
+        </Field>
+        <Field label="SEO priority">
+          <select name="priority" defaultValue={priority} className={adminSelect}>
+            <option value="">Any</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+            <option value="unmeasured">No demand figure yet</option>
+          </select>
+        </Field>
+        <Field label="Content type">
+          <select name="format" defaultValue={format} className={adminSelect}>
+            <option value="">Any</option>
+            {Object.entries(FORMATS).map(([k, f]) => (
+              <option key={k} value={k}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Category">
+          <select name="category" defaultValue={category} className={adminSelect}>
+            <option value="">Any</option>
+            {CATEGORIES.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </FilterBar>
+      {rows.length === 0 ? (
+        <EmptyState title="Nothing queued here" body="Topics appear once the backlog has been built from SEO Intelligence." />
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Topic</Th>
+              <Th>Primary keyword</Th>
+              <Th>Secondary keywords</Th>
+              <Th>Intent</Th>
+              <Th>Type · category</Th>
+              <Th>Priority</Th>
+              <Th align="right">Volume</Th>
+              <Th align="right">KD</Th>
+              <Th>Source</Th>
+              <Th>Status</Th>
+              <Th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((t) => {
+              const secondary = (() => { try { return JSON.parse(t.secondaryJson) as string[]; } catch { return []; } })();
+              return (
+                <tr key={t.id} className="align-top">
+                  <Td className="min-w-[260px] max-w-[360px]">
+                    <span className="font-medium text-ink-950">{t.title ?? t.keyword}</span>
+                    <span className="mt-0.5 block text-[11px] leading-snug text-ink-500">{t.reason}</span>
+                  </Td>
+                  <Td className="min-w-[140px]">{t.keyword}</Td>
+                  <Td className="min-w-[160px] max-w-[240px] text-[12px] text-ink-700">{secondary.length ? `${secondary.slice(0, 4).join(", ")}${secondary.length > 4 ? ` +${secondary.length - 4}` : ""}` : "—"}</Td>
+                  <Td>{t.intent}</Td>
+                  <Td className="whitespace-nowrap">
+                    {isFormat(t.format) ? FORMATS[t.format].name : t.format} · {categoryBySlug(t.category)?.short ?? t.category}
+                  </Td>
+                  <Td>
+                    <Tone tone={t.priority === "high" ? "success" : t.priority === "medium" ? "brand" : t.priority === "low" ? "warning" : "neutral"}>{t.priority === "unmeasured" ? "no figure" : t.priority}</Tone>
+                    <span className="mt-1 block text-[11px] tabular-nums text-ink-500">score {t.score}</span>
+                  </Td>
+                  <Td align="right">{t.volume?.toLocaleString("en-US") ?? "—"}</Td>
+                  <Td align="right">{t.difficulty !== null ? Math.round(t.difficulty) : "—"}</Td>
+                  <Td className="min-w-[180px] max-w-[260px] text-[11px] leading-snug text-ink-600">{t.source ?? "—"}</Td>
+                  <Td>
+                    <Tone tone="warning">{TASK_LABEL[t.status] ?? t.status}</Tone>
+                  </Td>
+                  <Td>
+                    <ConfirmButton label="Remove" message="Takes this topic out of the backlog. It will not be written or queued again." action={removeTopicAction.bind(null, t.id)} size="sm" />
+                  </Td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
+      )}
+      <Pagination base={base} params={{ ...p.params, tab: "backlog" }} page={p.page} pages={pageCount(total, p.per)} total={total} per={p.per} />
+    </>
+  );
+}
+
 async function Topics({ p, base, lastPlan, plan }: { p: ReturnType<typeof listParams>; base: string; lastPlan: { summary: string; at: Date } | null; plan: { duplicates?: { keyword: string; existing: string; why: string }[] } | null }) {
   const status = p.get("status");
-  const where: Prisma.ContentTaskWhereInput = { ...(status ? { status } : {}), ...(p.q ? { keyword: { contains: p.q, mode: "insensitive" as const } } : {}) };
+  const where: Prisma.ContentTaskWhereInput = { day: { not: BACKLOG_DAY }, ...(status ? { status } : {}), ...(p.q ? { keyword: { contains: p.q, mode: "insensitive" as const } } : {}) };
   const [rows, total] = await Promise.all([db.contentTask.findMany({ where, orderBy: [{ createdAt: "desc" }], skip: p.skip, take: p.per, select: { id: true, day: true, kind: true, status: true, keyword: true, volume: true, difficulty: true, intent: true, score: true, category: true, format: true, reason: true, error: true, articleId: true } }), db.contentTask.count({ where })]);
   return (
     <>

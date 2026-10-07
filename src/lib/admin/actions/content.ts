@@ -129,6 +129,7 @@ export async function saveContentSettingsAction(_prev: ActionState | undefined, 
       "content.autoPublish": on("autoPublish"),
       "content.rampUp": on("rampUp"),
       "content.publishReportedNews": on("publishReportedNews"),
+      "content.requireDemand": on("requireDemand"),
       "content.dailyTarget": int("dailyTarget", 0, 100, 100),
       "content.newsPerDay": int("newsPerDay", 0, 7, 6),
       "content.minScore": int("minScore", 30, 95, 45),
@@ -138,5 +139,33 @@ export async function saveContentSettingsAction(_prev: ActionState | undefined, 
     await audit({ actor: actorOf(admin), action: "content.settings", targetType: "content", targetId: "settings", summary: `Content pipeline settings: ${JSON.stringify(patch)}` });
     refresh();
     return okState(undefined, "Saved.");
+  });
+}
+
+/** Builds or refreshes the topic backlog from SEO Intelligence now, and leaves the rest to the scheduled job. */
+export async function refreshBacklogAction(): Promise<ActionState> {
+  return runAdmin("content.manage", async (admin) => {
+    const { backlogState, syncBacklog } = await import("@/lib/content/backlog");
+    const { enqueueJob } = await import("@/lib/jobs/queue");
+    // A finished pass is started again; an unfinished one continues from where it stopped.
+    const finished = Boolean((await backlogState())?.finishedAt);
+    const step = await syncBacklog({ budgetMs: 18_000, restart: finished });
+    if (!step.done) await enqueueJob("content_backlog", {}, { dedupe: true });
+    await audit({ actor: actorOf(admin), action: "content.backlog", targetType: "content", targetId: "backlog", summary: `Backlog refresh: ${step.state.cursor} of ${step.state.total} read, ${step.state.added} added` });
+    refresh();
+    const s = step.state;
+    return okState(undefined, step.done ? `Done: ${s.total} recommendations read; ${s.added} topics added, ${s.refreshed} refreshed, ${s.updates} improve-existing entries, ${s.duplicates} duplicates dropped, ${s.notRelevant} not relevant.` : `${s.cursor} of ${s.total} read so far; the rest continues in the background from where this stopped.`);
+  });
+}
+
+/** Takes a topic out of the queue (it is kept, marked removed, so it is not queued again). */
+export async function removeTopicAction(id: string): Promise<ActionState> {
+  return runAdmin("content.manage", async (admin) => {
+    const t = await db.contentTask.findUnique({ where: { id } });
+    if (!t || t.status !== "queued") return failState("Only queued topics can be removed.");
+    await db.contentTask.update({ where: { id }, data: { status: "skipped", error: `Removed from the backlog by ${admin.email}` } });
+    await audit({ actor: actorOf(admin), action: "content.topic_remove", targetType: "content", targetId: id, summary: `Removed topic “${t.title ?? t.keyword}” from the backlog` });
+    refresh();
+    return okState(undefined, "Removed from the backlog.");
   });
 }

@@ -2064,8 +2064,16 @@ model ContentTask {
   day         String
   /// new | update | news
   kind        String   @default("new")
-  /// planned | writing | written | checking | done | failed | skipped
+  /// queued (in the backlog, day = "backlog") | planned | writing | written | checking | done | failed | skipped
   status      String   @default("planned")
+  /// working title of the topic (no facts; the writer replaces it with a real headline)
+  title       String?
+  /// JSON array of secondary keywords the same article should cover
+  secondaryJson String @default("[]")
+  /// where the topic came from in SEO Intelligence
+  source      String?
+  /// high | medium | low | unmeasured (no demand figure for the keyword yet)
+  priority    String   @default("low")
   keyword     String
   /// normalised keyword: one task per keyword per day, and the duplicate check across days
   norm        String
@@ -2103,4 +2111,5 @@ model ContentTask {
   @@index([batchId])
   @@index([checkBatchId])
   @@index([norm])
+  @@index([day, status, score])
 }

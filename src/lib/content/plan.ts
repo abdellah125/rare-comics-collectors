@@ -47,18 +47,19 @@ export type PlanContext = {
 };
 
 /** Everything the site already has, read once per planning run. */
-export async function loadPlanContext(): Promise<PlanContext> {
+export async function loadPlanContext(opts: { includeQueued?: boolean } = {}): Promise<PlanContext> {
   const since = new Date(Date.now() - 21 * 86_400_000);
   const [rows, tasks, ctx, products] = await Promise.all([
     db.article.findMany({ where: { status: { not: "rejected" } }, select: { id: true, slug: true, title: true, answer: true, topic: true, origin: true, status: true, primaryKeyword: true, secondaryJson: true, charactersJson: true, titlesJson: true, tagsJson: true } }),
-    db.contentTask.findMany({ where: { createdAt: { gte: since }, status: { in: ["planned", "writing", "written", "checking", "review"] } }, select: { keyword: true, norm: true } }),
+    // The backlog compares a topic with everything already queued; the daily plan must not (it picks from the queue).
+    db.contentTask.findMany({ where: opts.includeQueued ? { OR: [{ createdAt: { gte: since }, status: { in: ["planned", "writing", "written", "checking"] } }, { day: "backlog", kind: "new", status: "queued" }] } : { createdAt: { gte: since }, status: { in: ["planned", "writing", "written", "checking"] } }, select: { keyword: true, norm: true, title: true, secondaryJson: true } }),
     buildContext(),
     db.product.findMany({ where: publishedWhere, select: { slug: true, title: true, issue: true, grader: true, grade: true }, take: 6000 }),
   ]);
   const articles = rows.map((a) => ({ ...a, tokens: articleTokens(`${a.title} ${a.slug.replace(/-/g, " ")} ${parseJsonArray(a.charactersJson, isString).join(" ")} ${parseJsonArray(a.titlesJson, isString).join(" ")}`) }));
   const pages: ExistingPage[] = [
     ...articles.map((a) => ({ url: `/guides/${a.slug}`, title: a.title, kind: "article" as const, keywords: [a.primaryKeyword ? normPhrase(a.primaryKeyword) : "", ...parseJsonArray(a.secondaryJson, isString).map(normPhrase)].filter(Boolean) })),
-    ...tasks.map((t) => ({ url: "", title: t.keyword, kind: "task" as const, keywords: [t.norm] })),
+    ...tasks.map((t) => ({ url: "", title: t.title ?? t.keyword, kind: "task" as const, keywords: [t.norm, ...parseJsonArray(t.secondaryJson, isString).map(normPhrase)] })),
   ];
   const productsBySeries = new Map<string, BriefLink[]>();
   for (const p of products) {
@@ -129,15 +130,15 @@ export function buildBrief(ctx: PlanContext, s: Selected, today: string): Brief 
 }
 
 /** Topics SEO Intelligence recommends a guide for and the site does not have yet. */
-export async function loadCandidates(ctx: PlanContext): Promise<Candidate[]> {
-  const clusters = await db.seoCluster.findMany({ where: { urlExists: false, recommendedUrl: { startsWith: "/guides/" }, pageType: { in: CONTENT_PAGE_TYPES } }, select: { key: true, label: true, entityType: true, bucket: true, intent: true, specificJson: true, primaryPhrase: true, secondaryJson: true, supportingJson: true, volume: true, difficulty: true, pageType: true, recommendedUrl: true, title: true, h1: true, topicsJson: true, linksJson: true } });
+export async function loadCandidates(ctx: PlanContext, opts: { includeTitlePages?: boolean } = {}): Promise<Candidate[]> {
+  const clusters = await db.seoCluster.findMany({ where: { urlExists: false, OR: [{ recommendedUrl: { startsWith: "/guides/" }, pageType: { in: CONTENT_PAGE_TYPES } }, ...(opts.includeTitlePages ? [{ pageType: "Comic title page" }] : [])] }, select: { key: true, label: true, entityType: true, bucket: true, intent: true, specificJson: true, primaryPhrase: true, secondaryJson: true, supportingJson: true, volume: true, difficulty: true, pageType: true, recommendedUrl: true, title: true, h1: true, topicsJson: true, linksJson: true } });
   const norms = clusters.map((c) => normPhrase(c.primaryPhrase));
-  const keywords = new Map<string, { relevance: number; impressions: number | null; position: number | null; competitorsJson: string; volume: number | null; difficulty: number | null }>();
+  const keywords = new Map<string, { relevance: number; impressions: number | null; position: number | null; competitorsJson: string; volume: number | null; difficulty: number | null; sourcesJson: string }>();
   for (let i = 0; i < norms.length; i += 2000) {
-    for (const k of await db.seoKeyword.findMany({ where: { norm: { in: norms.slice(i, i + 2000) } }, select: { norm: true, relevance: true, impressions: true, position: true, competitorsJson: true, volume: true, difficulty: true } })) keywords.set(k.norm, k);
+    for (const k of await db.seoKeyword.findMany({ where: { norm: { in: norms.slice(i, i + 2000) } }, select: { norm: true, relevance: true, impressions: true, position: true, competitorsJson: true, volume: true, difficulty: true, sourcesJson: true } })) keywords.set(k.norm, k);
   }
   const published = ctx.articles.filter((a) => a.status === "published");
-  return clusters.map((c) => {
+  const out = clusters.map((c) => {
     const norm = normPhrase(c.primaryPhrase);
     const k = keywords.get(norm);
     const labelTokens = articleTokens(c.label);
@@ -168,8 +169,33 @@ export async function loadCandidates(ctx: PlanContext): Promise<Candidate[]> {
       supportArticles: published.filter((a) => tokensIn(a.tokens, labelTokens)).length,
       productCount: planLinks.filter((l) => l.url.startsWith("/store/")).length || (ctx.links.productsBySeries.get(seriesKey)?.length ?? 0),
       competitorGap: Boolean(k && k.position === null && k.competitorsJson !== "[]"),
+      sources: k ? parseJsonArray(k.sourcesJson, isString).slice(0, 6) : [],
     } satisfies Candidate;
   });
+  if (!opts.includeTitlePages) return out;
+  // "Comics for sale" keywords for a series have no page type of their own on the site. When the
+  // series already has a guide planned, the keywords join that guide; otherwise they become one
+  // buyer's guide to the series. Never a second page for the same series.
+  const guides = out.filter((c) => c.pageType !== "Comic title page");
+  // A series can have a key-issues guide and a values guide planned: the buying keywords belong with the key issues.
+  const byLabel = new Map<string, Candidate>();
+  for (const g of guides) {
+    const key = normPhrase(g.label);
+    const held = byLabel.get(key);
+    if (!held || (held.bucket !== "learn" && g.bucket === "learn")) byLabel.set(key, g);
+  }
+  for (const t of out.filter((c) => c.pageType === "Comic title page")) {
+    const home = byLabel.get(normPhrase(t.label));
+    if (home) {
+      home.secondary = [...new Set([...home.secondary, t.keyword, ...t.secondary])].filter((k) => normPhrase(k) !== home.norm).slice(0, 12);
+      continue;
+    }
+    const name = t.label;
+    const slug = t.recommendedUrl.replace(/^\/titles\//, "");
+    guides.push({ ...t, pageType: "Buying guide", bucket: "buy", recommendedUrl: `/guides/${slug}-comics-buying-guide`, planTitle: `${name} Comics: A Buyer's Guide to the Key Issues`, planH1: `Buying ${name} comics` });
+    byLabel.set(normPhrase(name), guides[guides.length - 1]);
+  }
+  return guides;
 }
 
 export type PlanResult = { day: string; target: number; considered: number; eligible: number; created: number; duplicates: { keyword: string; existing: string; why: string }[]; news: number; summary: string };
@@ -201,7 +227,12 @@ export async function planDay(opts: { day?: string; limit?: number } = {}): Prom
   const newsToAdd = Math.min(Math.max(0, newsWanted - newsHave), room);
   const evergreenRoom = room - newsToAdd;
   // More than needed are selected, because some will turn out to be covered already.
-  const picked = selectTopics(candidates, { target: evergreenRoom * 2 + 10, minScore: settings["content.minScore"] });
+  // The backlog is the queue the plan draws from: a topic the owner removed from it is not planned.
+  const backlog = new Map((await db.contentTask.findMany({ where: { day: "backlog", kind: "new" }, select: { id: true, norm: true, status: true } })).map((t) => [t.norm, t]));
+  // Once the backlog exists, only what is queued in it can be planned: it has already been compared
+  // with every other topic, and a topic staff removed stays out. Before it exists, the plan works as before.
+  const built = backlog.size > 0;
+  const picked = selectTopics(candidates.filter((c) => (built ? backlog.get(c.norm)?.status === "queued" : true)), { target: evergreenRoom * 2 + 10, minScore: settings["content.minScore"], requireDemand: settings["content.requireDemand"] });
   const duplicates: PlanResult["duplicates"] = [];
   const today = new Date().toISOString().slice(0, 10);
   let created = 0;
@@ -216,7 +247,10 @@ export async function planDay(opts: { day?: string; limit?: number } = {}): Prom
     }
     const brief = buildBrief(ctx, s, today);
     try {
-      await db.contentTask.create({ data: { day, kind: "new", keyword: s.keyword, norm: s.norm, clusterKey: s.clusterKey, intent: s.intent, volume: s.volume, difficulty: s.difficulty, score: s.score, scoreJson: JSON.stringify(s.parts), category: s.category, format: s.format, reason: s.reason, briefJson: JSON.stringify(brief) } });
+      // A queued topic moves out of the backlog into today's plan; anything else is created as before.
+      const fromQueue = backlog.get(s.norm);
+      if (fromQueue?.status === "queued") await db.contentTask.update({ where: { id: fromQueue.id }, data: { day, status: "planned", score: s.score, scoreJson: JSON.stringify(s.parts), volume: s.volume, difficulty: s.difficulty, category: s.category, format: s.format, reason: s.reason, briefJson: JSON.stringify(brief) } });
+      else await db.contentTask.create({ data: { day, kind: "new", keyword: s.keyword, norm: s.norm, clusterKey: s.clusterKey, intent: s.intent, volume: s.volume, difficulty: s.difficulty, score: s.score, scoreJson: JSON.stringify(s.parts), category: s.category, format: s.format, reason: s.reason, briefJson: JSON.stringify(brief) } });
     } catch {
       continue; // already planned today
     }

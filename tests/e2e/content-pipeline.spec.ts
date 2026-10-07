@@ -178,6 +178,17 @@ test("the content dashboard lists articles with their figures and lets staff app
   await expect(topic).toContainText(/Quality gate/);
   await expect(topic.getByRole("button", { name: "Try again" })).toBeVisible();
 
+  // Backlog: queued topics with their SEO figures; removing one keeps it out for good.
+  const queued = await db.contentTask.create({ data: { day: "backlog", kind: "new", status: "queued", keyword: `e2e queued keyword ${stamp}`, norm: `e2e queued keyword ${stamp}`, title: `E2E Queued Topic ${stamp}: A Collector's Guide`, secondaryJson: JSON.stringify(["second phrase", "third phrase"]), intent: "commercial", volume: 880, difficulty: 21, score: 73, category: "buying-guides", format: "guide", priority: "high", source: "SEO Intelligence cluster e2e (keyword from: gsc)", reason: "commercial intent; 880 searches a month." } });
+  await page.goto(`/admin/content?tab=backlog&q=${stamp}`);
+  await expectHealthy(page);
+  await expect(page.getByTestId("backlog-state")).toBeVisible();
+  const item = page.getByRole("table").first().locator("tr", { hasText: `E2E Queued Topic ${stamp}` });
+  for (const text of [`e2e queued keyword ${stamp}`, "second phrase, third phrase", "commercial", "Guide · Buying", "high", "880", "21", "SEO Intelligence cluster e2e", "Queued"]) await expect(item).toContainText(text);
+  await confirm(item, "Remove");
+  await expect(item).toHaveCount(0, { timeout: 30_000 });
+  expect((await db.contentTask.findUniqueOrThrow({ where: { id: queued.id } })).status).toBe("skipped");
+
   // Settings: saved on the server and read back.
   await page.goto("/admin/content?tab=settings");
   const before = (await db.setting.findUnique({ where: { key: "content.dailyTarget" } }))?.value ?? null;

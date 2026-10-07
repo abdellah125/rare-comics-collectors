@@ -142,6 +142,8 @@ export const settingDefaults = {
   /** Opportunity score (0–100) a topic needs before it is written. */
   "content.minScore": 45,
   "content.newsPerDay": 4,
+  /** Only write a topic whose keyword has a measured search volume or Search Console impressions. */
+  "content.requireDemand": true,
   /** Publish articles that pass the quality gate and the fact check without waiting for a person. */
   "content.autoPublish": true,
   /** Quality score (0–100) an article needs to be published automatically. */

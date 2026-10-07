@@ -42,6 +42,8 @@ export type Candidate = {
   productCount: number;
   /** competitors rank for it and the site has no page */
   competitorGap: boolean;
+  /** where SEO Intelligence found the keyword: gsc, research:<seed>, catalog, competitor:<domain>… */
+  sources?: string[];
 };
 
 export type ScoreParts = { volume: number; difficulty: number; intent: number; trend: number; commercial: number; ranking: number; gap: number; authority: number; relevance: number; links: number; products: number };
@@ -165,9 +167,9 @@ export type Selected = Candidate & { score: number; parts: ScoreParts; reason: s
  * more than a third of the day, and few long-form pieces. Stops below the minimum score, so a
  * day with few good topics produces few articles.
  */
-export function selectTopics(candidates: Candidate[], opts: { target: number; minScore: number; maxPerEntity?: number; maxLongform?: number }): Selected[] {
+export function selectTopics(candidates: Candidate[], opts: { target: number; minScore: number; maxPerEntity?: number; maxLongform?: number; requireDemand?: boolean }): Selected[] {
   const scored = candidates
-    .filter((c) => hasDemand(c) && c.relevance >= MIN_RELEVANCE && c.intent !== "navigational")
+    .filter((c) => (opts.requireDemand === false || hasDemand(c)) && c.relevance >= MIN_RELEVANCE && c.intent !== "navigational")
     .map((c) => {
       const s = scoreOpportunity(c);
       const category = categoryFor(c);

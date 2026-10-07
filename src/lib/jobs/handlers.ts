@@ -124,6 +124,16 @@ export function registerJobHandlers() {
     }
   });
 
+  // The topic backlog: every opportunity SEO Intelligence supports, queued for the content pipeline.
+  // Built in short steps that remember their place; once a pass is finished the next one starts a day
+  // later and picks up what SEO Intelligence has learnt since. No AI and no paid API is involved.
+  registerJobHandler("content_backlog", async (payload) => {
+    const { syncBacklog } = await import("@/lib/content/backlog");
+    const step = await syncBacklog({ restart: payload.restart === true });
+    if (step.done) await enqueueJob("content_backlog", { restart: true }, { runAt: new Date(Date.now() + 24 * 3_600_000), dedupe: true });
+    else await enqueueJob("content_backlog", {}, { runAt: new Date(Date.now() + 15_000), dedupe: true });
+  });
+
   // Every 30 minutes: book gateway payments that the return leg or a webhook missed (PayPal captures, Stripe intents).
   registerJobHandler("reconcile_payments", async () => {
     const { reconcileRecentPayments } = await import("@/lib/payments/reconcile");
@@ -279,6 +289,7 @@ export async function ensureRecurringJobs() {
   await enqueueJob("reconcile_payments", {}, { dedupe: true });
   await enqueueJob("crypto_check", {}, { dedupe: true });
   await enqueueJob("content_tick", {}, { dedupe: true });
+  await enqueueJob("content_backlog", {}, { dedupe: true });
   await enqueueJob("seo_sync", {}, { dedupe: true });
   await enqueueJob("import_sync", {}, { dedupe: true });
   await enqueueJob("import_auto_release", {}, { dedupe: true });

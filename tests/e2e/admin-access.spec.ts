@@ -21,6 +21,7 @@ const ADMIN_ROUTES = [
   "/admin/catalog",
   "/admin/guides",
   "/admin/content",
+  "/admin/content?tab=backlog",
   "/admin/content?tab=topics",
   "/admin/content?tab=settings",
   "/admin/reviews",
