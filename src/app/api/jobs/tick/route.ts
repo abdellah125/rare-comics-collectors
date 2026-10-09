@@ -1,5 +1,5 @@
 import { ensureRecurringJobs, registerJobHandlers } from "@/lib/jobs/handlers";
-import { processJobs } from "@/lib/jobs/queue";
+import { noteDrain, processJobs } from "@/lib/jobs/queue";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -25,6 +25,7 @@ export async function GET() {
     registerJobHandlers();
     await ensureRecurringJobs().catch(() => {});
     const result = await processJobs(25);
+    await noteDrain("tick", result);
     return Response.json({ ok: true, ...result }, { headers: { "cache-control": "no-store" } });
   } catch (err) {
     console.error("[jobs] tick failed", err);

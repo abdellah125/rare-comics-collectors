@@ -1,7 +1,7 @@
 import { env } from "@/lib/env";
 import { safeEqual } from "@/lib/crypto";
 import { ensureRecurringJobs, registerJobHandlers } from "@/lib/jobs/handlers";
-import { processJobs } from "@/lib/jobs/queue";
+import { noteDrain, processJobs } from "@/lib/jobs/queue";
 
 export const dynamic = "force-dynamic";
 // Draining 50 jobs (emails, payouts, cleanups) can take a while on a cold function.
@@ -28,6 +28,7 @@ async function run(req: Request) {
   registerJobHandlers();
   await ensureRecurringJobs();
   const result = await processJobs(50);
+  await noteDrain("cron", result);
   return Response.json({ ok: true, ...result });
 }
 

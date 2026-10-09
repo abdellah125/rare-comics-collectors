@@ -329,6 +329,13 @@ Running record of every issue found, fix shipped, and item still owed, kept so l
 - **To grow the backlog:** more keywords with metrics in SEO Intelligence (keyword research credits, or time in Search Console). The backlog follows automatically.
 - Dashboard: Admin › Content pipeline › Backlog (counts, breakdowns, the pass report, filterable list, Refresh, Remove). Migration `20261015090000_content_backlog`. Tests: `tests/integration/content-backlog.ts` (7 checks: steps, resuming, fields, no duplicates, second pass adds nothing, nothing else touched), e2e in `content-pipeline.spec.ts`.
 
+### Jobs & system fixes (2026-10-09)
+- **Recurring jobs ran twice in a row:** the scheduler that runs on every queue drain added a copy "due now" while another copy was still running (the duplicate check only looked at waiting jobs). It now checks waiting and running copies (`ensureScheduled`); a handler's own "next run" still uses the waiting-only check, so jobs keep rescheduling themselves (`tests/integration/jobs-recurring.ts`, 5 checks).
+- **One list of recurring jobs** (`RECURRING_JOBS` in `src/lib/jobs/queue.ts`) drives both the scheduler and the admin page. The page used to list 6 of the 14 and offered a job (`recompute_seller_stats`) that is not recurring.
+- **Admin › Jobs & system:** a health line per recurring job (last done, next run, ok / late / missing / failing, last error, Queue now); every registered type in the filter; jobs cut off by the time limit shown as stuck with Release; Clear resolved failures (removes failures a later successful run has superseded); the runtime card now says how the queue runs on Vercel, when it last ran from traffic and from the cron, whether CRON_SECRET is set (without it the daily cron is refused), that uploads cannot be stored on Vercel without BLOB_READ_WRITE_TOKEN, and whether the AI key is set.
+- **Housekeeping:** failed and cancelled jobs older than 30 days are deleted by `cleanup_expired` (only completed ones were, so the failed count grew forever). Rows with the old status "done" are now "completed" (migration `20261016090000_job_status_cleanup`). `/api/jobs/tick` and `/api/jobs/run` record when they last drained (settings `jobs.lastTick`, `jobs.lastCron`).
+- Tests: `tests/e2e/jobs-system.spec.ts`.
+
 ## 2. Still owed by the site owner (cannot be done from the codebase)
 - DNS at Namecheap: CNAME `default._domainkey` → `default._domainkey.privateemail.com` (DKIM) and TXT `_dmarc` → `v=DMARC1; p=none; rua=mailto:<mailbox>` (DMARC). Until then mail authenticates on SPF only.
 - Google Search Console: verify ownership (HTML-tag value into `GOOGLE_SITE_VERIFICATION`, redeploy), submit `/sitemap.xml` (the index; it lists the store and guide sitemaps).

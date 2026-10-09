@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { enqueueJob, registerJobHandler } from "@/lib/jobs/queue";
+import { RECURRING_JOBS, enqueueJob, ensureScheduled, registerJobHandler } from "@/lib/jobs/queue";
 import { deliverEmail, queueTemplateEmail } from "@/lib/mail";
 import { refreshExchangeRates } from "@/lib/currency";
 import { autoCompleteOrders, expireUnpaidOrders, recomputeSellerStats } from "@/lib/orders/lifecycle";
@@ -49,6 +49,8 @@ export function registerJobHandlers() {
     await db.loginChallenge.deleteMany({ where: { expiresAt: { lt: now } } });
     await db.idempotencyKey.deleteMany({ where: { expiresAt: { lt: now } } });
     await db.job.deleteMany({ where: { status: "completed", completedAt: { lt: new Date(now.getTime() - 14 * 86_400_000) } } });
+    // Failures and cancellations stay a month for diagnosis, then go: they no longer say anything about today.
+    await db.job.deleteMany({ where: { status: { in: ["failed", "cancelled"] }, runAt: { lt: new Date(now.getTime() - 30 * 86_400_000) } } });
     await sweepRateLimitBuckets();
     await enqueueJob("cleanup_expired", {}, { runAt: new Date(Date.now() + 12 * 3_600_000), dedupe: true });
   });
@@ -279,18 +281,5 @@ export function registerJobHandlers() {
 export async function ensureRecurringJobs() {
   const settings = await getSettings();
   if (!settings["system.jobsEnabled"]) return;
-  await enqueueJob("expire_unpaid_orders", {}, { dedupe: true });
-  await enqueueJob("auto_complete_orders", {}, { dedupe: true });
-  await enqueueJob("schedule_payouts", {}, { dedupe: true });
-  await enqueueJob("cleanup_expired", {}, { dedupe: true });
-  await enqueueJob("fetch_exchange_rates", {}, { dedupe: true });
-  await enqueueJob("indexnow_sync", {}, { dedupe: true });
-  await enqueueJob("catalog_release", {}, { dedupe: true });
-  await enqueueJob("reconcile_payments", {}, { dedupe: true });
-  await enqueueJob("crypto_check", {}, { dedupe: true });
-  await enqueueJob("content_tick", {}, { dedupe: true });
-  await enqueueJob("content_backlog", {}, { dedupe: true });
-  await enqueueJob("seo_sync", {}, { dedupe: true });
-  await enqueueJob("import_sync", {}, { dedupe: true });
-  await enqueueJob("import_auto_release", {}, { dedupe: true });
+  for (const job of RECURRING_JOBS) await ensureScheduled(job.type);
 }
