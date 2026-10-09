@@ -54,7 +54,8 @@ export function parseFactAnswers(text: string, questions: FactQuestion[]): Map<s
   return out;
 }
 
-export async function lookupComicFacts(questions: FactQuestion[]): Promise<Map<string, FactAnswer>> {
+/** The answers by listing id, or null when the AI service could not be asked (no key, no credit, an outage). */
+export async function lookupComicFacts(questions: FactQuestion[]): Promise<Map<string, FactAnswer> | null> {
   if (!knowledgeConfigured() || questions.length === 0) return new Map();
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -76,6 +77,6 @@ export async function lookupComicFacts(questions: FactQuestion[]): Promise<Map<s
   } catch (err) {
     // The lookup is an extra: when it is unavailable the details simply stay Unknown.
     console.error("[import knowledge]", err instanceof Error ? err.message : err);
-    return new Map();
+    return null;
   }
 }

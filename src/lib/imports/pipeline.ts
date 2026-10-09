@@ -993,7 +993,10 @@ export async function enrichUnknown(source: string, limit = 25): Promise<{ asked
     else if (!gained && typeof ev.data.slug === "string") env.takenSlugs.add(item.slug);
   }
   // 2. Reference knowledge for what is still missing.
-  const answers = await lookupComicFacts(stillUnknown.map((i) => ({ id: i.id, listingTitle: i.sourceTitle, series: i.title, issue: i.issue, needPublisher: i.publisher === UNKNOWN, needYear: i.year === null })));
+  const looked = stillUnknown.length ? await lookupComicFacts(stillUnknown.map((i) => ({ id: i.id, listingTitle: i.sourceTitle, series: i.title, issue: i.issue, needPublisher: i.publisher === UNKNOWN, needYear: i.year === null }))) : new Map();
+  // The service could not be asked: nothing is marked as tried, so these listings are looked up once it works again.
+  if (looked === null) return { asked: 0, filled: 0, remaining: await db.importItem.count({ where }) };
+  const answers = looked;
   for (const item of stillUnknown) {
     const a = answers.get(item.id);
     const known: { publisher?: string; year?: number } = {};

@@ -866,7 +866,7 @@ async function main() {
   await seedImportItems();
   await releaseApprovedOnce();
   await restoreSoldOutOnce();
-  if ((await db.importItem.count({ where: { status: "error", OR: [{ reviewedAt: null, editedJson: "[]" }, { problemsJson: { contains: "photo could not be stored" } }] } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: "pending", payloadJson: "{}" } })) === 0) {
+  if ((await db.importItem.count({ where: { status: "error", OR: [{ reviewedAt: null, editedJson: "[]" }, { problemsJson: { contains: "photo could not be stored" } }] } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: { in: ["pending", "running"] } } })) === 0) {
     await db.job.create({ data: { type: "import_fix", payloadJson: "{}", maxAttempts: 3 } });
     log("import errors: re-check queued");
   }
