@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { enqueueJob } from "@/lib/jobs/queue";
 import { getSettings } from "@/lib/settings";
+import { FEED_PATHS } from "@/lib/merchant-feed-xml";
 
 /**
  * Release queue for catalogue imports (prisma/data/catalog-queue/*.json).
@@ -105,7 +106,7 @@ export async function releaseDueListings(now = new Date()): Promise<{ released: 
   }
   if (ready.length > 0) {
     try {
-      for (const path of ["/", "/store", "/google-shopping-feed.xml", "/sitemap.xml", "/sitemaps/site.xml", "/collections", "/publishers", "/characters"]) revalidatePath(path);
+      for (const path of ["/", "/store", ...FEED_PATHS, "/sitemap.xml", "/sitemaps/site.xml", "/collections", "/publishers", "/characters"]) revalidatePath(path);
     } catch {
       // outside a request scope (polling worker): the documents' own revalidation window applies
     }

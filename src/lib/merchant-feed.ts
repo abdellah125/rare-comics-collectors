@@ -16,7 +16,7 @@ export type MerchantFeedResult = { xml: string; included: number; skipped: FeedS
  * rather than listed as out of stock. Listings that would be disapproved by
  * Google (no image, no price, no SKU) are skipped and logged.
  */
-export async function merchantFeed(): Promise<MerchantFeedResult> {
+export async function merchantFeed(opts: { maxBytes?: number } = {}): Promise<MerchantFeedResult> {
   const settings = await getSettings();
   const rows = await db.product.findMany({
     // Merchant Center needs a fixed price: products sold by bidding are not submitted.
@@ -27,7 +27,9 @@ export async function merchantFeed(): Promise<MerchantFeedResult> {
       seller: { select: { slug: true, displayName: true } },
     },
     orderBy: { publishedAt: "desc" },
-    take: 10_000,
+    // Every buyable listing (16,000+ in October 2026; 10,000 took about 3 s to build in production).
+    // The plain .xml is cut to its size limit afterwards; the compressed .xml.gz carries them all.
+    take: 50_000,
   });
 
   // The cheapest option a lone copy would ship with to the marketplace's home country —
@@ -69,7 +71,7 @@ export async function merchantFeed(): Promise<MerchantFeedResult> {
     items.push(mapped.item);
   }
   for (const s of skipped) console.warn(`[merchant-feed] skipped ${s.id}: ${s.reason}`);
-  const fitted = fitFeedItems(items);
+  const fitted = fitFeedItems(items, opts.maxBytes);
   const omittedForSize = items.length - fitted.length;
   console.log(`[merchant-feed] ${fitted.length} items, ${skipped.length} skipped${omittedForSize ? `, ${omittedForSize} older left out to stay under the size limit` : ""}`);
 

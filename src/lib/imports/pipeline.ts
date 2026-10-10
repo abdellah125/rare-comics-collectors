@@ -16,6 +16,7 @@ import { UNKNOWN, isKnown } from "@/lib/catalog/labels";
 import { dailyPlan, utcDayStart } from "@/lib/imports/daily";
 import { ADULT, PALETTES, buildListing, cadRateOf, slugify, usdPrice } from "../../../scripts/lib/hipcomic-listing.mjs";
 import { CGC_GRADES, eraForYear, normSeries, parseTitle, tidyCase } from "../../../scripts/lib/hipcomic-title.mjs";
+import { FEED_PATHS } from "@/lib/merchant-feed-xml";
 
 /**
  * The import pipeline: source data → review queue → (admin approval) → ready → (admin release) → listing.
@@ -442,7 +443,7 @@ export async function runImport(input: ImportInput): Promise<ImportRun> {
       }
     }
     for (const slug of touchedSlugs) revalidatePathSafe(`/store/${slug}`);
-    if (touchedSlugs.size > 0 || counts.unavailable > 0) for (const path of ["/store", "/google-shopping-feed.xml"]) revalidatePathSafe(path);
+    if (touchedSlugs.size > 0 || counts.unavailable > 0) for (const path of ["/store", ...FEED_PATHS]) revalidatePathSafe(path);
 
     const refused = log.some((e) => e.text.startsWith('"Complete catalogue" was ticked'));
     const message = `${refused ? "The complete-catalogue option was ignored (the file is far smaller than the catalogue). " : ""}${counts.rows} rows: ${counts.created} new (of which ${counts.duplicates} duplicates and ${counts.errors} with errors), ${counts.updated} updated, ${counts.unchanged} unchanged, ${counts.priceChanges} price changes, ${counts.unavailable} no longer available.`;
@@ -706,7 +707,7 @@ export async function releaseItems(ids: string[]): Promise<ReleaseResult> {
     out.slugs.push(slug);
   }
   if (out.slugs.length > 0) {
-    for (const path of ["/", "/store", "/google-shopping-feed.xml", "/sitemap.xml", "/sitemaps/site.xml", "/collections", "/publishers", "/characters"]) revalidatePathSafe(path);
+    for (const path of ["/", "/store", ...FEED_PATHS, "/sitemap.xml", "/sitemaps/site.xml", "/collections", "/publishers", "/characters"]) revalidatePathSafe(path);
     for (let i = 0; i < out.slugs.length; i += 100) await enqueueJob("indexnow_ping", { paths: [...out.slugs.slice(i, i + 100).map((s) => `/store/${s}`), ...(i === 0 ? ["/store", "/collections", "/publishers"] : [])] }, { maxAttempts: 3 });
   }
   return out;

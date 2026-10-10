@@ -89,6 +89,30 @@ describe("merchant feed items", () => {
     expect(xml).not.toMatch(/<g:[a-z_]+><\/g:[a-z_]+>/);
   });
 
+  it("leaves placeholders out instead of sending 'Unknown' or year 0", () => {
+    const unknownRaw = row({ title: "Air Stories", issue: "nn", publisher: "Unknown", year: 0, era: "Unknown", grader: "Raw", grade: "Not graded", label: "", category: null, keyIssue: null, attributes: {} });
+    const r = productToFeedItem(unknownRaw, ctx);
+    const item = ("item" in r ? r.item : null)!;
+    expect(item.title).toBe("Air Stories nn — Raw (ungraded)");
+    expect(item.description).toContain("Ungraded (raw) copy.");
+    expect(item.description).not.toMatch(/Unknown|Not graded|, 0\.| 0\.$/);
+    expect(item.brand).toBe("");
+    expect(item.productTypes).toEqual(["Comics > Raw books"]);
+    expect(item.productDetails).toEqual([{ section: "Grading", name: "Grading company", value: "Ungraded (raw)" }]);
+    expect(item.customLabels).toEqual(["Lone Star Slabs", "", "Raw", "sale"]);
+    const xml = feedItemXml(item);
+    expect(xml).not.toContain("Unknown");
+    expect(xml).not.toContain("<g:custom_label_1>");
+    expect(xml).toContain("<g:custom_label_2>Raw</g:custom_label_2>");
+    expect(xml).not.toContain("canonical_link");
+
+    const partly = productToFeedItem(row({ publisher: "Unknown", year: 1974, grade: "Unknown" }), ctx);
+    const p = ("item" in partly ? partly.item : null)!;
+    expect(p.title).toBe("Incredible Hulk #181 (1974) — CGC");
+    expect(p.description).toContain("Graded CGC on a Universal Blue label. Off-white pages. Published in 1974.");
+    expect(p.productDetails.map((d) => d.name)).toEqual(["Grading company", "Label", "Page quality", "Year", "Era", "Key issue"]);
+  });
+
   it("stays under the size limit by leaving out the oldest listings", () => {
     const r = productToFeedItem(row(), ctx);
     const item = ("item" in r ? r.item : null)!;
