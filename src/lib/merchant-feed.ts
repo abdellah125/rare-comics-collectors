@@ -1,6 +1,6 @@
 import "server-only";
 import { publishedWhere } from "@/lib/catalog/products";
-import { cheapestDeliveryOption, shippingOptionsFor } from "@/lib/commerce/pricing";
+import { cheapestDeliveryOption, shippingQuoter } from "@/lib/commerce/pricing";
 import { db } from "@/lib/db";
 import { isString, parseJsonArray, parseJsonObject } from "@/lib/json";
 import { buildFeedXml, productToFeedItem, type FeedItem, type FeedShipping, type FeedSkip } from "@/lib/merchant-feed-xml";
@@ -31,12 +31,15 @@ export async function merchantFeed(): Promise<MerchantFeedResult> {
   });
 
   // The cheapest option a lone copy would ship with to the marketplace's home country —
-  // the same figure the product page quotes. Memoised per price so the feed stays cheap.
+  // the same figure the product page quotes. The methods are loaded once and priced in memory:
+  // a query per distinct price made the feed take over a minute once the catalogue passed
+  // 10,000 listings, which broke the production build (it is prerendered at build time).
   const country = settings["marketplace.defaultCountry"];
+  const quote = await shippingQuoter(country);
   const shippingByPrice = new Map<number, FeedShipping | undefined>();
   const shippingFor = async (price: number): Promise<FeedShipping | undefined> => {
     if (shippingByPrice.has(price)) return shippingByPrice.get(price);
-    const cheapest = cheapestDeliveryOption(await shippingOptionsFor(country, price));
+    const cheapest = cheapestDeliveryOption(quote(price));
     const shipping = cheapest ? { country, service: cheapest.name, price: cheapest.price } : undefined;
     shippingByPrice.set(price, shipping);
     return shipping;
