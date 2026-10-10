@@ -25,18 +25,38 @@ export function indexNowKeyLocation(siteUrl: string, key: string, override = "")
   return `${siteUrl.replace(/\/+$/, "")}/${key}.txt`;
 }
 
+/**
+ * Paths and URLs → absolute URLs on the canonical origin, de-duplicated, in order. Anything on
+ * another host or scheme (IndexNow refuses those for this key) is returned in `rejected`.
+ */
+export function canonicalIndexNowUrls(siteUrl: string, paths: string[]): { urls: string[]; rejected: string[] } {
+  const origin = siteUrl.replace(/\/+$/, "");
+  const urls = new Set<string>();
+  const rejected: string[] = [];
+  for (const raw of paths) {
+    const p = typeof raw === "string" ? raw.trim() : "";
+    if (!p) continue;
+    const url = /^https?:\/\//i.test(p) ? p : `${origin}${p.startsWith("/") ? "" : "/"}${p}`;
+    if (/\s/.test(url) || !(url === origin || url.startsWith(`${origin}/`))) rejected.push(p);
+    else urls.add(url);
+  }
+  return { urls: [...urls], rejected };
+}
+
 /** Absolute URLs on the canonical origin only, de-duplicated and capped at the protocol's batch limit. */
 export function buildIndexNowPayload(siteUrl: string, key: string, paths: string[], keyLocationOverride = ""): IndexNowPayload {
   const origin = siteUrl.replace(/\/+$/, "");
   const host = new URL(origin).host;
-  const urls = new Set<string>();
-  for (const raw of paths) {
-    const p = raw.trim();
-    if (!p) continue;
-    const url = /^https?:\/\//i.test(p) ? p : `${origin}${p.startsWith("/") ? "" : "/"}${p}`;
-    if (url === origin || url.startsWith(`${origin}/`)) urls.add(url);
-  }
-  return { host, key, keyLocation: indexNowKeyLocation(origin, key, keyLocationOverride), urlList: [...urls].slice(0, INDEXNOW_MAX_URLS) };
+  const { urls } = canonicalIndexNowUrls(origin, paths);
+  return { host, key, keyLocation: indexNowKeyLocation(origin, key, keyLocationOverride), urlList: urls.slice(0, INDEXNOW_MAX_URLS) };
+}
+
+/** Seconds or an HTTP date, as sent in Retry-After; undefined when absent or unreadable. */
+export function parseRetryAfter(value: string | null, now = Date.now()): number | undefined {
+  if (!value) return undefined;
+  if (/^\d+$/.test(value.trim())) return Number(value.trim()) * 1000;
+  const at = Date.parse(value);
+  return Number.isFinite(at) ? Math.max(0, at - now) : undefined;
 }
 
 /** IndexNow keys are 8–128 characters from [a-zA-Z0-9-]. */

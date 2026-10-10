@@ -4,20 +4,31 @@ import { ConfirmButton } from "@/components/admin/confirm-button";
 import { Pagination } from "@/components/admin/pagination";
 import { AdminPageHeader, Card, EmptyState, Field, FilterBar, Kv, StatusBadge, Table, Td, Th, Tone, adminButton, adminSelect } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/auth/session";
-import { cancelJobAction, clearResolvedFailuresAction, enqueueJobAction, retryJobAction, runJobsNowAction } from "@/lib/admin/actions/system";
+import { cancelJobAction, enqueueJobAction, recoverAbandonedAction, retryJobAction, runJobsNowAction } from "@/lib/admin/actions/system";
 import { listParams, pageCount } from "@/lib/admin/query";
-import { db, type Prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { formatDateTime } from "@/lib/i18n";
+import { formatDuration as duration, jobCounts, jobListWhere, recurringHealth } from "@/lib/jobs/dashboard";
 import { registerJobHandlers } from "@/lib/jobs/handlers";
-import { RECURRING_JOBS, STALE_LOCK_MS, registeredJobTypes } from "@/lib/jobs/queue";
+import { queueConfig } from "@/lib/jobs/policy";
+import { leaseIsLive, registeredJobTypes } from "@/lib/jobs/queue";
 import { secretSource } from "@/lib/secrets-cache";
 import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Jobs & system" };
 export const dynamic = "force-dynamic";
 
-const STATUSES = ["pending", "running", "completed", "failed", "cancelled"];
+const FILTERS: { value: string; label: string }[] = [
+  { value: "pending", label: "pending (all waiting)" },
+  { value: "due", label: "due now" },
+  { value: "retrying", label: "waiting to retry" },
+  { value: "running", label: "running" },
+  { value: "abandoned", label: "abandoned (worker gone)" },
+  { value: "failed", label: "failed" },
+  { value: "completed", label: "completed" },
+  { value: "cancelled", label: "cancelled" },
+];
 const every = (m: number) => (m < 60 ? `every ${m} min` : m < 24 * 60 ? `every ${m / 60} h` : m === 24 * 60 ? "daily" : `every ${m / (24 * 60)} days`);
 const ago = (from: Date, to: Date) => {
   const min = Math.round((to.getTime() - from.getTime()) / 60_000);
@@ -25,7 +36,7 @@ const ago = (from: Date, to: Date) => {
 };
 const readDrain = (value: string | undefined) => {
   try {
-    return value ? (JSON.parse(value) as { at: string; processed: number; failed: number }) : null;
+    return value ? (JSON.parse(value) as { at: string; processed: number; failed: number; recovered?: number; remainingDue?: number }) : null;
   } catch {
     return null;
   }
@@ -36,47 +47,39 @@ export default async function AdminSystemPage({ searchParams }: PageProps<"/admi
   registerJobHandlers();
   const sp = await searchParams;
   const p = listParams(sp, { defaultSort: "createdAt", sorts: ["createdAt", "runAt"] });
-  const status = p.get("status") || "";
+  const filter = p.get("status") || "";
   const type = p.get("type") || "";
   const now = new Date();
-  const staleBefore = new Date(now.getTime() - STALE_LOCK_MS);
-  const where: Prisma.JobWhereInput = status === "stuck" ? { status: "running", lockedAt: { lt: staleBefore } } : { ...(status ? { status } : {}), ...(type ? { type } : {}) };
-  const recurringTypes = RECURRING_JOBS.map((r) => r.type);
-  const [rows, total, counts, stuck, settings, webhookFailed, lastByType, nextByType, lastFailByType, drains] = await Promise.all([
+  const where = jobListWhere(filter, type, now);
+  const [rows, total, counts, health, settings, webhookFailed, drains] = await Promise.all([
     db.job.findMany({ where, orderBy: { [p.sort]: p.dir }, skip: p.skip, take: p.per }),
     db.job.count({ where }),
-    db.job.groupBy({ by: ["status"], _count: { _all: true } }),
-    db.job.count({ where: { status: "running", lockedAt: { lt: staleBefore } } }),
+    jobCounts(now),
+    recurringHealth(now),
     getSettings(),
     db.webhookEvent.count({ where: { status: "failed" } }),
-    db.job.groupBy({ by: ["type"], where: { type: { in: recurringTypes }, status: "completed" }, _max: { completedAt: true } }),
-    db.job.groupBy({ by: ["type"], where: { type: { in: recurringTypes }, status: { in: ["pending", "running"] } }, _min: { runAt: true } }),
-    db.job.findMany({ where: { type: { in: recurringTypes }, status: "failed" }, orderBy: { runAt: "desc" }, distinct: ["type"], select: { type: true, runAt: true, lastError: true } }),
     db.setting.findMany({ where: { key: { in: ["jobs.lastTick", "jobs.lastCron"] } } }),
   ]);
-  const c = (s: string) => counts.find((x) => x.status === s)?._count._all ?? 0;
   const tick = readDrain(drains.find((d) => d.key === "jobs.lastTick")?.value);
   const cron = readDrain(drains.find((d) => d.key === "jobs.lastCron")?.value);
   const onVercel = Boolean(process.env.VERCEL);
+  const cfg = queueConfig();
   const base = "/admin/system";
-
-  // One line per recurring job: when it last finished, when it runs next, and whether that is healthy.
-  const health = RECURRING_JOBS.map((r) => {
-    const last = lastByType.find((x) => x.type === r.type)?._max.completedAt ?? null;
-    const next = nextByType.find((x) => x.type === r.type)?._min.runAt ?? null;
-    const fail = lastFailByType.find((x) => x.type === r.type) ?? null;
-    const failedSinceSuccess = fail && (!last || fail.runAt > last) ? fail : null;
-    const lateBy = next ? now.getTime() - next.getTime() : 0;
-    const state: "ok" | "late" | "missing" | "failing" = failedSinceSuccess ? "failing" : !next ? "missing" : lateBy > Math.max(15, r.everyMinutes) * 60_000 ? "late" : "ok";
-    return { ...r, last, next, fail: failedSinceSuccess, state };
-  });
   const problems = health.filter((h) => h.state !== "ok").length;
+  const drainText = (d: NonNullable<typeof tick>) => `${ago(new Date(d.at), now)} · ${d.processed} done, ${d.failed} failed${d.recovered ? `, ${d.recovered} recovered` : ""}${d.remainingDue ? `, ${d.remainingDue} still due` : ""}`;
+
+  const stat = (label: string, value: number, href: string, tone?: "danger" | "warning") => (
+    <Link href={href} className={`rounded-lg border px-3 py-2 ${tone === "danger" && value > 0 ? "border-rose-200 bg-rose-50" : tone === "warning" && value > 0 ? "border-amber-200 bg-amber-50" : "border-ink-200 bg-white"}`}>
+      <span className="block text-[11px] uppercase tracking-wide text-ink-500">{label}</span>
+      <span className="block text-lg font-semibold text-ink-950">{value.toLocaleString("en")}</span>
+    </Link>
+  );
 
   return (
     <>
       <AdminPageHeader
         title="Jobs & system"
-        lead={`Queue: ${c("pending")} pending · ${c("running")} running${stuck ? ` (${stuck} stuck)` : ""} · ${c("failed")} failed · ${c("completed")} completed. Recurring jobs: ${problems === 0 ? "all healthy" : `${problems} need attention`}.`}
+        lead={`${counts.total.toLocaleString("en")} jobs in the live table, ${counts.archived.toLocaleString("en")} archived. Recurring jobs: ${problems === 0 ? "all healthy" : `${problems} need attention`}.`}
         actions={
           <>
             <Link href="/admin/system/webhooks" className={adminButton.outline}>
@@ -85,11 +88,27 @@ export default async function AdminSystemPage({ searchParams }: PageProps<"/admi
             <Link href="/admin/settings/system" className={adminButton.outline}>
               Maintenance mode
             </Link>
-            {c("failed") > 0 && <ConfirmButton label="Clear resolved failures" message="Deletes failed jobs that a later successful run of the same job has made irrelevant. Failures that are still the latest result for their job stay." action={clearResolvedFailuresAction} />}
-            <ConfirmButton label="Run due jobs now" message="Processes due jobs in this request, for up to about 25 seconds." action={runJobsNowAction} variant="dark" />
+            {counts.abandoned > 0 && <ConfirmButton label={`Recover abandoned (${counts.abandoned})`} message="Running jobs whose worker stopped reporting are queued again with a delay, or marked failed when they have no attempts left. Jobs that are still reporting are not touched." action={recoverAbandonedAction} />}
+            <ConfirmButton label="Run due jobs now" message="Processes due jobs in this request, most urgent first, for up to about 25 seconds." action={runJobsNowAction} variant="dark" />
           </>
         }
       />
+
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8" data-testid="job-counts">
+        {stat("Pending", counts.pending, `${base}?status=pending`)}
+        {stat("Due now", counts.due, `${base}?status=due`)}
+        {stat("Retrying", counts.retrying, `${base}?status=retrying`, "warning")}
+        {stat("Running", counts.running, `${base}?status=running`)}
+        {stat("Abandoned", counts.abandoned, `${base}?status=abandoned`, "danger")}
+        {stat("Failed", counts.failed, `${base}?status=failed`, counts.failedUnresolved > 0 ? "danger" : undefined)}
+        {stat("Completed", counts.completed, `${base}?status=completed`)}
+        {stat("Cancelled", counts.cancelled, `${base}?status=cancelled`)}
+      </div>
+      {counts.failed > 0 && (
+        <p className="-mt-3 mb-4 text-[12px] text-ink-600" data-testid="failed-breakdown">
+          Of the {counts.failed} failed jobs, {counts.failedUnresolved} {counts.failedUnresolved === 1 ? "is" : "are"} still the latest result for their job type; the others were followed by a successful run. Failed jobs are kept as history.
+        </p>
+      )}
 
       {!settings["system.jobsEnabled"] && (
         <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -103,17 +122,16 @@ export default async function AdminSystemPage({ searchParams }: PageProps<"/admi
       )}
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2">
+        <div className="min-w-0 xl:col-span-2">
           <FilterBar action={base} reset>
-            <Field label="Status">
-              <select name="status" defaultValue={status} className={adminSelect}>
+            <Field label="Show">
+              <select name="status" defaultValue={filter} className={adminSelect}>
                 <option value="">Any</option>
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+                {FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
                   </option>
                 ))}
-                <option value="stuck">stuck (running, cut off)</option>
               </select>
             </Field>
             <Field label="Type">
@@ -136,40 +154,52 @@ export default async function AdminSystemPage({ searchParams }: PageProps<"/admi
               <thead>
                 <tr>
                   <Th>Type</Th>
-                  <Th>Run at</Th>
-                  <Th>Attempts</Th>
                   <Th>Status</Th>
-                  <Th>Payload / error</Th>
+                  <Th>Attempts</Th>
+                  <Th>Timing</Th>
+                  <Th>Result / error</Th>
                   <Th />
                 </tr>
               </thead>
               <tbody>
                 {rows.map((j) => {
-                  const isStuck = j.status === "running" && j.lockedAt !== null && j.lockedAt < staleBefore;
+                  const live = leaseIsLive(j, now);
+                  const abandoned = j.status === "running" && !live;
+                  const ranFor = j.startedAt && j.completedAt ? j.completedAt.getTime() - j.startedAt.getTime() : j.startedAt && j.status === "running" ? now.getTime() - j.startedAt.getTime() : null;
                   return (
                     <tr key={j.id}>
-                      <Td className="font-mono text-[12px]">{j.type}</Td>
-                      <Td className="whitespace-nowrap text-ink-600">
-                        {formatDateTime(j.runAt)}
-                        {j.completedAt && <span className="block text-[11px] text-ink-500">done {formatDateTime(j.completedAt)}</span>}
+                      <Td className="font-mono text-[12px]">
+                        <Link href={`${base}/jobs/${j.id}`} className="underline decoration-ink-300 underline-offset-2 hover:decoration-ink-700">
+                          {j.type}
+                        </Link>
+                      </Td>
+                      <Td>
+                        {abandoned ? <Tone tone="danger">abandoned</Tone> : <StatusBadge status={j.status} />}
+                        {j.status === "pending" && j.attempts > 0 && <span className="mt-0.5 block text-[11px] text-amber-700">retry</span>}
                       </Td>
                       <Td>
                         {j.attempts}/{j.maxAttempts}
                       </Td>
-                      <Td>{isStuck ? <Tone tone="danger">stuck</Tone> : <StatusBadge status={j.status} />}</Td>
-                      <Td className="max-w-[320px]">
-                        <details>
-                          <summary className="cursor-pointer truncate text-[12px] text-ink-600">{j.lastError ? <span className="text-rose-700">{j.lastError.slice(0, 80)}</span> : isStuck ? <span className="text-rose-700">Started {formatDateTime(j.lockedAt!)} and never reported back (cut off by the time limit).</span> : j.payloadJson.slice(0, 80)}</summary>
-                          <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-ink-50 p-2 text-[11px] text-ink-700">
-                            {j.payloadJson}
-                            {j.lastError ? `\n\n${j.lastError}` : ""}
-                          </pre>
-                        </details>
+                      <Td className="whitespace-nowrap text-[12px] text-ink-600">
+                        {j.status === "pending" ? (j.runAt <= now ? `due since ${ago(j.runAt, now).replace(" ago", "")}` : `runs ${formatDateTime(j.runAt)}`) : j.startedAt ? `started ${formatDateTime(j.startedAt)}` : formatDateTime(j.runAt)}
+                        {ranFor !== null && <span className="block text-[11px] text-ink-500">{j.status === "running" ? "running for" : "took"} {duration(ranFor)}</span>}
+                        {j.status === "running" && <span className="block text-[11px] text-ink-500">heartbeat {j.heartbeatAt ? ago(j.heartbeatAt, now) : "none"}</span>}
+                      </Td>
+                      <Td className="max-w-[320px] text-[12px]">
+                        {abandoned ? (
+                          <span className="text-rose-700">Worker stopped reporting{j.leaseUntil ? `; lease expired ${ago(j.leaseUntil, now)}` : ""}.</span>
+                        ) : j.status === "completed" ? (
+                          <span className="line-clamp-2 text-ink-600">{j.result ?? "done"}</span>
+                        ) : j.lastError ? (
+                          <span className="line-clamp-2 text-rose-700">{j.lastError}</span>
+                        ) : (
+                          <span className="text-ink-400">—</span>
+                        )}
                       </Td>
                       <Td>
                         <span className="flex gap-1">
-                          {(j.status === "failed" || j.status === "cancelled" || isStuck) && <ConfirmButton label={isStuck ? "Release" : "Retry"} message={isStuck ? "Puts this job back in the queue to run again." : "Queue this job again."} action={retryJobAction.bind(null, j.id)} size="sm" />}
-                          {(j.status === "pending" || j.status === "failed") && <ConfirmButton label="Cancel" message="Cancel this job?" action={cancelJobAction.bind(null, j.id)} size="sm" variant="danger" />}
+                          {(j.status === "failed" || j.status === "cancelled" || abandoned) && <ConfirmButton label="Retry" message={abandoned ? "Records this attempt as abandoned and queues the job again. Its history is kept." : "Queue this job again with a fresh allowance of attempts. Its failure history is kept."} action={retryJobAction.bind(null, j.id)} size="sm" />}
+                          {(j.status === "pending" || j.status === "failed" || abandoned) && <ConfirmButton label="Cancel" message={`Cancel this ${j.type} job? It stays in the list as cancelled.${j.status === "pending" ? " A recurring job is scheduled afresh on the next drain." : ""}`} action={cancelJobAction.bind(null, j.id)} size="sm" variant="danger" />}
                         </span>
                       </Td>
                     </tr>
@@ -182,24 +212,27 @@ export default async function AdminSystemPage({ searchParams }: PageProps<"/admi
         </div>
 
         <div className="grid gap-6 self-start">
-          <Card title="Recurring jobs" description="Each one schedules its next run when it finishes. Late means its run is overdue: the queue has not been driven (no visits, no cron). Missing means nothing is scheduled: queue it.">
+          <Card title="Recurring jobs" description="Each one schedules its next run when it finishes. Late: its run is overdue because the queue has not been driven (no visits, no cron). Missing: nothing is scheduled. Failing: the latest run failed.">
             <ul className="divide-y divide-ink-100 px-4 text-[13px]" data-testid="recurring-health">
               {health.map((h) => (
                 <li key={h.type} className="py-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-[12px] text-ink-950">{h.type}</span>
-                    <Tone tone={h.state === "ok" ? "success" : h.state === "late" ? "warning" : "danger"}>{h.state === "ok" ? "ok" : h.state}</Tone>
+                    <Link href={`${base}?type=${h.type}`} className="font-mono text-[12px] text-ink-950 hover:underline">
+                      {h.type}
+                    </Link>
+                    <Tone tone={h.state === "ok" ? "success" : h.state === "late" ? "warning" : "danger"}>{h.state}</Tone>
                   </div>
                   <p className="mt-0.5 text-[12px] text-ink-600">
                     {h.what} · {every(h.everyMinutes)}
                   </p>
                   <p className="mt-0.5 text-[11px] text-ink-500">
-                    Last done {h.last ? ago(h.last, now) : "never"} · next {h.next ? (h.next <= now ? `due since ${ago(h.next, now).replace(" ago", "")}` : formatDateTime(h.next)) : "not scheduled"}
+                    Last success {h.lastSuccess ? ago(h.lastSuccess, now) : "never"} · next {h.next ? (h.next <= now ? `due since ${ago(h.next, now).replace(" ago", "")}` : formatDateTime(h.next)) : "not scheduled"}
+                    {h.avgMs !== null && ` · usually ${duration(h.avgMs)}`}
                   </p>
-                  {h.fail?.lastError && <p className="mt-1 text-[11px] leading-snug text-rose-700">Last failure {ago(h.fail.runAt, now)}: {h.fail.lastError.slice(0, 160)}</p>}
+                  {h.lastFailure?.error && <p className="mt-1 text-[11px] leading-snug text-rose-700">Failed {ago(h.lastFailure.at, now)}: {h.lastFailure.error.slice(0, 160)}</p>}
                   {(h.state === "missing" || h.state === "failing") && (
                     <div className="mt-1.5">
-                      <ConfirmButton label="Queue now" message={`Queue ${h.type} to run now?`} action={enqueueJobAction.bind(null, h.type)} size="sm" />
+                      <ConfirmButton label="Queue now" message={`Queue ${h.type} to run now? Nothing is added if a run is already waiting.`} action={enqueueJobAction.bind(null, h.type)} size="sm" />
                     </div>
                   )}
                 </li>
@@ -213,8 +246,10 @@ export default async function AdminSystemPage({ searchParams }: PageProps<"/admi
                 { label: "Site URL", value: env.siteUrl },
                 { label: "Database", value: (process.env.DATABASE_URL ?? "").replace(/:\/\/.*@/, "://***@").split("?")[0] || "—" },
                 { label: "How the queue runs", value: onVercel ? "No resident worker: drained by visitors' browsers (/api/jobs/tick), admin page visits and the daily cron" : process.env.JOBS_INLINE_WORKER === "false" ? "By cron calls to /api/jobs/run" : "In-process worker" },
-                { label: "Last drain from traffic", value: tick ? `${ago(new Date(tick.at), now)} · ${tick.processed} done, ${tick.failed} failed` : "not recorded yet" },
-                { label: "Last cron run", value: cron ? `${ago(new Date(cron.at), now)} · ${cron.processed} done, ${cron.failed} failed` : "not recorded yet" },
+                { label: "Leases", value: `${duration(cfg.leaseMs)}, renewed every ${duration(cfg.heartbeatMs)}; retries back off from ${duration(cfg.backoffBaseMs)} up to ${duration(cfg.backoffMaxMs)}` },
+                { label: "Archive", value: cfg.archiveAfterDays > 0 ? `Completed jobs move to the archive after ${Math.max(7, cfg.archiveAfterDays)} days; failed and cancelled jobs stay` : "Off" },
+                { label: "Last drain from traffic", value: tick ? drainText(tick) : "not recorded yet" },
+                { label: "Last cron run", value: cron ? drainText(cron) : "not recorded yet" },
                 { label: "Cron secret", value: env.cronSecret || env.jobsSecret ? `set (${[env.cronSecret ? "CRON_SECRET" : "", env.jobsSecret ? "JOBS_SECRET" : ""].filter(Boolean).join(", ")})` : "not set: /api/jobs/run refuses every call" },
                 { label: "Uploads", value: env.blobToken ? "Vercel Blob" : onVercel ? "Not configured: Vercel has no writable disk, so uploaded files cannot be stored. Set BLOB_READ_WRITE_TOKEN." : `Local folder ${env.uploadDir}` },
                 { label: "Secrets", value: `SESSION_SECRET from ${secretSource("session_secret")} · APP_ENCRYPTION_KEY from ${secretSource("encryption_key")}` },

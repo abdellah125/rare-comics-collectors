@@ -19,7 +19,7 @@ const check = (name: string, ok: boolean, detail = "") => {
 
 async function main() {
   const db = new PrismaClient();
-  const { markOrderPaid, markOrderPaymentFailed, cancelOrder, expireUnpaidOrders, restoreLatePaidOrder } = await import("@/lib/orders/lifecycle");
+  const { markOrderPaid, markOrderPaymentFailed, cancelOrder, expireUnpaidOrders, restoreLatePaidOrder, autoCompleteOrders } = await import("@/lib/orders/lifecycle");
   const { issueRefund, RefundError } = await import("@/lib/payments/payment-service");
   const { createPayoutForSeller } = await import("@/lib/finance/ledger");
   const { shippingOptionsFor } = await import("@/lib/commerce/pricing");
@@ -246,6 +246,30 @@ async function main() {
     check("without a global threshold the method's own rule applies", Boolean(standard2) && (standard2?.price ?? 0) > 0, JSON.stringify(without.map((o) => [o.name, o.price])));
     if (previous === null) await db.setting.deleteMany({ where: { key: "commerce.freeShippingThreshold" } });
     else await db.setting.update({ where: { key: "commerce.freeShippingThreshold" }, data: { value: previous } });
+  }
+
+  // Overlapping cancellations (the expiry job and an admin at the same moment) release the stock exactly once.
+  {
+    const before = await stockNow();
+    const o = await makeOrder(2);
+    await Promise.all([1, 2, 3].map(() => cancelOrder(o.id, "overlap", { id: null, type: "job" }, { notify: false }).catch(() => null)));
+    const events = await db.orderEvent.count({ where: { orderId: o.id, type: "order.cancelled" } });
+    check("overlapping cancellations release stock once", (await stockNow()) === before && events === 1, `stock=${await stockNow()} expected=${before} events=${events}`);
+  }
+
+  // Two overlapping auto-complete runs complete an order once.
+  {
+    const others = await db.order.count({ where: { status: "delivered" } });
+    if (others === 0) {
+      const o = await makeOrder(1);
+      const old = new Date(Date.now() - 60 * 86_400_000);
+      await db.order.update({ where: { id: o.id }, data: { status: "delivered" } });
+      await db.shipment.create({ data: { orderId: o.id, status: "delivered", shippedAt: old, deliveredAt: old } });
+      const [a, b] = await Promise.all([autoCompleteOrders(), autoCompleteOrders()]);
+      const events = await db.orderEvent.count({ where: { orderId: o.id, type: "order.completed" } });
+      const after = await db.order.findUniqueOrThrow({ where: { id: o.id } });
+      check("overlapping auto-complete runs complete an order once", a + b === 1 && events === 1 && after.status === "completed", `runs=${a}+${b} events=${events}`);
+    } else check("(auto-complete overlap skipped: other delivered orders exist locally)", true);
   }
 
   // Cleanup: remove everything this script created and restore the product.

@@ -33,7 +33,7 @@ async function main() {
   await ensureRecurringJobs();
   check("scheduling again adds nothing", (await db.job.count({ where: { type: { in: types }, status: "pending" } })) === types.length);
 
-  await processJobs(50);
+  await processJobs(50, { types });
   const next = await db.job.groupBy({ by: ["type"], where: { type: { in: types }, status: "pending" }, _count: { _all: true }, _min: { runAt: true } });
   check("after running, each recurring job has scheduled its next run", next.length === types.length && next.every((n) => n._count._all === 1 && n._min.runAt!.getTime() > Date.now()), `${next.length} of ${types.length} scheduled`);
 

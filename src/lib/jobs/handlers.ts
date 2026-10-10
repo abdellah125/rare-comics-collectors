@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { RECURRING_JOBS, enqueueJob, ensureScheduled, registerJobHandler } from "@/lib/jobs/queue";
+import { RECURRING_JOBS, archiveCompletedJobs, enqueueJob, ensureScheduled, registerJobHandler } from "@/lib/jobs/queue";
 import { deliverEmail, queueTemplateEmail } from "@/lib/mail";
 import { refreshExchangeRates } from "@/lib/currency";
 import { autoCompleteOrders, expireUnpaidOrders, recomputeSellerStats } from "@/lib/orders/lifecycle";
@@ -28,18 +28,21 @@ export function registerJobHandlers() {
   });
 
   registerJobHandler("expire_unpaid_orders", async () => {
-    await expireUnpaidOrders();
+    const n = await expireUnpaidOrders();
     await enqueueJob("expire_unpaid_orders", {}, { runAt: new Date(Date.now() + 15 * 60_000), dedupe: true });
+    return `${n} overdue unpaid order(s) checked`;
   });
 
   registerJobHandler("auto_complete_orders", async () => {
-    await autoCompleteOrders();
+    const n = await autoCompleteOrders();
     await enqueueJob("auto_complete_orders", {}, { runAt: new Date(Date.now() + 6 * 3_600_000), dedupe: true });
+    return `${n} order(s) completed`;
   });
 
   registerJobHandler("schedule_payouts", async () => {
-    await scheduleDuePayouts();
+    const r = await scheduleDuePayouts();
     await enqueueJob("schedule_payouts", {}, { runAt: new Date(Date.now() + 24 * 3_600_000), dedupe: true });
+    return `${r.created} payout(s) scheduled, ${r.skipped} seller(s) skipped`;
   });
 
   registerJobHandler("cleanup_expired", async () => {
@@ -48,11 +51,16 @@ export function registerJobHandlers() {
     await db.passwordResetToken.deleteMany({ where: { expiresAt: { lt: now } } });
     await db.loginChallenge.deleteMany({ where: { expiresAt: { lt: now } } });
     await db.idempotencyKey.deleteMany({ where: { expiresAt: { lt: now } } });
-    await db.job.deleteMany({ where: { status: "completed", completedAt: { lt: new Date(now.getTime() - 14 * 86_400_000) } } });
-    // Failures and cancellations stay a month for diagnosis, then go: they no longer say anything about today.
-    await db.job.deleteMany({ where: { status: { in: ["failed", "cancelled"] }, runAt: { lt: new Date(now.getTime() - 30 * 86_400_000) } } });
+    // Old completed jobs move to JobArchive (restorable); failed and cancelled jobs and the attempt history stay.
+    let archived = 0;
+    for (let round = 0; round < 5; round++) {
+      const n = await archiveCompletedJobs(now);
+      archived += n;
+      if (n < 2_000) break;
+    }
     await sweepRateLimitBuckets();
     await enqueueJob("cleanup_expired", {}, { runAt: new Date(Date.now() + 12 * 3_600_000), dedupe: true });
+    return `${archived} completed job(s) archived`;
   });
 
   registerJobHandler("recompute_seller_stats", async (payload) => {
@@ -83,20 +91,19 @@ export function registerJobHandlers() {
   });
 
   // Search engines that speak IndexNow (Bing, Yandex, Seznam, Naver) hear about changed pages immediately.
-  registerJobHandler("indexnow_ping", async (payload) => {
-    const { submitIndexNow } = await import("@/lib/indexnow");
-    const paths = Array.isArray(payload.paths) ? payload.paths.filter((p): p is string => typeof p === "string") : [];
-    const result = await submitIndexNow(paths);
-    if (!result.ok) throw new Error(`IndexNow responded ${result.status}`);
-  });
+  // Other waiting pings (queued before pings were batched, or a sealed full batch) go out in the same
+  // request; they are marked completed only once that request has been accepted.
+  registerJobHandler("indexnow_ping", async (payload, ctx) => (await import("@/lib/jobs/indexnow-ping")).runIndexNowPing(payload, ctx));
 
   // Weekly: the first run submits every sitemap URL, later runs only what changed since the previous one.
+  // The next run is queued only after a submission was accepted, so a failed run is retried with the same range.
   registerJobHandler("indexnow_sync", async (payload) => {
-    const { submitIndexNow, sitemapPaths } = await import("@/lib/indexnow");
+    const { submitIndexNow, sitemapPaths, indexNowJobOutcome } = await import("@/lib/indexnow");
     const since = typeof payload.since === "string" ? new Date(payload.since) : null;
-    const result = await submitIndexNow(await sitemapPaths(since));
-    await enqueueJob("indexnow_sync", { since: new Date().toISOString() }, { runAt: new Date(Date.now() + 7 * 24 * 3_600_000), dedupe: true });
-    if (!result.ok) throw new Error(`IndexNow responded ${result.status}`);
+    const startedAt = new Date().toISOString();
+    const summary = indexNowJobOutcome(await submitIndexNow(await sitemapPaths(since)));
+    await enqueueJob("indexnow_sync", { since: startedAt }, { runAt: new Date(Date.now() + 7 * 24 * 3_600_000), dedupe: true });
+    return `${since ? `Changed since ${since.toISOString()}` : "Full sitemap"}: ${summary}`;
   });
 
   // Legacy scheduled publishing. With catalog.autoRelease off (the default) it publishes nothing:
@@ -180,7 +187,8 @@ export function registerJobHandlers() {
       if (more.ready + more.errors === 0) break;
     }
     const left = await db.importItem.count({ where: { status: "approved" } });
-    if (left > 0 && result.ready + result.errors + result.waiting > 0) await enqueueJob("import_prepare", {}, { runAt: new Date(Date.now() + (result.ready + result.errors > 0 ? 2_000 : 5 * 60_000)), maxAttempts: 3 });
+    if (left > 0 && result.ready + result.errors + result.waiting > 0) await enqueueJob("import_prepare", {}, { runAt: new Date(Date.now() + (result.ready + result.errors > 0 ? 2_000 : 5 * 60_000)), maxAttempts: 3, dedupe: true });
+    return `${result.ready} ready, ${result.errors} to Error, ${result.waiting} photo(s) to try again; ${left} approved left`;
   });
 
   // The page-by-page catalogue import was removed at the owner's request; a job left in the queue ends here.
@@ -189,25 +197,10 @@ export function registerJobHandlers() {
   });
 
   // Re-checks items in Error against the current rules, a batch at a time, until every one has been looked at once.
-  registerJobHandler("import_fix", async (payload) => {
-    const { reprocessErrors } = await import("@/lib/imports/pipeline");
-    const { IMPORT_SOURCE } = await import("@/lib/imports/status");
-    // Photos that failed only because the host has no disk: back into preparation.
-    if (!payload.cursor && !payload.phase) {
-      const { retryPhotoErrors } = await import("@/lib/imports/pipeline");
-      await retryPhotoErrors(IMPORT_SOURCE);
-    }
-    // Second phase: details still Unknown are looked up from reference knowledge, a small batch at a time.
-    if (payload.phase === "knowledge") {
-      const { enrichUnknown } = await import("@/lib/imports/pipeline");
-      const done = await enrichUnknown(IMPORT_SOURCE, 25);
-      if (done.asked > 0 && done.remaining > 0) await enqueueJob("import_fix", { phase: "knowledge" }, { runAt: new Date(Date.now() + 3_000), maxAttempts: 3 });
-      return;
-    }
-    const result = await reprocessErrors(IMPORT_SOURCE, { cursor: typeof payload.cursor === "string" ? payload.cursor : null, limit: 300 });
-    if (result.nextCursor) await enqueueJob("import_fix", { cursor: result.nextCursor }, { runAt: new Date(Date.now() + 2_000), maxAttempts: 3 });
-    else await enqueueJob("import_fix", { phase: "knowledge" }, { runAt: new Date(Date.now() + 2_000), maxAttempts: 3 });
-  });
+  // Phases: {} (photo errors back into preparation, then the first batch) → {cursor} batches of 300
+  // in id order → {phase:"knowledge"} batches of 25 → done. Each step is complete in itself and queues
+  // the next; a retried step repeats only its own batch. Items an admin has reviewed or edited are never touched.
+  registerJobHandler("import_fix", async (payload) => (await import("@/lib/jobs/import-fix")).runImportFix(payload));
 
   // "Release all approved": repeats in batches until everything approved before the request is live.
   registerJobHandler("import_release_approved", async (payload) => {

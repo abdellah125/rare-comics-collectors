@@ -1602,18 +1602,79 @@ model Job {
   id          String    @id @default(cuid())
   type        String
   payloadJson String    @default("{}")
-  /// pending | running | done | failed | cancelled
+  /// pending | running | completed | failed | cancelled
   status      String    @default("pending")
   runAt       DateTime  @default(now())
+  /// higher runs first among due jobs (payments and email before imports and content)
+  priority    Int       @default(0)
   attempts    Int       @default(0)
   maxAttempts Int       @default(5)
   lastError   String?
+  lastErrorAt DateTime?
+  /// at most one *pending* row per key (partial unique index in the migration): recurring jobs, open IndexNow batch
+  dedupeKey   String?
+  /// set when the current attempt was claimed; kept for history
   lockedAt    DateTime?
+  startedAt   DateTime?
+  /// the worker renews the lease while the handler runs; an expired lease means the worker is gone
+  heartbeatAt DateTime?
+  leaseUntil  DateTime?
+  lockedBy    String?
   completedAt DateTime?
+  /// what the last successful run reported (e.g. "IndexNow 200: 14 URLs accepted")
+  result      String?
   createdAt   DateTime  @default(now())
 
   @@index([status, runAt])
+  @@index([status, leaseUntil])
   @@index([type])
+  @@index([type, status, completedAt])
+  @@index([createdAt])
+}
+
+/// One row per attempt of a job: when it started and ended, how, and why it failed.
+model JobAttempt {
+  id         String    @id @default(cuid())
+  /// no foreign key: history outlives the job row when it is archived
+  jobId      String
+  type       String
+  attempt    Int
+  worker     String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  /// running | succeeded | failed | abandoned | lost_lease
+  outcome    String    @default("running")
+  /// transient | permanent | lease_expired
+  errorKind  String?
+  error      String?
+  durationMs Int?
+  /// when the queue will try again, if it will
+  retryAt    DateTime?
+
+  @@index([jobId, attempt])
+  @@index([type, startedAt])
+  @@index([outcome, startedAt])
+}
+
+/// Completed jobs older than the retention window are moved here (never deleted), so the live table stays small.
+/// Restore: INSERT INTO "Job" (...) SELECT ... FROM "JobArchive" WHERE ...; see src/lib/jobs/queue.ts archiveCompletedJobs.
+model JobArchive {
+  id          String    @id
+  type        String
+  payloadJson String
+  status      String
+  runAt       DateTime
+  priority    Int       @default(0)
+  attempts    Int
+  maxAttempts Int
+  lastError   String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  result      String?
+  createdAt   DateTime
+  archivedAt  DateTime  @default(now())
+
+  @@index([type, completedAt])
 }
 
 // ───────────────────────────── SEO intelligence (src/lib/seo) ─────────────────────────────

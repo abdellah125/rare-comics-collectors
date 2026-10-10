@@ -573,8 +573,9 @@ async function seedCatalogQueue() {
     }
     log(`release queue ${data.source}: ${data.listings.length} listings (${fresh.length} new, ${published} published now${paused ? ", queue paused" : ""})`);
   }
-  for (let i = 0; i < newPaths.length; i += 100) {
-    await db.job.create({ data: { type: "indexnow_ping", payloadJson: JSON.stringify({ paths: [...newPaths.slice(i, i + 100), ...(i === 0 ? ["/store", "/collections", "/publishers"] : [])] }), maxAttempts: 3 } });
+  // One job per 10,000 URLs (the IndexNow request limit) instead of one per 100.
+  for (let i = 0; i < newPaths.length; i += 9_990) {
+    await db.job.create({ data: { type: "indexnow_ping", payloadJson: JSON.stringify({ paths: [...newPaths.slice(i, i + 9_990), ...(i === 0 ? ["/store", "/collections", "/publishers"] : [])] }), maxAttempts: 5, priority: 10 } });
   }
 }
 

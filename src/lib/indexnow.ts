@@ -1,7 +1,8 @@
 import "server-only";
 import { env } from "@/lib/env";
-import { buildIndexNowPayload, INDEXNOW_ENDPOINT, indexNowKeyLocation, isValidIndexNowKey } from "@/lib/indexnow-payload";
-import { enqueueJob } from "@/lib/jobs/queue";
+import { db } from "@/lib/db";
+import { buildIndexNowPayload, canonicalIndexNowUrls, INDEXNOW_ENDPOINT, INDEXNOW_MAX_URLS, indexNowKeyLocation, isValidIndexNowKey, parseRetryAfter } from "@/lib/indexnow-payload";
+import { PermanentJobError, TransientJobError, jobPriority } from "@/lib/jobs/policy";
 import { site } from "@/lib/site";
 
 /**
@@ -25,7 +26,20 @@ export function indexNowKeyLocationUrl(): string {
   return indexNowKeyLocation(site.url, indexNowKey(), env.indexNow.keyLocation);
 }
 
-export type IndexNowResult = { ok: boolean; status: number; submitted: number; skipped?: string; keyLocation: string; urls: string[] };
+export type IndexNowResult = {
+  ok: boolean;
+  /** the endpoint's HTTP status; 0 when nothing was sent or the request got no answer */
+  status: number;
+  submitted: number;
+  skipped?: string;
+  keyLocation: string;
+  urls: string[];
+  /** paths that are not on the canonical origin and were left out */
+  rejected: string[];
+  /** network failure or timeout */
+  error?: string;
+  retryAfterMs?: number;
+};
 
 /** What each IndexNow response status means, in the words the admin tool shows. */
 export function describeIndexNowStatus(status: number): string {
@@ -40,22 +54,61 @@ export function describeIndexNowStatus(status: number): string {
   }
 }
 
-/** Submits absolute canonical URLs. Called by the job queue and by the admin IndexNow tool. */
+/**
+ * Submits absolute canonical URLs, in requests of at most 10,000 (the protocol's limit), stopping
+ * at the first request that is not accepted. Called by the job queue and by the admin IndexNow tool.
+ * "Accepted" (200/202) means the endpoint received the URLs; it says nothing about indexing.
+ */
 export async function submitIndexNow(paths: string[]): Promise<IndexNowResult> {
-  const payload = buildIndexNowPayload(site.url, indexNowKey(), paths, env.indexNow.keyLocation);
-  const base = { keyLocation: payload.keyLocation, urls: payload.urlList };
-  if (payload.urlList.length === 0) return { ...base, ok: true, status: 0, submitted: 0, skipped: "nothing to submit" };
+  const key = indexNowKey();
+  const { urls, rejected } = canonicalIndexNowUrls(site.url, paths);
+  if (rejected.length) console.warn(`[indexnow] ${rejected.length} path(s) not on ${site.url} left out: ${rejected.slice(0, 5).join(", ")}`);
+  const base = { keyLocation: indexNowKeyLocationUrl(), urls, rejected };
+  if (urls.length === 0) return { ...base, ok: true, status: 0, submitted: 0, skipped: "nothing to submit" };
   if (!env.indexNow.enabled) return { ...base, ok: true, status: 0, submitted: 0, skipped: "disabled outside production" };
-  const res = await fetch(INDEXNOW_ENDPOINT, {
-    method: "POST",
-    headers: { "content-type": "application/json; charset=utf-8" },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(10_000),
-  });
-  const ok = res.status === 200 || res.status === 202;
-  if (ok) console.log(`[indexnow] submitted ${payload.urlList.length} url(s) (${res.status}) keyLocation=${payload.keyLocation}`);
-  else console.warn(`[indexnow] endpoint answered ${res.status} for ${payload.urlList.length} url(s) keyLocation=${payload.keyLocation}`);
-  return { ...base, ok, status: res.status, submitted: payload.urlList.length };
+  let submitted = 0;
+  let status = 0;
+  for (let i = 0; i < urls.length; i += INDEXNOW_MAX_URLS) {
+    const payload = buildIndexNowPayload(site.url, key, urls.slice(i, i + INDEXNOW_MAX_URLS), env.indexNow.keyLocation);
+    let res: Response;
+    try {
+      res = await fetch(INDEXNOW_ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/json; charset=utf-8" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      console.warn(`[indexnow] request failed after ${submitted} url(s): ${error}`);
+      return { ...base, ok: false, status: 0, submitted, error };
+    }
+    status = res.status;
+    if (status !== 200 && status !== 202) {
+      console.warn(`[indexnow] endpoint answered ${status} for ${payload.urlList.length} url(s) keyLocation=${payload.keyLocation}`);
+      return { ...base, ok: false, status, submitted, retryAfterMs: parseRetryAfter(res.headers.get("retry-after")) };
+    }
+    submitted += payload.urlList.length;
+    console.log(`[indexnow] submitted ${payload.urlList.length} url(s) (${status}) keyLocation=${payload.keyLocation}`);
+  }
+  return { ...base, ok: true, status, submitted };
+}
+
+/**
+ * What a job does with a submission: a summary when it was accepted (or deliberately not sent),
+ * otherwise an error the queue can classify. Rate limits, server errors and network failures are
+ * retried later; a refused key or out-of-scope URLs will not get better by retrying.
+ */
+export function indexNowJobOutcome(result: IndexNowResult): string {
+  const left = result.rejected.length ? `; ${result.rejected.length} path(s) not on this site left out (${result.rejected.slice(0, 3).join(", ")})` : "";
+  if (result.skipped) return `Not sent: ${result.skipped}${left}`;
+  if (result.ok) return `IndexNow ${result.status}: ${result.submitted} URL(s) ${result.status === 200 ? "accepted" : "received (key validation pending)"}${left}`;
+  const done = result.submitted ? ` after ${result.submitted} URL(s) had been accepted` : "";
+  if (result.status === 0) throw new TransientJobError(`IndexNow request failed${done}: ${result.error ?? "no response"}`);
+  if (result.status === 429) throw new TransientJobError(`IndexNow is rate-limiting this host (429)${done}.`, Math.max(result.retryAfterMs ?? 0, 10 * 60_000));
+  if (result.status >= 500) throw new TransientJobError(`IndexNow server error ${result.status}${done}.`, result.retryAfterMs);
+  if ([400, 403, 422].includes(result.status)) throw new PermanentJobError(`IndexNow refused the submission (${result.status})${done}: ${describeIndexNowStatus(result.status)} keyLocation ${result.keyLocation}`);
+  throw new TransientJobError(`IndexNow answered ${result.status}${done}.`, result.retryAfterMs);
 }
 
 export type IndexNowKeyFileCheck = { url: string; status: number; ok: boolean; body: string; contentType: string };
@@ -71,13 +124,45 @@ export async function checkIndexNowKeyFile(url: string): Promise<IndexNowKeyFile
   }
 }
 
-/** Queues a ping for changed pages. Never throws: telling search engines must not break a save. */
+/** The one waiting ping that new paths are added to. */
+export const INDEXNOW_OPEN_BATCH = "indexnow_ping:open";
+/** A new batch waits this long for more paths before it is sent, so a burst of saves becomes one request. */
+const COALESCE_MS = 60_000;
+
+/**
+ * Queues changed pages for IndexNow. Paths are added to the waiting batch (under a lock) instead
+ * of one job per save; a full batch is sealed and a new one opened. Never throws: telling search
+ * engines must not break a save.
+ */
 export async function pingIndexNow(paths: string[]): Promise<void> {
-  if (paths.length === 0) return;
+  const fresh = [...new Set(paths.filter((p) => typeof p === "string" && p.trim()))];
+  if (fresh.length === 0) return;
   try {
-    await enqueueJob("indexnow_ping", { paths }, { maxAttempts: 3 });
+    await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(4207150002)`;
+      let todo = fresh;
+      const open = await tx.job.findFirst({ where: { type: "indexnow_ping", status: "pending", dedupeKey: INDEXNOW_OPEN_BATCH }, select: { id: true, payloadJson: true } });
+      if (open) {
+        const merged = [...new Set([...pathsOf(open.payloadJson), ...todo])];
+        await tx.job.update({ where: { id: open.id }, data: { payloadJson: JSON.stringify({ paths: merged.slice(0, INDEXNOW_MAX_URLS) }), ...(merged.length >= INDEXNOW_MAX_URLS ? { dedupeKey: null } : {}) } });
+        todo = merged.slice(INDEXNOW_MAX_URLS);
+      }
+      for (let i = 0; i < todo.length; i += INDEXNOW_MAX_URLS) {
+        const chunk = todo.slice(i, i + INDEXNOW_MAX_URLS);
+        await tx.job.create({ data: { type: "indexnow_ping", payloadJson: JSON.stringify({ paths: chunk }), runAt: new Date(Date.now() + COALESCE_MS), maxAttempts: 5, priority: jobPriority("indexnow_ping"), dedupeKey: chunk.length < INDEXNOW_MAX_URLS ? INDEXNOW_OPEN_BATCH : null } });
+      }
+    });
   } catch (err) {
     console.error("[indexnow] could not queue ping", err);
+  }
+}
+
+export function pathsOf(payloadJson: string): string[] {
+  try {
+    const p = JSON.parse(payloadJson) as { paths?: unknown };
+    return Array.isArray(p.paths) ? p.paths.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
   }
 }
 

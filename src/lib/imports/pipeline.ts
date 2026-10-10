@@ -560,10 +560,10 @@ export async function prepareItems(opts: { ids?: string[]; limit?: number } = {}
         const permanent = err instanceof ImageError ? err.permanent : false;
         const text = `photo could not be stored: ${err instanceof Error ? err.message : String(err)}`;
         if (permanent || item.attempts + 1 >= 3) {
-          await db.importItem.update({ where: { id: item.id }, data: { status: "error", attempts: item.attempts + 1, problemsJson: json([text]) } });
+          await db.importItem.updateMany({ where: { id: item.id, status: "approved" }, data: { status: "error", attempts: item.attempts + 1, problemsJson: json([text]) } });
           errors += 1;
         } else {
-          await db.importItem.update({ where: { id: item.id }, data: { attempts: item.attempts + 1 } });
+          await db.importItem.updateMany({ where: { id: item.id, status: "approved" }, data: { attempts: item.attempts + 1 } });
           waiting += 1;
         }
         continue;
@@ -571,10 +571,10 @@ export async function prepareItems(opts: { ids?: string[]; limit?: number } = {}
     }
     const problems = releaseProblems({ ...item, hasImage: Boolean(imageUrl) });
     if (problems.length > 0) {
-      await db.importItem.update({ where: { id: item.id }, data: { status: "error", imageUrl, problemsJson: json(problems) } });
+      await db.importItem.updateMany({ where: { id: item.id, status: "approved" }, data: { status: "error", imageUrl, problemsJson: json(problems) } });
       errors += 1;
     } else {
-      await db.importItem.update({ where: { id: item.id }, data: { status: "ready", imageUrl, problemsJson: "[]", attempts: 0 } });
+      await db.importItem.updateMany({ where: { id: item.id, status: "approved" }, data: { status: "ready", imageUrl, problemsJson: "[]", attempts: 0 } });
       ready += 1;
     }
   }
@@ -929,12 +929,12 @@ function rowFromItem(item: ImportItem, problems: string[], known: { publisher?: 
  * of the series agrees on is filled in). Items an admin has edited or already reviewed are left
  * alone, and anything that still lacks a fact stays in Error with its reasons: nothing is guessed.
  */
-export async function reprocessErrors(source: string, opts: { cursor?: string | null; limit?: number } = {}): Promise<{ checked: number; fixed: number; duplicates: number; still: number; nextCursor: string | null }> {
+export async function reprocessErrors(source: string, opts: { cursor?: string | null; limit?: number } = {}): Promise<{ checked: number; fixed: number; duplicates: number; still: number; skipped: number; nextCursor: string | null }> {
   const limit = opts.limit ?? 300;
   const batch = await db.importItem.findMany({ where: { source, status: "error", reviewedAt: null, editedJson: "[]", ...(opts.cursor ? { id: { gt: opts.cursor } } : {}) }, orderBy: { id: "asc" }, take: limit });
-  if (batch.length === 0) return { checked: 0, fixed: 0, duplicates: 0, still: 0, nextCursor: null };
+  if (batch.length === 0) return { checked: 0, fixed: 0, duplicates: 0, still: 0, skipped: 0, nextCursor: null };
   const env = await loadEnv(source);
-  const done: { id: string; ev: Evaluated }[] = [];
+  const done: { id: string; updatedAt: Date; ev: Evaluated }[] = [];
   let still = 0;
   for (const item of batch) {
     const problems = list(item.problemsJson);
@@ -947,19 +947,22 @@ export async function reprocessErrors(source: string, opts: { cursor?: string | 
     const priceReason = problems.find((r) => r.startsWith("price is in")) ?? null;
     const ev = evaluateNew(row, { price: item.sourcePrice, priceNote: item.priceNote, reason: item.sourcePrice === null ? priceReason : null }, env, item.sourceId);
     if (ev.outcome === "error") still += 1;
-    done.push({ id: item.id, ev });
+    done.push({ id: item.id, updatedAt: item.updatedAt, ev });
   }
   const withFacts = done.filter((d) => d.ev.facts);
   const ctx = withFacts.length > 0 ? await loadSeoContext(withFacts.map((d) => d.ev.facts!)) : null;
+  // Written only if the item is unchanged since it was read: an admin edit or review made meanwhile wins.
+  let written = 0;
   for (let n = 0; n < done.length; n += 50) {
-    await db.$transaction(
-      done.slice(n, n + 50).map(({ id, ev }) => {
+    const results = await db.$transaction(
+      done.slice(n, n + 50).map(({ id, updatedAt, ev }) => {
         const rec = ev.facts && ctx ? recommendSeo(ev.facts, ctx) : null;
-        return db.importItem.update({ where: { id }, data: { ...ev.data, ...(rec ? { seoTitle: rec.seoTitle, seoDescription: rec.seoDescription, primaryKeyword: rec.primaryKeyword, secondaryKeywordsJson: json(rec.secondaryKeywords), searchIntent: rec.searchIntent, internalLinksJson: json(rec.internalLinks), seoNotesJson: json(rec.notes), seoStatus: rec.status } : {}) } });
+        return db.importItem.updateMany({ where: { id, updatedAt, status: "error", reviewedAt: null, editedJson: "[]" }, data: { ...ev.data, ...(rec ? { seoTitle: rec.seoTitle, seoDescription: rec.seoDescription, primaryKeyword: rec.primaryKeyword, secondaryKeywordsJson: json(rec.secondaryKeywords), searchIntent: rec.searchIntent, internalLinksJson: json(rec.internalLinks), seoNotesJson: json(rec.notes), seoStatus: rec.status } : {}) } });
       }),
     );
+    written += results.reduce((sum, r) => sum + r.count, 0);
   }
-  return { checked: batch.length, fixed: done.filter((d) => d.ev.outcome === "ok").length, duplicates: done.filter((d) => d.ev.outcome === "duplicate").length, still, nextCursor: batch.length === limit ? batch[batch.length - 1].id : null };
+  return { checked: batch.length, fixed: done.filter((d) => d.ev.outcome === "ok").length, duplicates: done.filter((d) => d.ev.outcome === "duplicate").length, still, skipped: done.length - written, nextCursor: batch.length === limit ? batch[batch.length - 1].id : null };
 }
 
 /**
@@ -967,10 +970,10 @@ export async function reprocessErrors(source: string, opts: { cursor?: string | 
  * not state. Only an answer the model gives as certain is used; it is recorded on the item so the
  * admin can verify it, and anything not certain stays Unknown. Each item is asked about once.
  */
-export async function enrichUnknown(source: string, limit = 25): Promise<{ asked: number; filled: number; remaining: number }> {
+export async function enrichUnknown(source: string, limit = 25): Promise<{ asked: number; filled: number; remaining: number; unavailable?: boolean; notConfigured?: boolean }> {
   const where = { source, status: "pending_review", reviewedAt: null, editedJson: "[]", knowledgeTriedAt: null, OR: [{ year: null }, { publisher: UNKNOWN }] };
   const { lookupComicFacts, knowledgeConfigured } = await import("@/lib/imports/enrich");
-  if (!knowledgeConfigured()) return { asked: 0, filled: 0, remaining: 0 };
+  if (!knowledgeConfigured()) return { asked: 0, filled: 0, remaining: 0, notConfigured: true };
   const batch = await db.importItem.findMany({ where, orderBy: { id: "asc" }, take: limit });
   if (batch.length === 0) return { asked: 0, filled: 0, remaining: 0 };
   const env = await loadEnv(source);
@@ -995,7 +998,7 @@ export async function enrichUnknown(source: string, limit = 25): Promise<{ asked
   // 2. Reference knowledge for what is still missing.
   const looked = stillUnknown.length ? await lookupComicFacts(stillUnknown.map((i) => ({ id: i.id, listingTitle: i.sourceTitle, series: i.title, issue: i.issue, needPublisher: i.publisher === UNKNOWN, needYear: i.year === null }))) : new Map();
   // The service could not be asked: nothing is marked as tried, so these listings are looked up once it works again.
-  if (looked === null) return { asked: 0, filled: 0, remaining: await db.importItem.count({ where }) };
+  if (looked === null) return { asked: 0, filled: 0, remaining: await db.importItem.count({ where }), unavailable: true };
   const answers = looked;
   for (const item of stillUnknown) {
     const a = answers.get(item.id);
@@ -1013,11 +1016,14 @@ export async function enrichUnknown(source: string, limit = 25): Promise<{ asked
     facts.push({ id: item.id, ev, fields });
   }
   const ctx = facts.length > 0 ? await loadSeoContext(facts.map((f) => f.ev.facts!)) : null;
-  await db.importItem.updateMany({ where: { id: { in: batch.map((i) => i.id) } }, data: { knowledgeTriedAt: now } });
+  // Facts are written only to items unchanged since they were read (an admin edit or review made meanwhile wins), then the batch is marked as tried.
+  const readAt = new Map(batch.map((i) => [i.id, i.updatedAt]));
   for (const { id, ev, fields } of facts) {
     const rec = recommendSeo(ev.facts!, ctx!);
-    await db.importItem.update({ where: { id }, data: { ...ev.data, knowledgeJson: json(fields), seoTitle: rec.seoTitle, seoDescription: rec.seoDescription, primaryKeyword: rec.primaryKeyword, secondaryKeywordsJson: json(rec.secondaryKeywords), searchIntent: rec.searchIntent, internalLinksJson: json(rec.internalLinks), seoNotesJson: json(rec.notes), seoStatus: rec.status } });
+    const r = await db.importItem.updateMany({ where: { id, updatedAt: readAt.get(id), reviewedAt: null, editedJson: "[]" }, data: { ...ev.data, knowledgeJson: json(fields), seoTitle: rec.seoTitle, seoDescription: rec.seoDescription, primaryKeyword: rec.primaryKeyword, secondaryKeywordsJson: json(rec.secondaryKeywords), searchIntent: rec.searchIntent, internalLinksJson: json(rec.internalLinks), seoNotesJson: json(rec.notes), seoStatus: rec.status } });
+    if (r.count === 0) filled -= 1;
   }
+  await db.importItem.updateMany({ where: { id: { in: batch.map((i) => i.id) }, reviewedAt: null, editedJson: "[]" }, data: { knowledgeTriedAt: now } });
   return { asked: batch.length, filled, remaining: await db.importItem.count({ where }) };
 }
 

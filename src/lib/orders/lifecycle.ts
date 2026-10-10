@@ -182,6 +182,8 @@ async function releaseCoupon(tx: Tx, orderId: string, couponId: string | null) {
 
 export async function cancelOrder(orderId: string, reason: string, actor: ActorRef, opts: { notify?: boolean } = {}) {
   const order = await db.$transaction(async (tx) => {
+    // Row lock: the expiry job, an admin and a late payment can reach the same order at once; stock and coupons are released once.
+    await tx.$executeRaw`SELECT 1 FROM "Order" WHERE "id" = ${orderId} FOR UPDATE`;
     const order = await tx.order.findUnique({ where: { id: orderId }, select: { id: true, number: true, status: true, userId: true, email: true, paymentStatus: true, couponId: true } });
     if (!order) throw new Error("Order not found");
     if (["cancelled", "refunded", "completed", "failed"].includes(order.status)) return order;
@@ -261,14 +263,17 @@ export async function autoCompleteOrders(): Promise<number> {
     where: { status: "delivered", shipments: { every: { deliveredAt: { lt: cutoff } } } },
     select: { id: true },
   });
+  let completed = 0;
   for (const o of orders) {
-    await db.$transaction(async (tx) => {
-      await tx.order.update({ where: { id: o.id }, data: { status: "completed", completedAt: new Date() } });
-      await tx.orderItem.updateMany({ where: { orderId: o.id, status: "delivered" }, data: { status: "delivered" } });
+    // Only an order that is still delivered changes: a second run (or a refund meanwhile) does nothing twice.
+    completed += await db.$transaction(async (tx) => {
+      const r = await tx.order.updateMany({ where: { id: o.id, status: "delivered" }, data: { status: "completed", completedAt: new Date() } });
+      if (r.count === 0) return 0;
       await addOrderEvent(tx, o.id, "order.completed", "Order completed automatically after the inspection window", { id: null, type: "job" });
+      return 1;
     });
   }
-  return orders.length;
+  return completed;
 }
 
 /** Recomputes the derived status columns from items/shipments/payments. */
