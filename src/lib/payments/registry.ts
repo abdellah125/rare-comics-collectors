@@ -1,6 +1,7 @@
 import "server-only";
 import { env } from "@/lib/env";
 import { getSettings, type Settings } from "@/lib/settings";
+import { bankDetailsComplete } from "@/lib/payments/bank-details";
 import { bankTransferProvider } from "@/lib/payments/providers/bank-transfer";
 import { cryptoProvider } from "@/lib/payments/providers/crypto";
 import { paypalProvider } from "@/lib/payments/providers/paypal";
@@ -47,12 +48,14 @@ export async function providerStatuses(): Promise<ProviderStatus[]> {
     if (id === "stripe" && !p.isConfigured()) note = "Set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in the environment.";
     if (id === "paypal") note = "PayPal invoice requests: the buyer is not charged at checkout. They leave their name and PayPal email, you send the invoice from PayPal and mark the order paid once it is settled.";
     if (id === "crypto") note = "Buyers pay to your own wallets (USDT, BTC, BNB, ETH, LTC). The site holds no keys: it reads the blockchain and marks an order paid once the transfer is confirmed. Orders are priced in US dollars and converted when the order is placed.";
+    const bankReady = id !== "bank_transfer" || bankDetailsComplete(settings);
+    if (id === "bank_transfer" && !bankReady) note = "Enter the account name (beneficiary) and an account number or IBAN below. Until then bank wire is not offered at checkout.";
     if (id === "test") note = env.isProd ? "Sandbox gateway — keep disabled in production." : "Sandbox gateway for local testing; never charges.";
     return {
       id,
       displayName: p.displayName,
       method: p.method,
-      configured: p.isConfigured(),
+      configured: p.isConfigured() && bankReady,
       enabled: Boolean(settings[enabledKey(id)]),
       // Crypto is quoted from the US-dollar total, so the currency the buyer browses in does not matter.
       currencies: id === "test" || id === "crypto" ? ["*"] : currencies,

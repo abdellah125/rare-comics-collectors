@@ -45,7 +45,7 @@ export default async function AdminPaymentProvidersPage() {
               )}
               {p.id === "bank_transfer" && (
                 <>
-                  <Field label="Minimum order (cents)">
+                  <Field label="Minimum order (cents)" hint="Orders below this total do not see bank wire. 500000 = $5,000.00; 0 offers it for every order.">
                     <input name="minAmount" type="number" min={0} defaultValue={settings["payments.bank_transfer.minAmount"]} className={adminInput} />
                   </Field>
                   <div className="grid gap-3 sm:grid-cols-2">

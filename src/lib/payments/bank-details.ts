@@ -13,6 +13,15 @@ export type BankTransferDetails = {
   reserveHours: number;
 };
 
+/**
+ * Whether a buyer could actually send a wire with what finance has entered: an account name and
+ * an account number or IBAN. Until then bank wire is not offered, so nobody is shown empty details.
+ */
+export function bankDetailsComplete(settings: Settings): boolean {
+  const filled = (k: keyof Settings) => typeof settings[k] === "string" && (settings[k] as string).trim() !== "";
+  return filled("payments.bank_transfer.beneficiary") && (filled("payments.bank_transfer.accountNumber") || filled("payments.bank_transfer.iban"));
+}
+
 /** Bank wire details as configured under Finance › Payment providers, optionally with the order reference. */
 export function bankTransferDetails(settings: Settings, reference?: string): BankTransferDetails {
   const fields: [string, string][] = [

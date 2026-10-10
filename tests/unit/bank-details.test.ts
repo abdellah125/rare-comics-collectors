@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bankTransferDetails } from "@/lib/payments/bank-details";
+import { bankDetailsComplete, bankTransferDetails } from "@/lib/payments/bank-details";
 import { settingDefaults } from "@/lib/settings";
 
 describe("bank transfer details", () => {
@@ -13,5 +13,14 @@ describe("bank transfer details", () => {
   });
   it("has no bank lines when nothing is configured", () => {
     expect(bankTransferDetails(settingDefaults).lines).toEqual([]);
+  });
+  it("is offered only once an account name and an account number or IBAN are entered", () => {
+    const base = { ...settingDefaults, "payments.bank_transfer.beneficiary": "", "payments.bank_transfer.accountNumber": "", "payments.bank_transfer.iban": "" };
+    expect(bankDetailsComplete(base)).toBe(false);
+    expect(bankDetailsComplete({ ...base, "payments.bank_transfer.beneficiary": "Rare Comics Collectors, LLC" })).toBe(false);
+    expect(bankDetailsComplete({ ...base, "payments.bank_transfer.accountNumber": "30000002742046" })).toBe(false);
+    expect(bankDetailsComplete({ ...base, "payments.bank_transfer.beneficiary": "RCC", "payments.bank_transfer.accountNumber": "30000002742046" })).toBe(true);
+    expect(bankDetailsComplete({ ...base, "payments.bank_transfer.beneficiary": "RCC", "payments.bank_transfer.iban": "GB33BUKB20201555555555" })).toBe(true);
+    expect(bankDetailsComplete({ ...base, "payments.bank_transfer.beneficiary": "   ", "payments.bank_transfer.iban": "GB33" })).toBe(false);
   });
 });
