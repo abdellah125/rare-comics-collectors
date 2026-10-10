@@ -3,7 +3,7 @@ import { publishedWhere } from "@/lib/catalog/products";
 import { cheapestDeliveryOption, shippingQuoter } from "@/lib/commerce/pricing";
 import { db } from "@/lib/db";
 import { isString, parseJsonArray, parseJsonObject } from "@/lib/json";
-import { buildFeedXml, productToFeedItem, type FeedItem, type FeedShipping, type FeedSkip } from "@/lib/merchant-feed-xml";
+import { buildFeedXml, fitFeedItems, productToFeedItem, type FeedItem, type FeedShipping, type FeedSkip } from "@/lib/merchant-feed-xml";
 import { getSettings } from "@/lib/settings";
 import { site } from "@/lib/site";
 
@@ -69,15 +69,18 @@ export async function merchantFeed(): Promise<MerchantFeedResult> {
     items.push(mapped.item);
   }
   for (const s of skipped) console.warn(`[merchant-feed] skipped ${s.id}: ${s.reason}`);
-  console.log(`[merchant-feed] ${items.length} items, ${skipped.length} skipped`);
+  const fitted = fitFeedItems(items);
+  const omittedForSize = items.length - fitted.length;
+  console.log(`[merchant-feed] ${fitted.length} items, ${skipped.length} skipped${omittedForSize ? `, ${omittedForSize} older left out to stay under the size limit` : ""}`);
 
   const xml = buildFeedXml({
     title: `${settings["marketplace.name"]} — graded comics`,
     link: site.url,
     description: `Graded and raw collectible comic books for sale at ${settings["marketplace.name"]}.`,
-    items,
+    items: fitted,
     skipped,
     generatedAt: new Date(),
+    omittedForSize,
   });
-  return { xml, included: items.length, skipped };
+  return { xml, included: fitted.length, skipped };
 }

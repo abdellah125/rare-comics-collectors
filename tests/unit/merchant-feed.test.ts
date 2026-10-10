@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFeedXml, escapeXml, feedDescription, feedPrice, feedTitle, productToFeedItem, type FeedContext, type FeedProductRow } from "@/lib/merchant-feed-xml";
+import { FEED_MAX_BYTES, buildFeedXml, escapeXml, feedDescription, feedItemXml, feedPrice, feedTitle, fitFeedItems, productToFeedItem, type FeedContext, type FeedProductRow } from "@/lib/merchant-feed-xml";
 
 const ctx: FeedContext = { siteUrl: "https://www.rarecomicscollectors.com", currency: "USD", houseSellerId: "rare-comics-collectors", houseSellerName: "Rare Comics Collectors", shipping: { country: "US", service: "Insured standard", price: 0 } };
 
@@ -87,6 +87,21 @@ describe("merchant feed items", () => {
     expect(xml).not.toContain("<g:mpn>");
     expect(xml).toContain("IMP-346 (no product image)");
     expect(xml).not.toMatch(/<g:[a-z_]+><\/g:[a-z_]+>/);
+  });
+
+  it("stays under the size limit by leaving out the oldest listings", () => {
+    const r = productToFeedItem(row(), ctx);
+    const item = ("item" in r ? r.item : null)!;
+    const items = Array.from({ length: 200 }, (_, i) => ({ ...item, id: `IMP-${String(i).padStart(3, "0")}` }));
+    const one = Buffer.byteLength(feedItemXml(items[0]), "utf8") + 1;
+    const fitted = fitFeedItems(items, 4_000 + one * 50 + 10);
+    expect(fitted).toHaveLength(50);
+    expect(fitted[0].id).toBe("IMP-000"); // newest first: the head of the list is kept
+    expect(fitFeedItems(items)).toHaveLength(200);
+    const xml = buildFeedXml({ title: "T", link: ctx.siteUrl, description: "D", items: fitted, skipped: [], generatedAt: new Date("2026-10-10T00:00:00Z"), omittedForSize: 150 });
+    expect(xml).toContain("150 older listings left out to stay under the size limit");
+    expect(Buffer.byteLength(xml, "utf8")).toBeLessThanOrEqual(4_000 + one * 50 + 10);
+    expect(FEED_MAX_BYTES).toBeLessThan(20_000_000);
   });
 
   it("escapes and strips what XML cannot carry", () => {
