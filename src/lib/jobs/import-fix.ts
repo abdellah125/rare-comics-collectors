@@ -23,7 +23,7 @@ export async function runImportFix(payload: Record<string, unknown>): Promise<st
     if (done.unavailable) throw new TransientJobError(`Knowledge lookup: the AI service could not be asked; ${done.remaining} listing(s) still to look up. None was marked as tried.`, 15 * 60_000);
     if (done.asked > 0 && done.remaining > 0) {
       await queueImportFixStep({ phase: "knowledge" });
-      return `Knowledge: ${done.asked} looked up, ${done.filled} filled, ${done.remaining} left`;
+      return `Knowledge: ${done.asked} looked up, ${done.filled} filled, ${done.remaining} left${done.failed ? `; could not write ${done.failed.join(", ")} (see the logs)` : ""}`;
     }
     return `Knowledge phase finished: ${done.asked} looked up, ${done.filled} filled${done.notConfigured ? " (no AI key configured: skipped)" : ""}`;
   }
@@ -37,7 +37,7 @@ export async function runImportFix(payload: Record<string, unknown>): Promise<st
     throw new Error(`import_fix batch after ${cursor ?? "the first item"}: ${err instanceof Error ? err.message : String(err)}`);
   }
   await queueImportFixStep(result.nextCursor ? { cursor: result.nextCursor } : { phase: "knowledge" });
-  return `Batch after ${cursor ?? "the first item"}: ${result.checked} checked, ${result.fixed} fixed, ${result.duplicates} duplicate(s), ${result.still} still in Error${result.skipped ? `, ${result.skipped} left alone (changed meanwhile)` : ""}${photos ? `; ${photos} photo error(s) back into preparation` : ""}`;
+  return `Batch after ${cursor ?? "the first item"}: ${result.checked} checked, ${result.fixed} fixed, ${result.duplicates} duplicate(s), ${result.still} still in Error${result.skipped ? `, ${result.skipped} left alone (changed meanwhile)` : ""}${result.failed.length ? `, could not write ${result.failed.join(", ")} (see the logs)` : ""}${photos ? `; ${photos} photo error(s) back into preparation` : ""}`;
 }
 
 /** One step of the import_fix pass: {} starts it, {cursor} continues after that item id, {phase:"knowledge"} is the second phase. */

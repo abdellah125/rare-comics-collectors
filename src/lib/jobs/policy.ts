@@ -50,7 +50,7 @@ export type ErrorKind = "transient" | "permanent";
 
 /** Unknown errors (network, database hiccups, timeouts) are treated as transient: the attempt limit still ends them. */
 export function classifyError(err: unknown): { kind: ErrorKind; message: string; retryAfterMs?: number } {
-  const message = (err instanceof Error ? err.message : String(err)).slice(0, 1000) || "Unknown error";
+  const message = clipError(err instanceof Error ? err.message : String(err)) || "Unknown error";
   if (err instanceof PermanentJobError || (err as { permanent?: unknown })?.permanent === true) return { kind: "permanent", message };
   const retryAfterMs = err instanceof TransientJobError ? err.retryAfterMs : undefined;
   return { kind: "transient", message, retryAfterMs };
@@ -117,7 +117,19 @@ export function redactPayload(payloadJson: string, maxLength = 4_000): string {
   return text.length > maxLength ? `${text.slice(0, maxLength)}\n…` : text;
 }
 
-/** Error text as stored and shown: one line per cause, credentials in URLs masked. */
+/**
+ * At most `max` characters, keeping the beginning and the end. Database errors print the whole
+ * query first and the reason last ("Argument `era` must not be null."), so cutting the tail off
+ * would hide the one line that matters.
+ */
+export function clipError(message: string, max = 1000): string {
+  const t = message.trim();
+  if (t.length <= max) return t;
+  const head = Math.floor(max * 0.35);
+  return `${t.slice(0, head)} … ${t.slice(t.length - (max - head - 3))}`;
+}
+
+/** Error text as stored and shown: credentials in URLs masked, long text clipped at both ends. */
 export function cleanError(message: string): string {
-  return message.replace(/(\w+:\/\/)[^\s/@:]+:[^\s/@]+@/g, "$1***@").replace(/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, "$1***").slice(0, 1000);
+  return clipError(message.replace(/(\w+:\/\/)[^\s/@:]+:[^\s/@]+@/g, "$1***@").replace(/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, "$1***"));
 }

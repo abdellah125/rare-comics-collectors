@@ -490,7 +490,28 @@ export async function ensureScheduled(type: JobType, now = new Date()): Promise<
     },
     select: { id: true },
   });
-  if (!active) await enqueueJob(type, {}, { dedupe: true });
+  if (active) return;
+  await enqueueJob(type, {}, { dedupe: true, runAt: nextRunAfterFailure(type, await lastFinished(type), now) });
+}
+
+async function lastFinished(type: JobType): Promise<{ failedAt: Date | null; succeededAt: Date | null }> {
+  const [failed, ok] = await Promise.all([
+    db.job.findFirst({ where: { type, status: "failed" }, orderBy: { runAt: "desc" }, select: { lastErrorAt: true, runAt: true } }),
+    db.job.findFirst({ where: { type, status: "completed" }, orderBy: { completedAt: { sort: "desc", nulls: "last" } }, select: { completedAt: true } }),
+  ]);
+  return { failedAt: failed ? (failed.lastErrorAt ?? failed.runAt) : null, succeededAt: ok?.completedAt ?? null };
+}
+
+/**
+ * When a recurring job's latest run failed for good, its next run waits one interval (at most an
+ * hour) after that failure instead of starting at once. Otherwise a job that cannot finish (a
+ * time limit, an outage) was run again on every drain, each time taking the drain down with it.
+ */
+export function nextRunAfterFailure(type: string, last: { failedAt: Date | null; succeededAt: Date | null }, now = new Date()): Date {
+  if (!last.failedAt || (last.succeededAt && last.succeededAt > last.failedAt)) return now;
+  const every = RECURRING_JOBS.find((r) => r.type === type)?.everyMinutes ?? 60;
+  const at = new Date(last.failedAt.getTime() + Math.min(every, 60) * 60_000);
+  return at > now ? at : now;
 }
 
 export function registeredJobTypes(): JobType[] {

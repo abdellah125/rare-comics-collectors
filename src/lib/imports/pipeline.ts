@@ -17,6 +17,7 @@ import { dailyPlan, utcDayStart } from "@/lib/imports/daily";
 import { ADULT, PALETTES, buildListing, cadRateOf, slugify, usdPrice } from "../../../scripts/lib/hipcomic-listing.mjs";
 import { CGC_GRADES, eraForYear, normSeries, parseTitle, tidyCase } from "../../../scripts/lib/hipcomic-title.mjs";
 import { FEED_PATHS } from "@/lib/merchant-feed-xml";
+import { clipError } from "@/lib/jobs/policy";
 
 /**
  * The import pipeline: source data → review queue → (admin approval) → ready → (admin release) → listing.
@@ -242,6 +243,10 @@ function evaluateNew(row: SourceRow, usd: { price: number | null; priceNote: str
       data: { status: "error", problemsJson: json([...new Set(reasons)]), auction: row.auction, retailPrice: retail, priceBasis: null, title: p.series ?? "", issue: p.issue ?? "", publisher: p.publisher ?? "", year: p.year, era: p.era ?? "", grader: p.grader ?? "", grade: p.grade ?? "", label: p.label ?? "Universal Blue", certNumber: p.certNumber, description: row.extra.description },
     };
   }
+
+  // A year from before 1938 (stated, or learnt from another listing of the issue) has no collecting
+  // era: the plain listing states it as Unknown. The other builders need an era and would write null.
+  if (!p.era) plain = true;
 
   const l: BuiltListing = plain
     ? buildPlainListing({ sourceId: row.sourceId!, p: { series: p.series!, issue: p.issue ?? "nn", publisher: p.publisher, year: p.year, era: p.era, grader: p.grader, grade: raw ? condition : p.grade, label: p.label, certNumber: p.certNumber, pageQuality: p.pageQuality, volume: p.volume, notes: lot ? null : p.notes, lot } }, env.takenSlugs)
@@ -957,10 +962,10 @@ function rowFromItem(item: ImportItem, problems: string[], known: { publisher?: 
  * of the series agrees on is filled in). Items an admin has edited or already reviewed are left
  * alone, and anything that still lacks a fact stays in Error with its reasons: nothing is guessed.
  */
-export async function reprocessErrors(source: string, opts: { cursor?: string | null; limit?: number } = {}): Promise<{ checked: number; fixed: number; duplicates: number; still: number; skipped: number; nextCursor: string | null }> {
+export async function reprocessErrors(source: string, opts: { cursor?: string | null; limit?: number } = {}): Promise<{ checked: number; fixed: number; duplicates: number; still: number; skipped: number; failed: string[]; nextCursor: string | null }> {
   const limit = opts.limit ?? 300;
   const batch = await db.importItem.findMany({ where: { source, status: "error", reviewedAt: null, editedJson: "[]", ...(opts.cursor ? { id: { gt: opts.cursor } } : {}) }, orderBy: { id: "asc" }, take: limit });
-  if (batch.length === 0) return { checked: 0, fixed: 0, duplicates: 0, still: 0, skipped: 0, nextCursor: null };
+  if (batch.length === 0) return { checked: 0, fixed: 0, duplicates: 0, still: 0, skipped: 0, failed: [], nextCursor: null };
   const env = await loadEnv(source);
   const done: { id: string; updatedAt: Date; ev: Evaluated }[] = [];
   let still = 0;
@@ -981,16 +986,29 @@ export async function reprocessErrors(source: string, opts: { cursor?: string | 
   const ctx = withFacts.length > 0 ? await loadSeoContext(withFacts.map((d) => d.ev.facts!)) : null;
   // Written only if the item is unchanged since it was read: an admin edit or review made meanwhile wins.
   let written = 0;
+  const failed: string[] = [];
+  const write = ({ id, updatedAt, ev }: (typeof done)[number]) => {
+    const rec = ev.facts && ctx ? recommendSeo(ev.facts, ctx) : null;
+    return db.importItem.updateMany({ where: { id, updatedAt, status: "error", reviewedAt: null, editedJson: "[]" }, data: { ...ev.data, ...(rec ? { seoTitle: rec.seoTitle, seoDescription: rec.seoDescription, primaryKeyword: rec.primaryKeyword, secondaryKeywordsJson: json(rec.secondaryKeywords), searchIntent: rec.searchIntent, internalLinksJson: json(rec.internalLinks), seoNotesJson: json(rec.notes), seoStatus: rec.status } : {}) } });
+  };
   for (let n = 0; n < done.length; n += 50) {
-    const results = await db.$transaction(
-      done.slice(n, n + 50).map(({ id, updatedAt, ev }) => {
-        const rec = ev.facts && ctx ? recommendSeo(ev.facts, ctx) : null;
-        return db.importItem.updateMany({ where: { id, updatedAt, status: "error", reviewedAt: null, editedJson: "[]" }, data: { ...ev.data, ...(rec ? { seoTitle: rec.seoTitle, seoDescription: rec.seoDescription, primaryKeyword: rec.primaryKeyword, secondaryKeywordsJson: json(rec.secondaryKeywords), searchIntent: rec.searchIntent, internalLinksJson: json(rec.internalLinks), seoNotesJson: json(rec.notes), seoStatus: rec.status } : {}) } });
-      }),
-    );
-    written += results.reduce((sum, r) => sum + r.count, 0);
+    const part = done.slice(n, n + 50);
+    try {
+      const results = await db.$transaction(part.map(write));
+      written += results.reduce((sum, r) => sum + r.count, 0);
+    } catch {
+      // One bad row fails the whole transaction: write them one at a time and name the ones that fail.
+      for (const d of part) {
+        try {
+          written += (await write(d)).count;
+        } catch (err) {
+          failed.push(d.id);
+          console.error(`[import fix] item ${d.id} could not be written: ${clipError(err instanceof Error ? err.message : String(err), 600)}`);
+        }
+      }
+    }
   }
-  return { checked: batch.length, fixed: done.filter((d) => d.ev.outcome === "ok").length, duplicates: done.filter((d) => d.ev.outcome === "duplicate").length, still, skipped: done.length - written, nextCursor: batch.length === limit ? batch[batch.length - 1].id : null };
+  return { checked: batch.length, fixed: done.filter((d) => d.ev.outcome === "ok").length, duplicates: done.filter((d) => d.ev.outcome === "duplicate").length, still, skipped: done.length - written - failed.length, failed, nextCursor: batch.length === limit ? batch[batch.length - 1].id : null };
 }
 
 /**
@@ -998,7 +1016,7 @@ export async function reprocessErrors(source: string, opts: { cursor?: string | 
  * not state. Only an answer the model gives as certain is used; it is recorded on the item so the
  * admin can verify it, and anything not certain stays Unknown. Each item is asked about once.
  */
-export async function enrichUnknown(source: string, limit = 25): Promise<{ asked: number; filled: number; remaining: number; unavailable?: boolean; notConfigured?: boolean }> {
+export async function enrichUnknown(source: string, limit = 25): Promise<{ asked: number; filled: number; remaining: number; unavailable?: boolean; notConfigured?: boolean; failed?: string[] }> {
   const where = { source, status: "pending_review", reviewedAt: null, editedJson: "[]", knowledgeTriedAt: null, OR: [{ year: null }, { publisher: UNKNOWN }] };
   const { lookupComicFacts, knowledgeConfigured } = await import("@/lib/imports/enrich");
   if (!knowledgeConfigured()) return { asked: 0, filled: 0, remaining: 0, notConfigured: true };
@@ -1046,13 +1064,22 @@ export async function enrichUnknown(source: string, limit = 25): Promise<{ asked
   const ctx = facts.length > 0 ? await loadSeoContext(facts.map((f) => f.ev.facts!)) : null;
   // Facts are written only to items unchanged since they were read (an admin edit or review made meanwhile wins), then the batch is marked as tried.
   const readAt = new Map(batch.map((i) => [i.id, i.updatedAt]));
+  const failedIds: string[] = [];
   for (const { id, ev, fields } of facts) {
     const rec = recommendSeo(ev.facts!, ctx!);
-    const r = await db.importItem.updateMany({ where: { id, updatedAt: readAt.get(id), reviewedAt: null, editedJson: "[]" }, data: { ...ev.data, knowledgeJson: json(fields), seoTitle: rec.seoTitle, seoDescription: rec.seoDescription, primaryKeyword: rec.primaryKeyword, secondaryKeywordsJson: json(rec.secondaryKeywords), searchIntent: rec.searchIntent, internalLinksJson: json(rec.internalLinks), seoNotesJson: json(rec.notes), seoStatus: rec.status } });
+    let r: { count: number };
+    try {
+      r = await db.importItem.updateMany({ where: { id, updatedAt: readAt.get(id), reviewedAt: null, editedJson: "[]" }, data: { ...ev.data, knowledgeJson: json(fields), seoTitle: rec.seoTitle, seoDescription: rec.seoDescription, primaryKeyword: rec.primaryKeyword, secondaryKeywordsJson: json(rec.secondaryKeywords), searchIntent: rec.searchIntent, internalLinksJson: json(rec.internalLinks), seoNotesJson: json(rec.notes), seoStatus: rec.status } });
+    } catch (err) {
+      // Named, then skipped: one listing must not stop the whole knowledge pass.
+      failedIds.push(id);
+      console.error(`[import knowledge] item ${id} could not be written: ${clipError(err instanceof Error ? err.message : String(err), 600)}`);
+      r = { count: 0 };
+    }
     if (r.count === 0) filled -= 1;
   }
   await db.importItem.updateMany({ where: { id: { in: batch.map((i) => i.id) }, reviewedAt: null, editedJson: "[]" }, data: { knowledgeTriedAt: now } });
-  return { asked: batch.length, filled, remaining: await db.importItem.count({ where }) };
+  return { asked: batch.length, filled, remaining: await db.importItem.count({ where }), ...(failedIds.length ? { failed: failedIds } : {}) };
 }
 
 // ───────────────────────────── SEO backfill and statistics ─────────────────────────────

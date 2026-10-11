@@ -2,7 +2,9 @@ import { ensureRecurringJobs, registerJobHandlers } from "@/lib/jobs/handlers";
 import { noteDrain, processJobs } from "@/lib/jobs/queue";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// A drain starts jobs only in its first 25 s, but a started job (the weekly SEO analysis, an import
+// batch) may need longer; 60 s cut them off and lost the rest of the drain with them.
+export const maxDuration = 300;
 
 /**
  * Keeps the job queue moving on hosts without a frequent cron. The storefront pings this address

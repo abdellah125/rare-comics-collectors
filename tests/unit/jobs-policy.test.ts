@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canonicalIndexNowUrls, parseRetryAfter } from "@/lib/indexnow-payload";
-import { PermanentJobError, TransientJobError, classifyError, cleanError, isExclusiveType, jobPriority, queueConfig, redactPayload, retryDelayMs } from "@/lib/jobs/policy";
+import { PermanentJobError, TransientJobError, classifyError, cleanError, clipError, isExclusiveType, jobPriority, queueConfig, redactPayload, retryDelayMs } from "@/lib/jobs/policy";
 
 const opts = { baseMs: 30_000, maxMs: 6 * 3_600_000 };
 
@@ -36,6 +36,14 @@ describe("error classes", () => {
     expect(classifyError("plain string").message).toBe("plain string");
     // errors from other modules that carry permanent: true (e.g. FeedAccessError) count as permanent
     expect(classifyError(Object.assign(new Error("refused"), { permanent: true })).kind).toBe("permanent");
+  });
+  it("keeps the end of a long error, where databases put the reason", () => {
+    const prisma = "Invalid `prisma.importItem.updateMany()` invocation:\n" + "    field: value,\n".repeat(200) + "\nArgument `era` must not be null.";
+    const kept = classifyError(new Error(prisma)).message;
+    expect(kept.length).toBeLessThanOrEqual(1000);
+    expect(kept.startsWith("Invalid `prisma.importItem.updateMany()` invocation")).toBe(true);
+    expect(kept.endsWith("Argument `era` must not be null.")).toBe(true);
+    expect(clipError("short")).toBe("short");
   });
   it("masks credentials in stored error text", () => {
     expect(cleanError("connect postgres://admin:hunter2@db.example.com:5432/rcc failed")).toBe("connect postgres://***@db.example.com:5432/rcc failed");

@@ -32,7 +32,12 @@ export async function rebuildStrategy(ctx: SeoContext): Promise<{ clusters: numb
 
   // ── clusters ──
   const groups = new Map<string, Row[]>();
-  for (const k of rows) groups.set(k.clusterKey, [...(groups.get(k.clusterKey) ?? []), k]);
+  // push, not spread: copying the array on every row made this quadratic in the cluster size.
+  for (const k of rows) {
+    const g = groups.get(k.clusterKey);
+    if (g) g.push(k);
+    else groups.set(k.clusterKey, [k]);
+  }
   const manual = new Map((await db.seoCluster.findMany({ where: { statusManual: true }, select: { key: true, status: true } })).map((c) => [c.key, c.status]));
 
   const clusters: Prisma.SeoClusterCreateManyInput[] = [];
@@ -90,11 +95,19 @@ export async function rebuildStrategy(ctx: SeoContext): Promise<{ clusters: numb
   const byStatus = new Map<string, string[]>();
   for (const k of rows) {
     const r = role.get(k.id) ?? "supporting";
-    if (r !== k.clusterRole) byRole.set(r, [...(byRole.get(r) ?? []), k.id]);
+    if (r !== k.clusterRole) {
+      const ids = byRole.get(r);
+      if (ids) ids.push(k.id);
+      else byRole.set(r, [k.id]);
+    }
     if (k.statusManual) continue;
     const plan = planExists.get(k.clusterKey);
     const auto = k.position !== null ? (k.position <= 10 ? "ranking" : "needs_improvement") : k.score === null ? "discovered" : plan && !plan.exists && (k.priority === "high" || k.priority === "medium") ? "content_needed" : "analyzed";
-    if (auto !== k.status) byStatus.set(auto, [...(byStatus.get(auto) ?? []), k.id]);
+    if (auto !== k.status) {
+      const ids = byStatus.get(auto);
+      if (ids) ids.push(k.id);
+      else byStatus.set(auto, [k.id]);
+    }
   }
   for (const [r, ids] of byRole) for (let i = 0; i < ids.length; i += 2000) await db.seoKeyword.updateMany({ where: { id: { in: ids.slice(i, i + 2000) } }, data: { clusterRole: r } });
   for (const [s, ids] of byStatus) for (let i = 0; i < ids.length; i += 2000) await db.seoKeyword.updateMany({ where: { id: { in: ids.slice(i, i + 2000) } }, data: { status: s } });

@@ -48,6 +48,26 @@ async function main() {
   check("a copy whose function was cut off long ago no longer blocks scheduling", (await db.job.count({ where: { type: t, status: "pending" } })) === 1);
   await db.job.delete({ where: { id: running.id } });
 
+  // A recurring job whose last run failed for good is not rescheduled for "now" (it was re-run on every drain).
+  {
+    const { nextRunAfterFailure } = await import("@/lib/jobs/queue");
+    const now = new Date();
+    const failedAt = new Date(now.getTime() - 5 * 60_000);
+    const weekly = nextRunAfterFailure("seo_sync", { failedAt, succeededAt: null }, now);
+    check("after a failure, a weekly job waits an hour from it", Math.abs(weekly.getTime() - (failedAt.getTime() + 60 * 60_000)) < 1000, weekly.toISOString());
+    check("a 2-minute job waits its own interval (already over: now)", nextRunAfterFailure("crypto_check", { failedAt, succeededAt: null }, now).getTime() === now.getTime());
+    check("a success after the failure means no wait", nextRunAfterFailure("seo_sync", { failedAt, succeededAt: new Date(now.getTime() - 60_000) }, now).getTime() === now.getTime());
+    await db.job.deleteMany({ where: { type: "seo_sync", status: { in: ["pending", "running"] } } });
+    // (The runs above just completed; this failure comes after them.)
+    const justFailed = new Date();
+    const f = await db.job.create({ data: { type: "seo_sync", payloadJson: '{"itest":1}', status: "failed", attempts: 5, maxAttempts: 5, runAt: justFailed, lastError: "itest failure", lastErrorAt: justFailed } });
+    await ensureScheduled("seo_sync");
+    const next = await db.job.findFirst({ where: { type: "seo_sync", status: "pending" } });
+    check("ensureScheduled honours it", next !== null && next.runAt.getTime() > Date.now() + 55 * 60_000, next?.runAt.toISOString() ?? "none");
+    await db.job.delete({ where: { id: f.id } });
+    if (next) await db.job.delete({ where: { id: next.id } });
+  }
+
   // Leave the local queue in its normal state: one waiting copy of each, due now.
   await db.job.deleteMany({ where: { type: { in: types }, status: "pending" } });
   await ensureRecurringJobs();
