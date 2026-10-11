@@ -118,7 +118,7 @@ const METHODS: Record<string, { name: string; description: string; price: number
   "United States": [
     { name: "Insured standard", description: "Double-boxed, signature required, insured to full value.", price: 1495, freeOver: 25000, min: 2, max: 5, carrier: "usps" },
     { name: "Insured express", description: "Priority handling, same insurance and packaging.", price: 3995, min: 1, max: 2, carrier: "fedex" },
-    { name: "Vault pickup — Austin, TX", description: "Collect in person at the vault. ID required.", price: 0, min: 0, max: 1 },
+    { name: "Free standard shipping", description: "Tracked delivery in 3–5 business days.", price: 0, min: 3, max: 5, carrier: "usps" },
   ],
   Canada: [
     { name: "Insured international standard", description: "Tracked and insured, duties payable on delivery.", price: 2995, freeOver: 50000, min: 5, max: 10, carrier: "ups" },
@@ -183,8 +183,8 @@ async function seedShippingAndCountries() {
             estimatedDaysMin: m.min,
             estimatedDaysMax: m.max,
             carrierId: m.carrier ? carriers[m.carrier] : null,
-            requiresSignature: m.price > 0,
-            isInsured: m.price > 0,
+            requiresSignature: m.price > 0 && m.name.startsWith("Insured"),
+            isInsured: m.name.startsWith("Insured"),
             position: position++,
           },
         });
@@ -219,8 +219,9 @@ const TAX_RULES = [
 async function seedTax() {
   const count = await db.taxRule.count();
   if (count > 0) return;
-  for (const r of TAX_RULES) await db.taxRule.create({ data: r });
-  log(`${TAX_RULES.length} tax rules`);
+  // Prices are final: no tax is added at checkout. The rules exist switched off (Finance › Taxes).
+  for (const r of TAX_RULES) await db.taxRule.create({ data: { ...r, isActive: false } });
+  log(`${TAX_RULES.length} tax rules (inactive)`);
 }
 
 async function seedLocales() {
@@ -678,6 +679,43 @@ async function restoreSoldOutOnce() {
 }
 
 /**
+ * The owner asked (2026-10-11): bank wire offered on every order, vault pickup replaced by free
+ * standard shipping (3–5 days), and no tax added to the final price. Carried out once, so later
+ * changes made under Finance and Shipping in the admin are never overwritten. Nothing is deleted:
+ * the pickup method and the tax rules are switched off and can be switched on again there.
+ */
+async function checkoutChangesOnce() {
+  const key = "checkout.once.2026-10-11";
+  if (await db.setting.findUnique({ where: { key } })) return;
+  const usps = await db.carrier.findUnique({ where: { code: "usps" }, select: { id: true } });
+  const zone = await db.shippingZone.findFirst({ where: { name: "United States" }, select: { id: true } });
+  let pickupOff = 0;
+  let freeAdded = false;
+  if (zone) {
+    pickupOff = (await db.shippingMethod.updateMany({ where: { zoneId: zone.id, name: { startsWith: "Vault pickup" }, isActive: true }, data: { isActive: false } })).count;
+    const exists = await db.shippingMethod.findFirst({ where: { zoneId: zone.id, name: "Free standard shipping" }, select: { id: true } });
+    if (exists) await db.shippingMethod.update({ where: { id: exists.id }, data: { isActive: true } });
+    else {
+      await db.shippingMethod.create({ data: { zoneId: zone.id, name: "Free standard shipping", description: "Tracked delivery in 3–5 business days.", price: 0, estimatedDaysMin: 3, estimatedDaysMax: 5, carrierId: usps?.id ?? null, requiresSignature: false, isInsured: false, position: -1 } });
+      freeAdded = true;
+    }
+  }
+  const taxOff = (await db.taxRule.updateMany({ where: { isActive: true }, data: { isActive: false } })).count;
+  await db.setting.upsert({ where: { key: "payments.bank_transfer.minAmount" }, create: { key: "payments.bank_transfer.minAmount", value: "0" }, update: { value: "0" } });
+  await db.setting.upsert({ where: { key: "payments.bank_transfer.enabled" }, create: { key: "payments.bank_transfer.enabled", value: "true" }, update: { value: "true" } });
+  // Whether the wire can actually be offered (it needs an account name and an account number or IBAN). Only yes/no is logged.
+  const stored = await db.setting.findMany({ where: { key: { in: ["payments.bank_transfer.beneficiary", "payments.bank_transfer.accountNumber", "payments.bank_transfer.iban"] } } });
+  const filled = (k: string, envName: string) => {
+    const row = stored.find((s) => s.key === k);
+    const v = row ? (JSON.parse(row.value) as unknown) : process.env[envName];
+    return typeof v === "string" && v.trim() !== "";
+  };
+  const wireReady = filled("payments.bank_transfer.beneficiary", "BANK_BENEFICIARY") && (filled("payments.bank_transfer.accountNumber", "BANK_ACCOUNT_NUMBER") || filled("payments.bank_transfer.iban", "BANK_IBAN"));
+  await db.setting.create({ data: { key, value: JSON.stringify({ at: new Date().toISOString(), pickupOff, freeAdded, taxOff, wireReady }) } });
+  log(`checkout changes: vault pickup off (${pickupOff}), free standard shipping ${freeAdded ? "added" : "already there"}, ${taxOff} tax rule(s) off, bank wire on for every order (details complete: ${wireReady ? "yes" : "NO — enter them under Finance › Payment providers"})`);
+}
+
+/**
  * The owner asked (2026-10-10) for all approved imported products to be released. The admin
  * cannot be reached from here, so the request is carried out once by the application: a marker
  * row makes sure a later deploy does not repeat it. Only products approved before this moment
@@ -867,6 +905,7 @@ async function main() {
   await seedImportItems();
   await releaseApprovedOnce();
   await restoreSoldOutOnce();
+  await checkoutChangesOnce();
   if ((await db.importItem.count({ where: { status: "error", OR: [{ reviewedAt: null, editedJson: "[]" }, { problemsJson: { contains: "photo could not be stored" } }] } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: { in: ["pending", "running"] } } })) === 0) {
     await db.job.create({ data: { type: "import_fix", payloadJson: "{}", maxAttempts: 3 } });
     log("import errors: re-check queued");

@@ -522,7 +522,7 @@ export function CheckoutForm({ countries, regionOptions, defaultCountry, user, g
               <Row label="Subtotal" value={quote ? formatExact(quote.subtotal) : "—"} />
               {quote && quote.discount > 0 && <Row label="Discount" value={`− ${formatExact(quote.discount)}`} />}
               <Row label="Shipping & insurance" value={quote ? (quote.hasPhysical ? (quote.shipping ? (quote.shippingTotal === 0 ? "Free" : formatExact(quote.shippingTotal)) : "—") : "Not required") : "—"} />
-              <Row label={quote ? `${quote.tax.label}${quote.tax.rateBps ? ` (${(quote.tax.rateBps / 100).toFixed(2).replace(/\.?0+$/, "")}%)` : ""}` : "Tax"} value={quote ? formatExact(quote.tax.amount) : "—"} />
+              {quote && quote.tax.amount > 0 && <Row label={`${quote.tax.label}${quote.tax.rateBps ? ` (${(quote.tax.rateBps / 100).toFixed(2).replace(/\.?0+$/, "")}%)` : ""}`} value={formatExact(quote.tax.amount)} />}
               <div className="mt-1 flex justify-between gap-4 border-t border-ink-200 pt-4">
                 <dt className="font-display text-lg font-semibold text-ink-950">Total</dt>
                 <dd className="font-display text-lg font-semibold tabular-nums text-ink-950">{quote ? formatMoney(quote.presentmentTotal, quote.currency.code) : "—"}</dd>

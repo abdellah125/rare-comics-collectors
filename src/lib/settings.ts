@@ -83,7 +83,7 @@ export const settingDefaults = {
   /** How long a quoted crypto amount is held at its rate (10–60). */
   "payments.crypto.quoteMinutes": 30,
   "payments.bank_transfer.enabled": true,
-  "payments.bank_transfer.minAmount": 500_000,
+  "payments.bank_transfer.minAmount": 0,
   // Bank wire details: entered under Finance › Payment providers; BANK_* environment
   // variables act as defaults until something is saved there.
   "payments.bank_transfer.beneficiary": process.env.BANK_BENEFICIARY ?? "",
