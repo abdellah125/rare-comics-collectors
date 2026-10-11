@@ -103,6 +103,8 @@ function smtp() {
       host: env.smtp.host,
       port: env.smtp.port,
       secure: env.smtp.secure,
+      // On 587 (submission) the upgrade to TLS is required: the password is never sent unencrypted.
+      requireTLS: env.smtp.port === 587,
       auth: env.smtp.user ? { user: env.smtp.user, pass: env.smtp.pass } : undefined,
     });
   }

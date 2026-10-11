@@ -73,7 +73,15 @@ export const env = {
     get pass() {
       return str("SMTP_PASS");
     },
+    /**
+     * Implicit TLS. The port decides for the standard ones, whatever SMTP_SECURE says: 465 is TLS
+     * from the first byte, 587 and 25 start in plain text and upgrade (STARTTLS). The wrong pairing
+     * fails with "SSL routines … wrong version number" (Gmail: smtp.gmail.com, 465 or 587).
+     */
     get secure() {
+      const port = Number.parseInt(str("SMTP_PORT", "587"), 10);
+      if (port === 465) return true;
+      if (port === 587 || port === 25) return false;
       return bool("SMTP_SECURE", false);
     },
     get from() {
