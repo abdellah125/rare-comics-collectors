@@ -7,7 +7,7 @@ import { actorOf, runAdmin } from "@/lib/admin/guard";
 import { db } from "@/lib/db";
 import { fetchFeed, checkFeedUrl, FeedAccessError } from "@/lib/imports/feed";
 import { enqueueJob } from "@/lib/jobs/queue";
-import { approveItems, rejectItems, releaseApproved, releaseItems, removeItems, reprocessErrors, restoreItems, retryPhotoErrors, runImport, updateItem } from "@/lib/imports/pipeline";
+import { approveAllPending, approveItems, rejectItems, releaseApproved, releaseItems, removeItems, reprocessErrors, restoreItems, retryPhotoErrors, runImport, updateItem } from "@/lib/imports/pipeline";
 import { IMPORT_SOURCE } from "@/lib/imports/status";
 import { getSettings, saveSettings } from "@/lib/settings";
 import { failState, fieldErrors, formToObject, okState, zBool, zSlug, type ActionState } from "@/lib/validation";
@@ -137,6 +137,22 @@ export async function bulkImportAction(actionId: string, ids: string[]): Promise
     await audit({ actor: actorOf(admin), action: `import.${actionId}`, targetType: "import_item", targetId: clean.length === 1 ? clean[0] : undefined, summary: `Import queue ${actionId}: ${clean.length} selected — ${message}` });
     refresh(clean.length === 1 ? clean[0] : undefined);
     return okState(undefined, message);
+  });
+}
+
+/**
+ * Approves every product in Pending Review (except possible duplicates and listings the source no
+ * longer offers): the first batches now, the rest in the background. Nothing is published here.
+ */
+export async function approveAllPendingAction(): Promise<ActionState> {
+  return runAdmin("products.manage", async (admin) => {
+    const cutoff = new Date();
+    const r = await approveAllPending(IMPORT_SOURCE, admin.id, cutoff);
+    if (r.approved === 0 && r.remaining === 0) return failState("Nothing to approve: no product in Pending Review qualifies (possible duplicates and unavailable listings need a person).");
+    if (r.remaining > 0) await enqueueJob("import_approve_all", { cutoff: cutoff.toISOString(), adminId: admin.id, rounds: 0 }, { maxAttempts: 3, dedupeKey: "import_approve_all" });
+    await audit({ actor: actorOf(admin), action: "import.approve_all", targetType: "import_item", summary: `Approve all pending: ${r.approved} approved now (${r.ready} ready, ${r.queued} storing photos, ${r.errors} to Error), ${r.remaining} continuing in the background` });
+    refresh();
+    return okState(undefined, `${r.approved.toLocaleString("en-US")} approved: ${r.ready} ready to release${r.queued ? `, ${r.queued} having their photo stored` : ""}${r.errors ? `, ${r.errors} with an error` : ""}.${r.remaining ? ` The other ${r.remaining.toLocaleString("en-US")} are being approved in the background.` : ""}`);
   });
 }
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "@/components/link";
 import { ActionForm } from "@/components/admin/action-form";
+import { ApproveAllButton } from "@/components/admin/approve-all-button";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { ImportUploadForm } from "@/components/admin/import-upload-form";
 import { AdminPageHeader, Card, EmptyState, Field, Table, Td, Th, Tone, adminButton, adminInput } from "@/components/admin/ui";
@@ -54,6 +55,7 @@ export default async function AdminImportsPage() {
             <Link href="/admin/imports/queue" className={adminButton.primary}>
               Review queue
             </Link>
+            {manage && stats.pending > 0 && <ApproveAllButton />}
             {manage && stats.errors > 0 && <ConfirmButton label={`Fix ${stats.errors} errors`} title="Fix errors automatically" message="Re-checks every product in Error. Auctions are accepted as bidding products at their current bid, raw books are accepted with the condition their listing states, and details Merchant Center does not require (publisher, year, grade, label, issue number) are set to Unknown, then looked up from reference knowledge where that is certain. Fixed products move to Pending Review; nothing is published. Products you edited are left alone." action={fixErrorsAction} confirmLabel="Fix errors" />}
             {manage && stats.ready + stats.approved > 0 && <ConfirmButton label={`Release all ${stats.ready + stats.approved} approved`} title="Release all approved" message={`Publishes every approved product (${stats.ready} ready, ${stats.approved} still having their photo stored), whatever the daily limit. They become visible on the store, in the sitemap and in the Merchant Center feed.`} action={releaseAllReadyAction} confirmLabel="Release" />}
           </>

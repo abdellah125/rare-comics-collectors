@@ -216,6 +216,20 @@ export function registerJobHandlers() {
     if (r.remaining > 0 && rounds < 2_000) await enqueueJob("import_release_approved", { cutoff: cutoff.toISOString(), rounds: rounds + 1 }, { runAt: new Date(Date.now() + (r.released > 0 ? 3_000 : 60_000)), maxAttempts: 3 });
   });
 
+  // "Approve all": batches of 500 until every Pending Review item from before the click is approved
+  // (possible duplicates and unavailable listings stay for a person). Approval publishes nothing.
+  registerJobHandler("import_approve_all", async (payload) => {
+    const { approveAllPending } = await import("@/lib/imports/pipeline");
+    const { IMPORT_SOURCE } = await import("@/lib/imports/status");
+    const cutoff = typeof payload.cutoff === "string" ? new Date(payload.cutoff) : null;
+    const adminId = typeof payload.adminId === "string" ? payload.adminId : null;
+    if (!cutoff || Number.isNaN(cutoff.getTime()) || !adminId) throw new (await import("@/lib/jobs/policy")).PermanentJobError("import_approve_all needs the cutoff and the admin who asked.");
+    const rounds = typeof payload.rounds === "number" ? payload.rounds : 0;
+    const r = await approveAllPending(IMPORT_SOURCE, adminId, cutoff);
+    if (r.remaining > 0 && r.approved > 0 && rounds < 500) await enqueueJob("import_approve_all", { cutoff: cutoff.toISOString(), adminId, rounds: rounds + 1 }, { runAt: new Date(Date.now() + 2_000), maxAttempts: 3, dedupeKey: "import_approve_all" });
+    return `${r.approved} approved (${r.ready} ready, ${r.queued} storing photos, ${r.errors} to Error); ${r.remaining} left`;
+  });
+
   // The daily release rule: a batch per run until the day's quota is met, then a slower check for the next day.
   registerJobHandler("import_auto_release", async () => {
     const { autoRelease } = await import("@/lib/imports/pipeline");

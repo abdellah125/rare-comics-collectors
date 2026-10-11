@@ -597,6 +597,33 @@ export async function approveItems(ids: string[], adminId: string): Promise<{ ap
   return { approved: eligible.length, ready: done.ready, errors: done.errors, queued, skipped: items.length - eligible.length };
 }
 
+/**
+ * "Approve all": the Pending Review items a person would approve without looking twice. Possible
+ * duplicates (the same book may already be on sale) and listings the source no longer offers stay
+ * in Pending Review for a person. Only items imported before `cutoff` (the click) are taken, so
+ * products arriving later are not approved unseen.
+ */
+export function approveAllWhere(source: string, cutoff: Date): Prisma.ImportItemWhereInput {
+  return { source, status: "pending_review", createdAt: { lte: cutoff }, available: true, duplicateStatus: "unique" };
+}
+
+/** Approves the next batches of approveAllWhere while there is time; `remaining` is what is left for the next run. */
+export async function approveAllPending(source: string, adminId: string, cutoff: Date, budgetMs = 15_000): Promise<{ approved: number; ready: number; errors: number; queued: number; remaining: number }> {
+  const started = Date.now();
+  const total = { approved: 0, ready: 0, errors: 0, queued: 0 };
+  for (;;) {
+    const batch = await db.importItem.findMany({ where: approveAllWhere(source, cutoff), orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: 500, select: { id: true } });
+    if (batch.length === 0) break;
+    const r = await approveItems(batch.map((b) => b.id), adminId);
+    total.approved += r.approved;
+    total.ready += r.ready;
+    total.errors += r.errors;
+    total.queued += r.queued;
+    if (r.approved === 0 || Date.now() - started > budgetMs) break;
+  }
+  return { ...total, remaining: await db.importItem.count({ where: approveAllWhere(source, cutoff) }) };
+}
+
 export async function rejectItems(ids: string[], adminId: string): Promise<number> {
   const res = await db.importItem.updateMany({ where: { id: { in: ids }, status: { not: "released" } }, data: { status: "rejected", reviewedById: adminId, reviewedAt: new Date() } });
   return res.count;

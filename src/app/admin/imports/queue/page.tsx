@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/components/link";
+import { ApproveAllButton } from "@/components/admin/approve-all-button";
 import { BulkActionsBar, BulkProvider, RowCheckbox, SelectAllCheckbox } from "@/components/admin/bulk";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { Pagination, SortLink } from "@/components/admin/pagination";
@@ -59,7 +60,14 @@ export default async function AdminImportQueuePage({ searchParams }: PageProps<"
         crumbs={[{ label: "HipComic import", href: "/admin/imports" }, { label: "Review queue" }]}
         title="Review queue"
         lead={`${total.toLocaleString("en-US")} product(s) in this view. Approve what should go on sale, then press Release: only released products are public.`}
-        actions={manage && readyCount > 0 ? <ConfirmButton label={`Release all ${readyCount} approved`} title="Release all approved" message="Publishes every approved product, whatever the daily limit. They become visible on the store, in the sitemap and in the Merchant Center feed." action={releaseAllReadyAction} variant="primary" confirmLabel="Release" /> : undefined}
+        actions={
+          manage ? (
+            <>
+              <ApproveAllButton />
+              {readyCount > 0 && <ConfirmButton label={`Release all ${readyCount} approved`} title="Release all approved" message="Publishes every approved product, whatever the daily limit. They become visible on the store, in the sitemap and in the Merchant Center feed." action={releaseAllReadyAction} variant="primary" confirmLabel="Release" />}
+            </>
+          ) : undefined
+        }
       />
       <FilterBar action={base} reset>
         <Field label="Search">

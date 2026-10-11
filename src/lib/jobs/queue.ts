@@ -47,7 +47,8 @@ export type JobType =
   | "import_crawl"
   | "import_fix"
   | "import_auto_release"
-  | "import_release_approved";
+  | "import_release_approved"
+  | "import_approve_all";
 
 /**
  * The jobs that keep themselves scheduled: each handler queues its next run. This list is what
