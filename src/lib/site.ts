@@ -14,6 +14,8 @@ export const site = {
   googleTagId: "GT-NGWX2GTZ",
   /** Google Ads tag, configured on the same gtag.js library as the tag above. */
   googleAdsTagId: "AW-18492141724",
+  /** Google Tag Manager container; NEXT_PUBLIC_GTM_ID overrides it. Public by nature. */
+  gtmId: "GTM-M7L6W5L5",
   currency: "USD",
   twitter: "@rarecomicscol",
   founded: "2011",

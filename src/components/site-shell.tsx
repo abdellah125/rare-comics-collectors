@@ -5,7 +5,7 @@ import { CartDrawer } from "@/components/cart-drawer";
 import { CurrencyProvider } from "@/components/currency-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { GoogleTag } from "@/components/google-tag";
+import { GoogleTag, GoogleTagManagerNoscript } from "@/components/google-tag";
 import { JsonLd } from "@/components/json-ld";
 import { WelcomeOffer } from "@/components/welcome-offer";
 import { ChatWidget } from "@/components/chat-widget";
@@ -39,6 +39,7 @@ export async function SiteShell({ children, banner }: { children: ReactNode; ban
   const shippingNotice = threshold > 0 ? tr("Free insured shipping on {country} orders over {amount}", { country: settings["marketplace.defaultCountry"], amount: formatMoney(threshold, "USD", "en-US", { compact: true }) }) : tr("Insured shipping on every order");
   return (
     <>
+      <GoogleTagManagerNoscript />
       <JsonLd id="org-schema" data={organizationJsonLd()} />
       <GoogleTag />
       <a

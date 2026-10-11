@@ -20,6 +20,12 @@ import { site } from "@/lib/site";
  * The Google Ads tag (AW-…, NEXT_PUBLIC_GOOGLE_ADS_TAG_ID overrides it) is a second
  * `config` on the same queue: one copy of the library serves both ids.
  *
+ * Google Tag Manager (GTM-…, NEXT_PUBLIC_GTM_ID overrides it) shares the same dataLayer: its
+ * `gtm.start` event is queued after the consent defaults, so every tag in the container sees
+ * them, and gtm.js is fetched by the same loader at the same moment as gtag.js. Events pushed
+ * before it arrives are queued and processed when it does. GoogleTagManagerNoscript is the
+ * container's <noscript> fallback for visitors without JavaScript.
+ *
  * Consent Mode v2: visitors in the EEA, UK and Switzerland start with storage
  * denied (cookieless pings until `gtag('consent', 'update', …)` grants it);
  * everywhere else analytics storage is on. Defaults must precede `config`.
@@ -31,13 +37,19 @@ const CONSENT_REGIONS = [
 
 export const GOOGLE_TAG_LOAD_EVENT = "rcc:load-google-tag";
 
+const isProduction = () => process.env.NODE_ENV === "production" && process.env.VERCEL_ENV !== "preview";
+const gtmId = () => (process.env.NEXT_PUBLIC_GTM_ID ?? site.gtmId).trim();
+
 export function GoogleTag() {
   const id = (process.env.NEXT_PUBLIC_GOOGLE_TAG_ID || site.googleTagId).trim();
-  const isProduction = process.env.NODE_ENV === "production" && process.env.VERCEL_ENV !== "preview";
-  if (!id || !isProduction) return null;
+  const container = gtmId();
+  if ((!id && !container) || !isProduction()) return null;
   const adsId = (process.env.NEXT_PUBLIC_GOOGLE_ADS_TAG_ID || site.googleAdsTagId).trim();
-  const ids = [id, ...(adsId && adsId !== id ? [adsId] : [])];
-  const libraryUrl = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
+  const ids = id ? [id, ...(adsId && adsId !== id ? [adsId] : [])] : [];
+  const libraries = [
+    ...(id ? [`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`] : []),
+    ...(container ? [`https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(container)}`] : []),
+  ];
   const eager = process.env.NEXT_PUBLIC_GOOGLE_TAG_EAGER === "true";
   return (
     <Script id="google-tag-init" strategy="afterInteractive">
@@ -47,9 +59,10 @@ gtag('consent', 'default', {ad_storage: 'denied', ad_user_data: 'denied', ad_per
 gtag('consent', 'default', {ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted', analytics_storage: 'granted'});
 gtag('js', new Date());
 ${ids.map((tag) => `gtag('config', ${JSON.stringify(tag)});`).join(" ")}
+${container ? "dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});" : ""}
 (function(){
   var loaded = false;
-  function load(){ if (loaded) return; loaded = true; var s = document.createElement('script'); s.async = true; s.src = ${JSON.stringify(libraryUrl)}; document.head.appendChild(s); }
+  function load(){ if (loaded) return; loaded = true; ${JSON.stringify(libraries)}.forEach(function(src){ var s = document.createElement('script'); s.async = true; s.src = src; document.head.appendChild(s); }); }
   ${eager ? "load(); return;" : ""}
   function whenIdle(ms){ setTimeout(function(){ if ('requestIdleCallback' in window) requestIdleCallback(load, {timeout: 2000}); else load(); }, ms); }
   var asked = false;
@@ -61,5 +74,16 @@ ${ids.map((tag) => `gtag('config', ${JSON.stringify(tag)});`).join(" ")}
   if (document.readyState === 'complete') afterLoad(); else addEventListener('load', afterLoad);
 })();`}
     </Script>
+  );
+}
+
+/** GTM's fallback for visitors without JavaScript; rendered first inside <body>, as Google asks. */
+export function GoogleTagManagerNoscript() {
+  const container = gtmId();
+  if (!container || !isProduction()) return null;
+  return (
+    <noscript>
+      <iframe src={`https://www.googletagmanager.com/ns.html?id=${encodeURIComponent(container)}`} height="0" width="0" style={{ display: "none", visibility: "hidden" }} title="Google Tag Manager" />
+    </noscript>
   );
 }
