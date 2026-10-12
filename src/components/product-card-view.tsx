@@ -36,32 +36,32 @@ export function ProductCardView({
 
   return (
     <article
-      className={`group relative flex flex-col overflow-hidden rounded-xl border border-ink-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-lift ${deferPaint ? "[content-visibility:auto] [contain-intrinsic-size:auto_540px]" : ""}`}
+      className={`group relative flex flex-col overflow-hidden rounded-xl border border-ink-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-lift ${deferPaint ? "[content-visibility:auto] [contain-intrinsic-size:auto_420px] sm:[contain-intrinsic-size:auto_540px]" : ""}`}
     >
       <CoverArt product={product} priority={priority} className="aspect-[2/3] w-full" />
 
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
         {/* Badges live in the body: every corner of the cover plate already carries a chip. */}
         {(onSale || product.auction || product.keyIssue || (product.stock === 1 && !soldOut)) && (
-          <div className="mb-2.5 flex flex-wrap gap-1.5">
+          <div className="mb-2 flex flex-wrap gap-1 sm:mb-2.5 sm:gap-1.5">
             {product.auction && <Badge tone="brand">{tr("Auction")}</Badge>}
             {onSale && <Badge tone="sale">{tr("Sale")}</Badge>}
             {product.keyIssue && <Badge tone="gold">{tr("Key issue")}</Badge>}
             {product.stock === 1 && !soldOut && !product.auction && <Badge tone="dark">{tr("Last copy")}</Badge>}
           </div>
         )}
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-500 sm:text-[11px] sm:tracking-[0.12em]">
           {joinKnown([product.publisher, product.era]) || "\u00a0"}
         </p>
 
-        <h3 className="mt-1.5 font-display text-[17px] font-semibold leading-snug text-ink-950">
+        <h3 className="mt-1 line-clamp-3 font-display text-[14px] font-semibold leading-snug text-ink-950 sm:mt-1.5 sm:line-clamp-none sm:text-[17px]">
           <Link href={`/store/${product.slug}`} className="hover:text-brand-700">
             <span className="absolute inset-0 z-0" aria-hidden />
             {product.title} {product.issue}
           </Link>
         </h3>
 
-        <p className="mt-1 text-[13px] text-ink-600">
+        <p className="mt-1 text-[12px] text-ink-600 sm:text-[13px]">
           {product.grader === "Raw" ? (
             <>{tr("Raw")} · {product.grade}</>
           ) : !isKnown(product.grader) || !isKnown(product.grade) ? (
@@ -76,21 +76,21 @@ export function ProductCardView({
           )}
         </p>
 
-        {product.keyIssue && <p className="mt-2 line-clamp-2 text-[13px] leading-snug text-ink-500">{product.keyIssue}</p>}
+        {product.keyIssue && <p className="mt-2 hidden text-[13px] leading-snug text-ink-500 sm:line-clamp-2">{product.keyIssue}</p>}
 
-        <div className="mt-3">
+        <div className="mt-2 sm:mt-3">
           <Stars rating={product.rating} count={product.reviewCount} />
         </div>
 
-        <div className="mt-auto pt-4">
-          <div className="flex items-baseline gap-2">
-            {product.auction && <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-500">{tr("Current bid")}</span>}
-            <span className="font-display text-xl font-semibold tabular-nums text-ink-950">{priceLabel}</span>
-            {onSale && <span className="text-sm text-ink-500 line-through tabular-nums">{compareAtLabel}</span>}
+        <div className="mt-auto pt-3 sm:pt-4">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            {product.auction && <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-ink-500 sm:text-[11px]">{tr("Current bid")}</span>}
+            <span className="font-display text-lg font-semibold tabular-nums text-ink-950 sm:text-xl">{priceLabel}</span>
+            {onSale && <span className="text-xs text-ink-500 line-through tabular-nums sm:text-sm">{compareAtLabel}</span>}
           </div>
 
           {/* z-10 keeps the buttons clickable above the card-wide link overlay */}
-          <div className="relative z-10 mt-3 grid gap-2">{actions}</div>
+          <div className="relative z-10 mt-2.5 grid gap-1.5 sm:mt-3 sm:gap-2">{actions}</div>
         </div>
       </div>
     </article>

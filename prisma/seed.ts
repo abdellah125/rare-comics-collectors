@@ -114,11 +114,11 @@ const REGION_OF: Record<string, string> = {
 const NO_POSTAL = new Set(["IE", "HK", "AE", "QA", "SA", "KW"]);
 const REGION_REQUIRED = new Set(["US", "CA", "AU", "MX", "BR", "IN"]);
 
-const METHODS: Record<string, { name: string; description: string; price: number; freeOver?: number; min: number; max: number; carrier?: string }[]> = {
+const METHODS: Record<string, { name: string; description: string; price: number; freeOver?: number; min: number; max: number; carrier?: string; insured?: boolean }[]> = {
   "United States": [
     { name: "Insured standard", description: "Double-boxed, signature required, insured to full value.", price: 1495, freeOver: 25000, min: 2, max: 5, carrier: "usps" },
     { name: "Insured express", description: "Priority handling, same insurance and packaging.", price: 3995, min: 1, max: 2, carrier: "fedex" },
-    { name: "Free standard shipping", description: "Tracked delivery in 3–5 business days.", price: 0, min: 3, max: 5, carrier: "usps" },
+    { name: "Free standard shipping", description: "Insured and tracked, signature required. Delivered in 3–5 business days.", price: 0, min: 3, max: 5, carrier: "usps", insured: true },
   ],
   Canada: [
     { name: "Insured international standard", description: "Tracked and insured, duties payable on delivery.", price: 2995, freeOver: 50000, min: 5, max: 10, carrier: "ups" },
@@ -183,8 +183,8 @@ async function seedShippingAndCountries() {
             estimatedDaysMin: m.min,
             estimatedDaysMax: m.max,
             carrierId: m.carrier ? carriers[m.carrier] : null,
-            requiresSignature: m.price > 0 && m.name.startsWith("Insured"),
-            isInsured: m.name.startsWith("Insured"),
+            requiresSignature: m.insured === true || m.name.startsWith("Insured"),
+            isInsured: m.insured === true || m.name.startsWith("Insured"),
             position: position++,
           },
         });
@@ -716,6 +716,24 @@ async function checkoutChangesOnce() {
 }
 
 /**
+ * The owner asked (2026-10-12): free standard shipping is insured (signature required, like the
+ * paid insured methods), raw books are never described as cert-verified, every public address is
+ * contact@, and the automatic content pipeline is off. Once only; later admin changes are kept.
+ */
+async function storeChangesOnce() {
+  const key = "checkout.once.2026-10-12";
+  if (await db.setting.findUnique({ where: { key } })) return;
+  const insured = (await db.shippingMethod.updateMany({ where: { name: "Free standard shipping" }, data: { isInsured: true, requiresSignature: true, description: "Insured and tracked, signature required. Delivered in 3–5 business days." } })).count;
+  // Stored SEO descriptions of raw or ungraded books: drop the certificate claim, keep the rest.
+  const products = await db.$executeRaw`UPDATE "Product" SET "seoDescription" = replace("seoDescription", ' Cert-verified, insured shipping', ' Insured shipping') WHERE "seoDescription" LIKE '%Cert-verified, insured shipping%' AND "grader" NOT IN ('CGC', 'CBCS', 'PGX')`;
+  const items = await db.$executeRaw`UPDATE "ImportItem" SET "seoDescription" = replace("seoDescription", ' Cert-verified, insured shipping', ' Insured shipping') WHERE "seoDescription" LIKE '%Cert-verified, insured shipping%' AND "grader" NOT IN ('CGC', 'CBCS', 'PGX')`;
+  const email = await db.setting.updateMany({ where: { key: "marketplace.supportEmail", value: { in: ['"support@rarecomicscollectors.com"', '"hello@rarecomicscollectors.com"'] } }, data: { value: '"contact@rarecomicscollectors.com"' } });
+  await db.setting.upsert({ where: { key: "content.enabled" }, create: { key: "content.enabled", value: "false" }, update: { value: "false" } });
+  await db.setting.create({ data: { key, value: JSON.stringify({ at: new Date().toISOString(), insured, products, items, supportEmail: email.count }) } });
+  log(`store changes: free standard shipping insured (${insured}), cert claim removed from ${products} raw product(s) and ${items} queue item(s), support email ${email.count ? "set to contact@" : "kept"}, content pipeline off`);
+}
+
+/**
  * The owner asked (2026-10-10) for all approved imported products to be released. The admin
  * cannot be reached from here, so the request is carried out once by the application: a marker
  * row makes sure a later deploy does not repeat it. Only products approved before this moment
@@ -906,6 +924,7 @@ async function main() {
   await releaseApprovedOnce();
   await restoreSoldOutOnce();
   await checkoutChangesOnce();
+  await storeChangesOnce();
   if ((await db.importItem.count({ where: { status: "error", OR: [{ reviewedAt: null, editedJson: "[]" }, { problemsJson: { contains: "photo could not be stored" } }] } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: { in: ["pending", "running"] } } })) === 0) {
     await db.job.create({ data: { type: "import_fix", payloadJson: "{}", maxAttempts: 3 } });
     log("import errors: re-check queued");

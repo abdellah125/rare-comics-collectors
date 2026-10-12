@@ -710,4 +710,16 @@ export const es: Dict = {
     "Puja mínima: {amount}",
   "A bid is an offer to buy at that price, not a payment. Nothing is charged now; we contact the winning bidder to arrange payment and shipping.":
     "Una puja es una oferta de compra a ese precio, no un pago. No se cobra nada ahora; contactamos con el ganador para acordar el pago y el envío.",
+  "Free insured shipping on {country} orders":
+    "Envío asegurado gratis en pedidos a {country}",
+  "US orders":
+    "Pedidos a EE. UU.",
+  "Free within the US.":
+    "Gratis dentro de EE. UU.",
+  "Orders ship double-boxed, signature-required and insured to full value, free within the US.":
+    "Los pedidos se envían en doble caja, con entrega con firma y asegurados por su valor total; gratis dentro de EE. UU.",
+  "Every slab is cert-verified and every book restoration-checked before it is listed. Undisclosed restoration is refunded in full, forever.":
+    "Antes de publicarse, cada cómic graduado tiene su certificado verificado y cada cómic pasa una revisión de restauración. Una restauración no declarada se reembolsa íntegramente, sin límite de tiempo.",
+  "Every slab is cert-verified, every book restoration-checked and photographed. Buy now for immediate checkout, or add to your cart and keep browsing.":
+    "Cada cómic graduado tiene el certificado verificado y cada cómic la revisión de restauración hecha y sus fotos. Compra ahora para pagar al momento o añádelo al carrito y sigue mirando.",
 };

@@ -81,7 +81,7 @@ export default async function SellerStorefrontPage({ params }: PageProps<"/selle
         {seller.products.length === 0 ? (
           <p className="mt-4 text-sm text-ink-600">No active listings right now.</p>
         ) : (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
             {seller.products.map((p, i) => (
               <ProductCard key={p.id} product={toSummary(p)} deferPaint={i >= 4} />
             ))}

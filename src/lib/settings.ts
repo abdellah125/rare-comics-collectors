@@ -11,7 +11,7 @@ export const settingDefaults = {
   // Branding & content
   "marketplace.name": "Rare Comics Collectors",
   "marketplace.tagline": "Acquire legends. Grade yours. Know what it's worth.",
-  "marketplace.supportEmail": "support@rarecomicscollectors.com",
+  "marketplace.supportEmail": "contact@rarecomicscollectors.com",
   "marketplace.logoMediaId": "",
   "marketplace.faviconMediaId": "",
   "marketplace.primaryColor": "#e11d48",

@@ -99,6 +99,11 @@ export async function shippingQuoter(countryCode: string): Promise<(subtotal: nu
   };
 }
 
+/** Whether every order to this country can ship free and insured (a free, insured, carrier method with no minimum). */
+export async function freeInsuredShipping(countryCode: string): Promise<boolean> {
+  return (await shippingQuoter(countryCode))(1).some((o) => o.price === 0 && o.isInsured && o.carrierName !== null);
+}
+
 /** Shipping methods available for a destination country and order subtotal (base minor units). */
 export async function shippingOptionsFor(countryCode: string, subtotal: number): Promise<ShippingOption[]> {
   return (await shippingQuoter(countryCode))(subtotal);

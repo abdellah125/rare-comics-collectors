@@ -15,6 +15,7 @@ import { getTranslator } from "@/lib/i18n";
 import { msg } from "@/lib/i18n/translate";
 import { localizedMetadata } from "@/lib/seo-i18n";
 import { site } from "@/lib/site";
+import { freeInsuredShipping } from "@/lib/commerce/pricing";
 
 /** Translated page: each language version is canonical for itself and lists the others (hreflang). */
 export async function generateMetadata(): Promise<Metadata> {
@@ -52,7 +53,9 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
     grader: (facets.graders as string[]).includes(asked.grader) ? asked.grader : "",
   };
   const { products: shown, total } = await searchStore(filters);
-  const freeShippingThreshold = settings["commerce.freeShippingThreshold"];
+  const freeAll = await freeInsuredShipping(settings["marketplace.defaultCountry"]).catch(() => false);
+  // Free standard shipping covers every US order, so the threshold only matters when there is none.
+  const freeShippingThreshold = freeAll ? 0 : settings["commerce.freeShippingThreshold"];
   const returnWindowDays = settings["commerce.returnWindowDays"];
   const { eras, publishers, graders, lowestPrice } = facets;
   const inventoryCount = facets.count;
@@ -76,16 +79,17 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
       <JsonLd id="store-collection" data={collectionJsonLd} />
 
       <section className="border-b border-ink-200 bg-ink-50">
-        <Container className="py-10 lg:py-14">
+        <Container className="py-5 sm:py-8 lg:py-10">
           <Breadcrumbs items={crumbs} />
-          <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-4 sm:mt-5 sm:gap-6">
             <SectionHeading
               as="h1"
               eyebrow={tr("{count} listings in the vault", { count: inventoryCount.toLocaleString("en-US") })}
               title={tr("Graded comics for sale")}
-              lead={tr("Every slab is cert-verified against the grader's census before listing, and every raw book is graded in-house with its defects photographed and disclosed. Buy now to check out immediately, or add to cart and keep browsing.")}
+              lead={<span className="hidden sm:inline">{tr("Every slab is cert-verified against the grader's census before listing, and every raw book is graded in-house with its defects photographed and disclosed. Buy now to check out immediately, or add to cart and keep browsing.")}</span>}
+              className="[&>p:last-child]:mt-0 sm:[&>p:last-child]:mt-4"
             />
-            <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
+            <dl className="grid w-full grid-cols-3 gap-x-4 text-sm sm:w-auto sm:gap-x-8">
               <div>
                 <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{tr("From")}</dt>
                 <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">{formatPrice(lowestPrice)}</dd>
@@ -95,9 +99,9 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
                 <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">{eras.length}</dd>
               </div>
               <div>
-                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{freeShippingThreshold > 0 ? tr("Free shipping") : tr("Shipping")}</dt>
+                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">{freeAll || freeShippingThreshold > 0 ? tr("Free shipping") : tr("Shipping")}</dt>
                 <dd className="mt-0.5 font-display text-lg font-semibold text-ink-950">
-                  {freeShippingThreshold > 0 ? `${formatPrice(freeShippingThreshold)}+` : tr("Insured")}
+                  {freeAll ? tr("US orders") : freeShippingThreshold > 0 ? `${formatPrice(freeShippingThreshold)}+` : tr("Insured")}
                 </dd>
               </div>
             </dl>
@@ -105,7 +109,7 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
         </Container>
       </section>
 
-      <Container className="py-10 lg:py-14">
+      <Container className="py-5 sm:py-8 lg:py-12">
         <StoreBrowser products={shown} total={total} filters={filters} eras={[...eras]} publishers={publishers} graders={[...graders]} />
       </Container>
 
@@ -151,7 +155,9 @@ export default async function StorePage({ searchParams }: PageProps<"/store">) {
             </p>
             <h3>{tr("Buying with confidence")}</h3>
             <p>
-              {freeShippingThreshold > 0
+              {freeAll
+                ? tr("Orders ship double-boxed, signature-required and insured to full value, free within the US.")
+                : freeShippingThreshold > 0
                 ? tr("Orders ship double-boxed, signature-required and insured to full value, free within the US above {amount}.", { amount: formatPrice(freeShippingThreshold) })
                 : tr("Orders ship double-boxed, signature-required and insured to full value.")}{" "}
               <Rich

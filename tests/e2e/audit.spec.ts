@@ -81,7 +81,8 @@ test("admin settings reach the storefront", async ({ page }) => {
   try {
     await page.goto("/");
     await expect(page.locator("h1").first()).toContainText("E2E headline propagation");
-    await expect(page.getByText(/Free over \$123\.45/).first()).toBeVisible();
+    // Free standard shipping covers every US order, so the threshold gives way to "Free within the US."
+    await expect(page.getByText(/Free within the US\.|Free over \$123\.45/).first()).toBeVisible();
     await expect(page.getByText(/21-day inspection window/).first()).toBeVisible();
     await page.goto(`/store/${E2E.productSlug}`);
     await expect(page.getByText(/21-day inspection/).first()).toBeVisible();

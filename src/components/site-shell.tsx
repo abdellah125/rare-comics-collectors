@@ -21,6 +21,7 @@ import { getSettings } from "@/lib/settings";
 import { listCollections } from "@/lib/catalog/collections";
 import { sessionDto } from "@/lib/auth/session-dto";
 import { formatMoney } from "@/lib/money";
+import { freeInsuredShipping } from "@/lib/commerce/pricing";
 
 /**
  * Storefront chrome: providers, header, main landmark, footer and the cart
@@ -36,7 +37,8 @@ export async function SiteShell({ children, banner }: { children: ReactNode; ban
   const returningCustomer = sessionUser ? (await db.order.count({ where: { userId: sessionUser.id, paymentStatus: { in: ["paid", "partially_refunded", "refunded"] } } }).catch(() => 0)) > 0 : false;
   const brand = { name: settings["marketplace.name"], logoUrl: settings["marketplace.logoMediaId"] ? `/api/media/${settings["marketplace.logoMediaId"]}` : null };
   const threshold = settings["commerce.freeShippingThreshold"];
-  const shippingNotice = threshold > 0 ? tr("Free insured shipping on {country} orders over {amount}", { country: settings["marketplace.defaultCountry"], amount: formatMoney(threshold, "USD", "en-US", { compact: true }) }) : tr("Insured shipping on every order");
+  const freeAll = await freeInsuredShipping(settings["marketplace.defaultCountry"]).catch(() => false);
+  const shippingNotice = freeAll ? tr("Free insured shipping on {country} orders", { country: settings["marketplace.defaultCountry"] }) : threshold > 0 ? tr("Free insured shipping on {country} orders over {amount}", { country: settings["marketplace.defaultCountry"], amount: formatMoney(threshold, "USD", "en-US", { compact: true }) }) : tr("Insured shipping on every order");
   return (
     <>
       <GoogleTagManagerNoscript />

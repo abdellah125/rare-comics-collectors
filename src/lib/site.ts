@@ -19,9 +19,9 @@ export const site = {
   currency: "USD",
   twitter: "@rarecomicscol",
   founded: "2011",
-  email: "hello@rarecomicscollectors.com",
-  salesEmail: "sales@rarecomicscollectors.com",
-  gradingEmail: "grading@rarecomicscollectors.com",
+  email: "contact@rarecomicscollectors.com",
+  salesEmail: "contact@rarecomicscollectors.com",
+  gradingEmail: "contact@rarecomicscollectors.com",
   /** WhatsApp for customers. The only place the number is written: digits for wa.me, and as displayed. */
   whatsapp: { number: "14185066697", display: "+1 418-506-6697" },
   /** The store's own time zone, used for the "open now" status. */

@@ -19,6 +19,7 @@ import { localizedMetadata } from "@/lib/seo-i18n";
 import { getSettings } from "@/lib/settings";
 import { formatMoney } from "@/lib/money";
 import { fullAddress, mapDirectionsLink, mapEmbedLink, site } from "@/lib/site";
+import { freeInsuredShipping } from "@/lib/commerce/pricing";
 
 /** Translated page: each language version is canonical for itself and lists the others (hreflang). */
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,14 +40,14 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
-const trustPointsFor = (tr: Translator, freeShippingThreshold: number, returnWindowDays: number) => [
+const trustPointsFor = (tr: Translator, freeShippingThreshold: number, returnWindowDays: number, freeAll: boolean) => [
   {
     title: tr("Authenticity guaranteed"),
-    body: tr("Every book is restoration-checked and cert-verified before it is listed. Undisclosed restoration is refunded in full, forever."),
+    body: tr("Every slab is cert-verified and every book restoration-checked before it is listed. Undisclosed restoration is refunded in full, forever."),
   },
   {
     title: tr("Insured, tracked shipping"),
-    body: `${tr("Double-boxed, signature-required and insured to full value on every order.")}${freeShippingThreshold > 0 ? ` ${tr("Free over {amount} within the US.", { amount: formatMoney(freeShippingThreshold, "USD", "en-US", { compact: true }) })}` : ""}`,
+    body: `${tr("Double-boxed, signature-required and insured to full value on every order.")}${freeAll ? ` ${tr("Free within the US.")}` : freeShippingThreshold > 0 ? ` ${tr("Free over {amount} within the US.", { amount: formatMoney(freeShippingThreshold, "USD", "en-US", { compact: true }) })}` : ""}`,
   },
   {
     title: tr("{days}-day inspection window", { days: returnWindowDays }),
@@ -86,7 +87,8 @@ const reviewsFor = (tr: Translator) => [
 export default async function HomePage() {
   const [{ hero, grid }, inventoryCount, settings, collections, publishers, guides] = await Promise.all([homeProducts(), countPublished(), getSettings(), listCollections(), listPublishers(), latestGuides(4)]);
   const tr = await getTranslator();
-  const trustPoints = trustPointsFor(tr, settings["commerce.freeShippingThreshold"], settings["commerce.returnWindowDays"]);
+  const freeAll = await freeInsuredShipping(settings["marketplace.defaultCountry"]).catch(() => false);
+  const trustPoints = trustPointsFor(tr, settings["commerce.freeShippingThreshold"], settings["commerce.returnWindowDays"], freeAll);
   const steps = stepsFor(tr);
   const reviews = reviewsFor(tr);
   const headline = settings["marketplace.homepageHeadline"].trim();
@@ -160,14 +162,14 @@ export default async function HomePage() {
           }}
         />
 
-        <div className="relative mx-auto grid max-w-7xl gap-14 px-5 py-16 sm:px-8 lg:grid-cols-12 lg:items-center lg:gap-10 lg:py-24">
+        <div className="relative mx-auto grid max-w-7xl gap-8 px-5 py-9 sm:gap-14 sm:px-8 sm:py-16 lg:grid-cols-12 lg:items-center lg:gap-10 lg:py-24">
           <div className="lg:col-span-7">
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand-400/35 bg-brand-500/12 px-3.5 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-300">
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand-400/35 bg-brand-500/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-300 sm:px-3.5 sm:py-1.5 sm:text-[12px] sm:tracking-[0.14em]">
               <ShieldIcon className="h-3.5 w-3.5" />
               {tr("Authorised CGC & CBCS submission centre")}
             </span>
 
-            <h1 className="mt-6 font-display text-[clamp(2.4rem,5.4vw,4rem)] font-semibold leading-[1.04] tracking-tight">
+            <h1 className="mt-4 font-display text-[clamp(2rem,5.4vw,4rem)] font-semibold leading-[1.04] tracking-tight sm:mt-6">
               {headline || (
                 <>
                   {tr("Buy graded comics.")}
@@ -177,12 +179,12 @@ export default async function HomePage() {
               )}
             </h1>
 
-            <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-300">
+            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-300 sm:mt-6 sm:text-[17px]">
               {subheadline ||
                 tr("A vetted inventory of CGC and CBCS key issues, plus the grading, pressing, appraisal and consignment services that turn a shelf of long boxes into a documented, insurable collection.")}
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
               <ButtonLink href="/store" size="lg" variant="primary">
                 {tr("Shop the store")}
               </ButtonLink>
@@ -191,15 +193,15 @@ export default async function HomePage() {
               </ButtonLink>
             </div>
 
-            <dl className="mt-12 grid max-w-2xl grid-cols-2 gap-x-6 gap-y-7 sm:grid-cols-4">
+            <dl className="mt-8 grid max-w-2xl grid-cols-4 gap-x-3 gap-y-7 sm:mt-12 sm:gap-x-6">
               {site.stats.map((s) => (
                 <div key={s.label}>
                   <dt className="sr-only">{tr(s.label)}</dt>
                   <dd>
-                    <span className="block font-display text-2xl font-semibold text-white sm:text-[28px]">
+                    <span className="block font-display text-lg font-semibold text-white sm:text-[28px]">
                       {s.value}
                     </span>
-                    <span className="mt-1 block text-[12px] leading-snug text-ink-400">{tr(s.label)}</span>
+                    <span className="mt-1 block text-[10px] leading-snug text-ink-400 sm:text-[12px]">{tr(s.label)}</span>
                   </dd>
                 </div>
               ))}
@@ -208,7 +210,7 @@ export default async function HomePage() {
 
           {/* Fanned covers */}
           <div className="lg:col-span-5">
-            <div className="relative mx-auto flex max-w-md items-end justify-center gap-3 sm:gap-4">
+            <div className="relative mx-auto flex max-w-[16rem] items-end justify-center gap-3 sm:max-w-md sm:gap-4">
               {hero.map((p, i) => (
                 // The fan rotation lives on a wrapper so the hover lift on the link isn't overridden by it.
                 <div
@@ -233,7 +235,7 @@ export default async function HomePage() {
                 </div>
               ))}
             </div>
-            <p className="mt-9 text-center text-[13px] text-ink-400">
+            <p className="mt-6 text-center text-[13px] text-ink-400 sm:mt-9">
               {tr("Featured in the vault this week")} ·{" "}
               <Link href="/store" className="font-medium text-brand-300 underline-offset-4 hover:underline">
                 {tr("see all {count} listings", { count: inventoryCount.toLocaleString("en-US") })}
@@ -244,14 +246,14 @@ export default async function HomePage() {
 
         {/* trust strip */}
         <div className="relative border-t border-white/10">
-          <ul className="mx-auto grid max-w-7xl gap-px bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="mx-auto grid max-w-7xl grid-cols-2 gap-px bg-white/10 lg:grid-cols-4">
             {trustPoints.map((t) => (
-              <li key={t.title} className="bg-ink-950 px-5 py-6 sm:px-8">
-                <p className="flex items-center gap-2 text-sm font-semibold text-white">
+              <li key={t.title} className="bg-ink-950 px-4 py-4 sm:px-8 sm:py-6">
+                <p className="flex items-center gap-2 text-[13px] font-semibold text-white sm:text-sm">
                   <CheckIcon className="h-4 w-4 shrink-0 text-brand-400" />
                   {t.title}
                 </p>
-                <p className="mt-2 text-[13px] leading-relaxed text-ink-400">{t.body}</p>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-ink-400 sm:mt-2 sm:text-[13px]">{t.body}</p>
               </li>
             ))}
           </ul>
@@ -264,14 +266,14 @@ export default async function HomePage() {
           <SectionHeading
             eyebrow={tr("The store")}
             title={tr("Graded keys, ready to ship")}
-            lead={tr("Every listing is cert-verified, restoration-checked and photographed in the holder. Buy now for immediate checkout, or add to your cart and keep browsing.")}
+            lead={tr("Every slab is cert-verified, every book restoration-checked and photographed. Buy now for immediate checkout, or add to your cart and keep browsing.")}
           />
           <ButtonLink href="/store" variant="outline" size="md">
             {tr("View all inventory")}
           </ButtonLink>
         </div>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:mt-12 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {grid.map((p, i) => (
             <ProductCard key={p.slug} product={p} deferPaint={i >= 4} />
           ))}

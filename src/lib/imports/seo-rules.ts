@@ -19,7 +19,9 @@ export function defaultSeoDescription(f: SeoFacts, returnWindowDays: number): st
   const key = f.keyIssue ? ` — ${f.keyIssue.replace(/\.$/, "")}` : "";
   const origin = [isKnown(f.publisher) ? f.publisher : "", f.year ? String(f.year) : ""].filter(Boolean).join(" ");
   const start = `${bookName(f)}${origin ? `, ${origin}` : ""}. ${gradeLabel(f)}${key}.`;
-  const end = ` Cert-verified, insured shipping and a ${returnWindowDays}-day return window.`;
+  // Only a slab has a certificate to verify; a raw book is never described as cert-verified.
+  const slab = isKnown(f.grader) && f.grader !== "Raw";
+  const end = slab ? ` Cert-verified, insured shipping and a ${returnWindowDays}-day return window.` : ` Insured shipping and a ${returnWindowDays}-day return window.`;
   const text = start + end;
   // Keep the facts; drop the key-issue note first when the whole thing runs long.
   return text.length <= 165 ? text : `${bookName(f)}${origin ? `, ${origin}` : ""}. ${gradeLabel(f)}.${end}`;

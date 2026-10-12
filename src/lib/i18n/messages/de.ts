@@ -710,4 +710,16 @@ export const de: Dict = {
     "Mindestgebot: {amount}",
   "A bid is an offer to buy at that price, not a payment. Nothing is charged now; we contact the winning bidder to arrange payment and shipping.":
     "Ein Gebot ist ein Kaufangebot zu diesem Preis, keine Zahlung. Jetzt wird nichts berechnet; wir kontaktieren den Höchstbietenden, um Zahlung und Versand zu regeln.",
+  "Free insured shipping on {country} orders":
+    "Kostenloser versicherter Versand für {country}-Bestellungen",
+  "US orders":
+    "US-Bestellungen",
+  "Free within the US.":
+    "Innerhalb der USA kostenlos.",
+  "Orders ship double-boxed, signature-required and insured to full value, free within the US.":
+    "Bestellungen werden doppelt verpackt, gegen Unterschrift zugestellt und zum vollen Wert versichert – innerhalb der USA kostenlos.",
+  "Every slab is cert-verified and every book restoration-checked before it is listed. Undisclosed restoration is refunded in full, forever.":
+    "Bei jedem Slab wird das Zertifikat verifiziert, und jedes Heft wird vor dem Einstellen auf Restaurierung geprüft. Nicht angegebene Restaurierung erstatten wir vollständig – ohne zeitliche Begrenzung.",
+  "Every slab is cert-verified, every book restoration-checked and photographed. Buy now for immediate checkout, or add to your cart and keep browsing.":
+    "Jeder Slab ist zertifikatsgeprüft, jedes Heft auf Restaurierung kontrolliert und fotografiert. Jetzt kaufen und sofort bezahlen – oder in den Warenkorb legen und weiterstöbern.",
 };

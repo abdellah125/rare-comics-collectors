@@ -710,4 +710,16 @@ export const fr: Dict = {
     "Enchère minimale : {amount}",
   "A bid is an offer to buy at that price, not a payment. Nothing is charged now; we contact the winning bidder to arrange payment and shipping.":
     "Une enchère est une offre d'achat à ce prix, pas un paiement. Rien n'est débité maintenant ; nous contactons le gagnant pour organiser le paiement et l'expédition.",
+  "Free insured shipping on {country} orders":
+    "Livraison assurée offerte pour les commandes {country}",
+  "US orders":
+    "Commandes US",
+  "Free within the US.":
+    "Offerte aux États-Unis.",
+  "Orders ship double-boxed, signature-required and insured to full value, free within the US.":
+    "Les commandes sont expédiées en double emballage, remises contre signature et assurées à leur valeur totale ; livraison offerte aux États-Unis.",
+  "Every slab is cert-verified and every book restoration-checked before it is listed. Undisclosed restoration is refunded in full, forever.":
+    "Chaque slab a son certificat vérifié et chaque comic est contrôlé (restauration) avant la mise en vente. Toute restauration non déclarée est remboursée intégralement, sans limite de temps.",
+  "Every slab is cert-verified, every book restoration-checked and photographed. Buy now for immediate checkout, or add to your cart and keep browsing.":
+    "Chaque slab a son certificat vérifié, chaque comic est contrôlé (restauration) et photographié. Achetez maintenant pour payer tout de suite, ou ajoutez au panier et poursuivez votre visite.",
 };

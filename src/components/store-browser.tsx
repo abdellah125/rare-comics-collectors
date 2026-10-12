@@ -289,7 +289,7 @@ export function StoreBrowser({ products, total, filters, eras, publishers, grade
         ) : (
           <>
             <h2 className="sr-only">{tr("Listings")}</h2>
-            <div className={`mt-6 grid gap-5 transition-opacity sm:grid-cols-2 xl:grid-cols-3 ${pending ? "opacity-60" : ""}`} aria-busy={pending}>
+            <div className={`mt-5 grid grid-cols-2 gap-3 transition-opacity sm:mt-6 sm:gap-5 md:grid-cols-3 xl:grid-cols-4 ${pending ? "opacity-60" : ""}`} aria-busy={pending}>
               {cards}
             </div>
 

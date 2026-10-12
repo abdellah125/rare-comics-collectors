@@ -110,7 +110,7 @@ export default async function CharacterPage({ params }: PageProps<"/characters/[
               and we will source a copy.
             </p>
           ) : (
-            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
               {products.map((p, i) => (
                 <ProductCard key={p.slug} product={p} priority={i < 2} deferPaint={i >= 4} />
               ))}

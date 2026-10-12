@@ -58,8 +58,10 @@ export async function generateMetadata({ params }: PageProps<"/store/[slug]">): 
 /** Google wants a priceValidUntil date; a rolling one-year horizon never goes stale between edits. */
 const rollingPriceValidUntil = () => new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
 
-const assurancesFor = (returnWindowDays: number) => [
-  { icon: ShieldIcon, title: "Authenticity guaranteed", body: "Cert-verified against the grader's census. Undisclosed restoration refunded in full, forever." },
+const assurancesFor = (returnWindowDays: number, slab: boolean) => [
+  slab
+    ? { icon: ShieldIcon, title: "Authenticity guaranteed", body: "Cert-verified against the grader's census. Undisclosed restoration refunded in full, forever." }
+    : { icon: ShieldIcon, title: "Authenticity guaranteed", body: "Ungraded copy, shown in its own photos. Undisclosed restoration refunded in full, forever." },
   { icon: TruckIcon, title: "Insured & tracked", body: "Double-boxed, signature required, insured to full value." },
   { icon: SearchIcon, title: `${returnWindowDays}-day inspection`, body: `Return in the original holder within ${returnWindowDays} days of delivery for a full refund.` },
 ];
@@ -296,7 +298,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
             </ul>
 
             <div className="mt-8 grid gap-px overflow-hidden rounded-xl bg-ink-200 sm:grid-cols-3">
-              {assurancesFor(settings["commerce.returnWindowDays"]).map((a) => (
+              {assurancesFor(settings["commerce.returnWindowDays"], isKnown(product.grader) && product.grader !== "Raw").map((a) => (
                 <div key={a.title} className="bg-white p-4">
                   <a.icon className="h-5 w-5 text-brand-600" />
                   <p className="mt-2 text-[13px] font-semibold text-ink-950">{a.title}</p>
@@ -435,7 +437,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
                 Browse all inventory →
               </Link>
             </div>
-            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
               {related.map((p) => (
                 <ProductCard key={p.slug} product={p} deferPaint />
               ))}
