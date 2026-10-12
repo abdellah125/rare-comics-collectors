@@ -80,8 +80,9 @@ export const getGuide = cache(async (slug: string): Promise<Guide | null> => {
 });
 
 /** Counts a reading of a guide. Never throws: a counter must not break a page. */
+/** Counts a view without touching updatedAt: the sitemap lastmod of a guide moves only when its text does. */
 export async function recordGuideView(id: string) {
-  await db.article.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+  await db.$executeRaw`UPDATE "Article" SET "viewCount" = "viewCount" + 1 WHERE "id" = ${id}`.catch(() => {});
 }
 
 /** Articles of a category: those filed under it, plus older ones filed only under the topic it is the default for. */
