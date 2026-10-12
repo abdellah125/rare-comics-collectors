@@ -1,6 +1,7 @@
 import { preconnect } from "react-dom";
 import type { ProductSummary } from "@/lib/products";
 import coverMap from "@/lib/gocovers-map.json";
+import { coverAlt } from "@/lib/catalog/labels";
 
 /**
  * Comic cover plate. Hook-free so it renders on the server inside product cards
@@ -50,6 +51,7 @@ export function CoverArt({
   const sourcePhoto = src !== null && SOURCE_PHOTO.test(src);
   // The page's main photo on another host: open the connection while the HTML is still arriving.
   if (priority && sourcePhoto) preconnect(SOURCE_PHOTO_ORIGIN);
+  const alt = coverAlt(product);
   const imgProps = {
     decoding: "async" as const,
     loading: priority ? ("eager" as const) : ("lazy" as const),
@@ -61,27 +63,24 @@ export function CoverArt({
     <div
       className={`relative isolate overflow-hidden rounded-md ${className}`}
       style={{ background: `linear-gradient(150deg, ${from} 0%, ${to} 100%)` }}
-      role="img"
-      aria-label={`${product.title} ${product.issue} — ${[product.publisher, product.year > 0 ? String(product.year) : ""].filter((v) => v && v !== "Unknown").join(", ")}${product.publisher !== "Unknown" || product.year > 0 ? ", " : ""}${
-        slabbed ? `${product.grader} ${product.grade}` : `raw, graded ${product.grade}`
-      }`}
+      // With a photo, the photo carries the description (search engines read img alt); without one, the plate does.
+      {...(src ? {} : { role: "img", "aria-label": alt })}
     >
-      {/* The wrapper carries the accessible name, so the scan itself is decorative. */}
       {src &&
         (responsive ? (
           <picture>
             <source type="image/avif" srcSet={srcSetFor(src, "avif")} sizes={sizes} />
-            <img src={src} srcSet={srcSetFor(src, "webp")} sizes={sizes} alt="" {...imgProps} />
+            <img src={src} srcSet={srcSetFor(src, "webp")} sizes={sizes} alt={alt} {...imgProps} />
           </picture>
         ) : isQueuePhoto(src) ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} srcSet={queueSrcSet(src)} sizes={sizes} alt="" {...imgProps} />
+          <img src={src} srcSet={queueSrcSet(src)} sizes={sizes} alt={alt} {...imgProps} />
         ) : sourcePhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} srcSet={sourceSrcSet(src)} sizes={sizes} alt="" {...imgProps} />
+          <img src={src} srcSet={sourceSrcSet(src)} sizes={sizes} alt={alt} {...imgProps} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt="" {...imgProps} />
+          <img src={src} alt={alt} {...imgProps} />
         ))}
 
       {/* halftone / print texture */}

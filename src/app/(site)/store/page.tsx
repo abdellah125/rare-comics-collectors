@@ -21,7 +21,7 @@ import { freeInsuredShipping } from "@/lib/commerce/pricing";
 export async function generateMetadata(): Promise<Metadata> {
   return localizedMetadata({
   title: msg("Graded Comics for Sale — CGC & CBCS Key Issues"),
-  description: msg("Browse CGC-graded Golden Age and Silver Age key issues for sale. Cert-verified, restoration-checked, insured shipping and a 14-day return window. Buy now or add to cart."),
+  description: msg("CGC and CBCS graded slabs and raw comic books, Golden Age to today. Free insured US shipping and a 14-day return window."),
   path: "/store",
   keywords: [
     "graded comics for sale",

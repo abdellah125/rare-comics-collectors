@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "@/components/link";
 import { notFound } from "next/navigation";
+import { HubPagination, pageHref, readPage } from "@/components/hub-pagination";
 import { CollectionCards, PublisherChips } from "@/components/catalog-links";
 import { RelatedGuides } from "@/components/guide-links";
 import { listGuides } from "@/lib/guides/data";
@@ -8,7 +9,7 @@ import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
 import { collectionCopy } from "@/lib/catalog/collection-copy";
-import { collectionProducts, getCollection, listCollections, listPublishers, lowestPrice } from "@/lib/catalog/collections";
+import { HUB_PAGE_SIZE, collectionProducts, getCollection, hubPages, listCollections, listPublishers, lowestPrice } from "@/lib/catalog/collections";
 import { formatPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
@@ -16,28 +17,34 @@ import { site } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: PageProps<"/collections/[slug]">): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps<"/collections/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const collection = await getCollection(slug);
-  if (!collection || collection.count === 0) {
+  const page = collection ? readPage((await searchParams).page, hubPages(collection.count)) : null;
+  if (!collection || collection.count === 0 || page === null) {
     return pageMetadata({ title: "Collection not found", description: "This collection has no listings right now.", path: `/collections/${slug}`, noIndex: true });
   }
   const settings = await getSettings();
-  const copy = collectionCopy(collection);
+  const pages = hubPages(collection.count);
+  const paged = page > 1 ? ` — Page ${page} of ${pages}` : "";
   return pageMetadata({
-    title: collection.seoTitle,
-    description: `${copy.summary} ${collection.count} in stock, cert-verified, insured shipping and a ${settings["commerce.returnWindowDays"]}-day return window.`.slice(0, 300),
-    path: `/collections/${collection.slug}`,
+    title: `${collection.seoTitle}${paged}`,
+    description: `${page > 1 ? `Page ${page} of ${pages}. ` : ""}${collection.count.toLocaleString("en-US")} ${collection.shortName} comics for sale: CGC and CBCS slabs and raw copies. Free insured US shipping and ${settings["commerce.returnWindowDays"]}-day returns.`,
+    path: pageHref(`/collections/${collection.slug}`, page),
     keywords: [`${collection.shortName.toLowerCase()} comics for sale`, `${collection.shortName.toLowerCase()} key issues`, `CGC ${collection.shortName.toLowerCase()} comics`, "graded comics for sale"],
   });
 }
 
-export default async function CollectionPage({ params }: PageProps<"/collections/[slug]">) {
+export default async function CollectionPage({ params, searchParams }: PageProps<"/collections/[slug]">) {
   const { slug } = await params;
   const collection = await getCollection(slug);
   if (!collection || collection.count === 0) notFound();
+  const pages = hubPages(collection.count);
+  const page = readPage((await searchParams).page, pages);
+  if (page === null) notFound();
+  const base = `/collections/${collection.slug}`;
 
-  const [products, collections, publishers, settings, guides, lowestInCollection] = await Promise.all([collectionProducts(collection.id), listCollections(), listPublishers(), getSettings(), listGuides({ tag: collection.shortName, take: 4 }), lowestPrice({ categoryId: collection.id })]);
+  const [products, collections, publishers, settings, guides, lowestInCollection] = await Promise.all([collectionProducts(collection.id, page), listCollections(), listPublishers(), getSettings(), listGuides({ tag: collection.shortName, take: 4 }), lowestPrice({ categoryId: collection.id })]);
   const copy = collectionCopy(collection);
   const publishersHere = publishers.filter((p) => products.some((x) => x.publisher === p.name));
   const lowest = lowestInCollection ?? Number.POSITIVE_INFINITY;
@@ -54,7 +61,7 @@ export default async function CollectionPage({ params }: PageProps<"/collections
     "@id": `${site.url}/collections/${collection.slug}#page`,
     name: collection.seoTitle,
     description: copy.summary,
-    url: `${site.url}/collections/${collection.slug}`,
+    url: `${site.url}${pageHref(base, page)}`,
     isPartOf: { "@id": `${site.url}/#website` },
     // Summary-page pattern: each entry points at a product page that carries the full Product/Offer markup.
     mainEntity: itemListJsonLd(products.map((p) => ({ url: `${site.url}/store/${p.slug}` }))),
@@ -91,8 +98,10 @@ export default async function CollectionPage({ params }: PageProps<"/collections
           ))}
         </div>
 
+        <HubPagination base={base} page={page} pages={pages} label={`${collection.shortName} pages`} />
+
         <p className="mt-8 text-sm text-ink-500">
-          {collection.count > products.length && `Showing the newest ${products.length} of ${collection.count.toLocaleString("en-US")} listings. `}
+          {pages > 1 && `Showing ${((page - 1) * HUB_PAGE_SIZE + 1).toLocaleString("en-US")}–${((page - 1) * HUB_PAGE_SIZE + products.length).toLocaleString("en-US")} of ${collection.count.toLocaleString("en-US")} listings. `}
           Want to filter by grade, grader or price?{" "}
           <Link href="/store" className="font-semibold text-brand-700 underline-offset-4 hover:underline">
             Use the full store browser

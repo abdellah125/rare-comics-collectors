@@ -22,3 +22,26 @@ export function gradeLabel(grader: string, grade: string, rawSeparator = " "): s
 
 /** The known ones of several facts, joined: ["Marvel Comics", ""] → "Marvel Comics". */
 export const joinKnown = (parts: (string | null | undefined)[], separator = " · "): string => parts.filter((p): p is string => isKnown(p)).join(separator);
+
+/**
+ * Alt text for a product photo: what the book is, where it is from, how it is graded, and which
+ * photo this is. Only known facts are named. e.g. "Amazing Fantasy #15 (Marvel Comics, 1962), CGC 6.5
+ * graded comic book, Universal Blue label — front cover in its holder".
+ */
+export function coverAlt(
+  p: { title: string; issue: string; publisher: string; year: number | null; grader: string; grade: string; label?: string | null },
+  photo?: { index: number; total: number },
+): string {
+  const book = `${p.title} ${p.issue === "nn" ? "" : p.issue}`.trim();
+  const origin = joinKnown([p.publisher, yearText(p.year)], ", ");
+  const raw = p.grader === "Raw";
+  const grading = raw
+    ? isKnown(p.grade) && p.grade !== NOT_GRADED
+      ? `raw comic book in ${p.grade} condition`
+      : "raw, ungraded comic book"
+    : isKnown(p.grader)
+      ? `${p.grader}${isKnown(p.grade) ? ` ${p.grade}` : ""} graded comic book${isKnown(p.label) && !/^raw$/i.test(p.label!) ? `, ${p.label!.replace(/\s*\([^)]*\)\s*$/, "")} label` : ""}`
+      : "comic book";
+  const which = photo && photo.index > 1 ? `photo ${photo.index} of ${photo.total}` : raw ? "front cover" : "front cover in its holder";
+  return `${book}${origin ? ` (${origin})` : ""}, ${grading} — ${which}`;
+}

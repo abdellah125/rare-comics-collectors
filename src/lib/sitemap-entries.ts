@@ -12,11 +12,14 @@ import { services } from "@/lib/services";
 import { getSettings } from "@/lib/settings";
 import { TRANSLATED_LOCALES, localizePath } from "@/lib/i18n/config";
 import { site } from "@/lib/site";
+import { listPriceGuides } from "@/lib/catalog/price-guide";
 
 export type SitemapEntry = MetadataRoute.Sitemap[number];
 
 /** Guides are split into files of this many URLs; the index at /sitemap.xml lists them all. */
 export const GUIDE_SITEMAP_SIZE = 2000;
+/** Products are split into files of this many URLs (every listing is in one; the protocol allows 50,000 per file). */
+export const PRODUCT_SITEMAP_SIZE = 5000;
 
 const url = (path: string) => `${site.url}${path}`;
 
@@ -32,18 +35,18 @@ export const TRANSLATED_PATHS = ["/", "/store", "/contact"] as const;
 export async function sitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const settings = await getSettings();
 
-  const [products, sellers, latestProduct, collections, publishers, characters, latestGuide] = await Promise.all([
-    db.product.findMany({ where: publishedWhere, select: { slug: true, updatedAt: true, images: { orderBy: { position: "asc" }, take: 1, select: { url: true } } }, orderBy: { publishedAt: "desc" }, take: 5000 }),
+  const [sellers, latestProduct, collections, publishers, characters, latestGuide, priceGuides] = await Promise.all([
     settings["features.sellerStorefronts"] ? db.sellerProfile.findMany({ where: { status: "approved" }, select: { slug: true, updatedAt: true } }) : Promise.resolve([]),
-    db.product.findFirst({ where: publishedWhere, orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }),
+    // The last visible change in the catalogue (not the last stock sync), so hub pages are not "new" every day.
+    db.product.findFirst({ where: publishedWhere, orderBy: { contentUpdatedAt: "desc" }, select: { contentUpdatedAt: true } }),
     listCollections(),
     listPublishers(),
     listCharacters(),
     db.article.findFirst({ where: publishedGuideWhere, orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }),
+    listPriceGuides(),
   ]);
-  const storeChanged = latestProduct?.updatedAt ?? new Date();
+  const storeChanged = latestProduct?.contentUpdatedAt ?? new Date();
   const guidesChanged = latestGuide?.updatedAt ?? storeChanged;
-  const absolute = (imageUrl: string) => (imageUrl.startsWith("http") ? imageUrl : url(imageUrl));
 
   const core: MetadataRoute.Sitemap = [
     { url: url("/"), lastModified: storeChanged, changeFrequency: "daily", priority: 1 },
@@ -55,7 +58,6 @@ export async function sitemapEntries(): Promise<MetadataRoute.Sitemap> {
     { url: url("/contact"), changeFrequency: "monthly", priority: 0.7 },
     { url: url("/faq"), changeFrequency: "monthly", priority: 0.6 },
     { url: url("/support"), changeFrequency: "monthly", priority: 0.5 },
-    { url: url("/track-order"), changeFrequency: "yearly", priority: 0.4 },
     { url: url("/policies"), changeFrequency: "yearly", priority: 0.4 },
   ];
 
@@ -67,18 +69,17 @@ export async function sitemapEntries(): Promise<MetadataRoute.Sitemap> {
     { url: url("/publishers"), lastModified: storeChanged, changeFrequency: "weekly", priority: 0.7 },
     ...publishers.map((p) => ({ url: url(`/publishers/${p.slug}`), lastModified: storeChanged, changeFrequency: "weekly" as const, priority: 0.7 })),
   ];
+  const priceGuideUrls: MetadataRoute.Sitemap = priceGuides.length
+    ? [
+        { url: url("/price-guide"), lastModified: storeChanged, changeFrequency: "weekly", priority: 0.8 },
+        ...priceGuides.map((g) => ({ url: url(`/price-guide/${g.slug}`), lastModified: g.changedAt, changeFrequency: "weekly" as const, priority: 0.75 })),
+      ]
+    : [];
   const topicUrls: MetadataRoute.Sitemap = GUIDE_TOPICS.map((t) => ({ url: url(`/guides/topics/${t.slug}`), lastModified: guidesChanged, changeFrequency: "weekly" as const, priority: 0.75 }));
   // Category pages exist for search engines only once they have something in them.
   const counts = await categoryCounts();
   const categoryUrls: MetadataRoute.Sitemap = CATEGORIES.filter((c) => (counts[c.slug] ?? 0) > 0).map((c) => ({ url: url(`/guides/category/${c.slug}`), lastModified: guidesChanged, changeFrequency: c.fresh ? ("daily" as const) : ("weekly" as const), priority: 0.75 }));
   const characterUrls: MetadataRoute.Sitemap = characters.map((c) => ({ url: url(`/characters/${c.slug}`), lastModified: guidesChanged, changeFrequency: "weekly" as const, priority: 0.7 }));
-  const productUrls: MetadataRoute.Sitemap = products.map((p) => ({
-    url: url(`/store/${p.slug}`),
-    lastModified: p.updatedAt,
-    changeFrequency: "weekly",
-    priority: 0.8,
-    images: p.images[0]?.url ? [absolute(p.images[0].url)] : undefined,
-  }));
   const sellerUrls: MetadataRoute.Sitemap = sellers.map((s) => ({ url: url(`/sellers/${s.slug}`), lastModified: s.updatedAt, changeFrequency: "weekly", priority: 0.6 }));
   const serviceUrls: MetadataRoute.Sitemap = services.map((s) => ({ url: url(`/services/${s.slug}`), changeFrequency: "monthly", priority: 0.75 }));
   const policyUrls: MetadataRoute.Sitemap = policies.map((p) => ({ url: url(`/policies/${p.slug}`), lastModified: new Date(p.updated), changeFrequency: "yearly", priority: 0.3 }));
@@ -89,7 +90,48 @@ export async function sitemapEntries(): Promise<MetadataRoute.Sitemap> {
     TRANSLATED_PATHS.map((p) => ({ url: url(localizePath(p, l)), lastModified: storeChanged, changeFrequency: "weekly" as const, priority: 0.6 })),
   );
 
-  return [...core, ...localizedUrls, ...collectionUrls, ...publisherUrls, ...topicUrls, ...categoryUrls, ...characterUrls, ...productUrls, ...sellerUrls, ...serviceUrls, ...policyUrls];
+  return [...core, ...localizedUrls, ...collectionUrls, ...publisherUrls, ...priceGuideUrls, ...topicUrls, ...categoryUrls, ...characterUrls, ...sellerUrls, ...serviceUrls, ...policyUrls];
+}
+
+export async function productSitemapPages(): Promise<number> {
+  return Math.max(1, Math.ceil((await db.product.count({ where: publishedWhere })) / PRODUCT_SITEMAP_SIZE));
+}
+
+/**
+ * One file of product URLs (1-based), oldest listing first so a product keeps its file as new ones
+ * arrive. lastmod is the last visible change (contentUpdatedAt), with the main photo for image search.
+ */
+export async function productSitemapEntries(page: number): Promise<MetadataRoute.Sitemap> {
+  const rows = await db.product.findMany({
+    where: publishedWhere,
+    select: { slug: true, contentUpdatedAt: true, images: { orderBy: { position: "asc" }, take: 1, select: { url: true } } },
+    orderBy: [{ publishedAt: "asc" }, { id: "asc" }],
+    skip: (page - 1) * PRODUCT_SITEMAP_SIZE,
+    take: PRODUCT_SITEMAP_SIZE,
+  });
+  const absolute = (imageUrl: string) => (imageUrl.startsWith("http") ? imageUrl : url(imageUrl));
+  return rows.map((p) => ({ url: url(`/store/${p.slug}`), lastModified: p.contentUpdatedAt, changeFrequency: "weekly" as const, priority: 0.8, images: p.images[0]?.url ? [absolute(p.images[0].url)] : undefined }));
+}
+
+/** The newest lastmod in each sitemap file, for the index (a file only counts as changed when a URL in it did). */
+export async function sitemapFileDates(): Promise<{ site: Date; products: Date[]; guides: Date[] }> {
+  const [productPages, guidePages, latestGuide] = await Promise.all([productSitemapPages(), guideSitemapPages(), db.article.findFirst({ where: publishedGuideWhere, orderBy: { updatedAt: "desc" }, select: { updatedAt: true } })]);
+  const products = await Promise.all(
+    Array.from({ length: productPages }, async (_, i) => {
+      const ids = await db.product.findMany({ where: publishedWhere, orderBy: [{ publishedAt: "asc" }, { id: "asc" }], skip: i * PRODUCT_SITEMAP_SIZE, take: PRODUCT_SITEMAP_SIZE, select: { id: true } });
+      const r = await db.product.aggregate({ _max: { contentUpdatedAt: true }, where: { id: { in: ids.map((x) => x.id) } } });
+      return r._max.contentUpdatedAt ?? new Date(0);
+    }),
+  );
+  const guides = await Promise.all(
+    Array.from({ length: guidePages }, async (_, i) => {
+      const rows = await db.article.findMany({ where: publishedGuideWhere, orderBy: [{ publishedAt: "asc" }, { id: "asc" }], skip: i * GUIDE_SITEMAP_SIZE, take: GUIDE_SITEMAP_SIZE, select: { updatedAt: true } });
+      return rows.reduce((m, r) => (r.updatedAt > m ? r.updatedAt : m), new Date(0));
+    }),
+  );
+  const latestProduct = products.reduce((m, d) => (d > m ? d : m), new Date(0));
+  const siteDate = latestGuide && latestGuide.updatedAt > latestProduct ? latestGuide.updatedAt : latestProduct;
+  return { site: siteDate, products, guides };
 }
 
 export async function guideSitemapPages(): Promise<number> {
@@ -111,7 +153,8 @@ export async function newsSitemapItems(): Promise<{ url: string; title: string; 
 
 /** Everything, for the IndexNow sync. */
 export async function allSitemapEntries(): Promise<MetadataRoute.Sitemap> {
-  const pages = await guideSitemapPages();
+  const [pages, productPages] = await Promise.all([guideSitemapPages(), productSitemapPages()]);
   const guides = await Promise.all(Array.from({ length: pages }, (_, i) => guideSitemapEntries(i + 1)));
-  return [...(await sitemapEntries()), ...guides.flat()];
+  const products = await Promise.all(Array.from({ length: productPages }, (_, i) => productSitemapEntries(i + 1)));
+  return [...(await sitemapEntries()), ...products.flat(), ...guides.flat()];
 }

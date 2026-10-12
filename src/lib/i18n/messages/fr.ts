@@ -722,4 +722,12 @@ export const fr: Dict = {
     "Chaque slab a son certificat vérifié et chaque comic est contrôlé (restauration) avant la mise en vente. Toute restauration non déclarée est remboursée intégralement, sans limite de temps.",
   "Every slab is cert-verified, every book restoration-checked and photographed. Buy now for immediate checkout, or add to your cart and keep browsing.":
     "Chaque slab a son certificat vérifié, chaque comic est contrôlé (restauration) et photographié. Achetez maintenant pour payer tout de suite, ou ajoutez au panier et poursuivez votre visite.",
+  "Buy Graded Comics & Comic Grading":
+    "Achat de comics gradés et gradation",
+  "CGC and CBCS graded comics and raw keys with an authenticity guarantee, plus grading submission, pressing and appraisal in {city}, {region}.":
+    "Comics gradés CGC et CBCS et numéros clés non gradés avec garantie d'authenticité, plus gradation, pressage et expertise à {city}, {region}.",
+  "CGC and CBCS graded slabs and raw comic books, Golden Age to today. Free insured US shipping and a 14-day return window.":
+    "Slabs CGC et CBCS et comics non gradés, du Golden Age à aujourd'hui. Livraison assurée offerte aux États-Unis et 14 jours pour retourner.",
+  "Price guide":
+    "Guide des prix",
 };

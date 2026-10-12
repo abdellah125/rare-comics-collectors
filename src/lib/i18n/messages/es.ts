@@ -722,4 +722,12 @@ export const es: Dict = {
     "Antes de publicarse, cada cómic graduado tiene su certificado verificado y cada cómic pasa una revisión de restauración. Una restauración no declarada se reembolsa íntegramente, sin límite de tiempo.",
   "Every slab is cert-verified, every book restoration-checked and photographed. Buy now for immediate checkout, or add to your cart and keep browsing.":
     "Cada cómic graduado tiene el certificado verificado y cada cómic la revisión de restauración hecha y sus fotos. Compra ahora para pagar al momento o añádelo al carrito y sigue mirando.",
+  "Buy Graded Comics & Comic Grading":
+    "Compra cómics graduados y graduación",
+  "CGC and CBCS graded comics and raw keys with an authenticity guarantee, plus grading submission, pressing and appraisal in {city}, {region}.":
+    "Cómics graduados por CGC y CBCS y números clave sin graduar con garantía de autenticidad, más graduación, prensado y tasación en {city}, {region}.",
+  "CGC and CBCS graded slabs and raw comic books, Golden Age to today. Free insured US shipping and a 14-day return window.":
+    "Cómics graduados por CGC y CBCS y cómics sin graduar, de la Golden Age a hoy. Envío asegurado gratis en EE. UU. y 14 días para devoluciones.",
+  "Price guide":
+    "Guía de precios",
 };

@@ -16,6 +16,8 @@ import { Markdown, outline, plainText } from "@/lib/guides/markdown";
 import { formatDateTime } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
+import { listPriceGuides } from "@/lib/catalog/price-guide";
+import { collectionHref, listCollections, listPublishers, publisherHref } from "@/lib/catalog/collections";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,31 @@ export async function generateMetadata({ params }: PageProps<"/guides/[slug]">):
   };
 }
 
+/**
+ * Store pages for what a guide is about: the price guide of each key issue it names (directly or
+ * as a character's first appearance), the publishers' pages and the eras of the books it shows.
+ */
+async function storeLinksFor(guide: { titles: string[]; characters: string[]; publishers: string[] }): Promise<{ href: string; label: string }[]> {
+  const [guides, publishers, collections] = await Promise.all([listPriceGuides(), listPublishers(), listCollections()]);
+  const norm = (v: string) => v.toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9#]+/g, " ").trim();
+  const wanted = new Set(guide.titles.map(norm));
+  for (const c of guide.characters) {
+    const f = characterFact(c);
+    if (f) wanted.add(norm(`${f.firstTitle} ${f.firstIssue}`));
+  }
+  const links: { href: string; label: string }[] = [];
+  for (const g of guides) {
+    if (links.length >= 6) break;
+    if (wanted.has(norm(`${g.title} ${g.issue}`))) links.push({ href: `/price-guide/${g.slug}`, label: `${g.title} ${g.issue} price guide` });
+  }
+  for (const name of guide.publishers) {
+    const p = publishers.find((x) => x.name.toLowerCase() === name.toLowerCase());
+    if (p) links.push({ href: publisherHref(p.name), label: `${p.name} comics for sale` });
+  }
+  for (const c of collections.filter((c) => guide.titles.some((t) => t.toLowerCase().includes(c.shortName.toLowerCase())))) links.push({ href: collectionHref(c.slug), label: `${c.shortName} comics` });
+  return links.filter((l, i, all) => all.findIndex((x) => x.href === l.href) === i).slice(0, 10);
+}
+
 export default async function GuidePage({ params }: PageProps<"/guides/[slug]">) {
   const { slug } = await params;
   const guide = await getGuide(slug);
@@ -45,7 +72,7 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
   after(() => recordGuideView(guide.id));
   const category = categoryOf(guide);
   const isNews = guide.format === "news";
-  const [related, products] = await Promise.all([relatedGuides(guide), productsForGuide(guide)]);
+  const [related, products, storeLinks] = await Promise.all([relatedGuides(guide), productsForGuide(guide), storeLinksFor(guide)]);
   const toc = outline(guide.body).filter((h) => h.level === 2);
   const words = plainText(guide.body).split(" ").length;
   const facts = guide.characters.map((c) => characterFact(c)).filter((f): f is NonNullable<typeof f> => f !== null).slice(0, 3);
@@ -297,6 +324,21 @@ export default async function GuidePage({ params }: PageProps<"/guides/[slug]">)
               ))}
             </div>
           </section>
+        )}
+
+        {storeLinks.length > 0 && (
+          <nav className="mt-10" aria-label="Shop this topic">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500">Shop this topic</h2>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {storeLinks.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} className="inline-flex rounded-lg border border-ink-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-ink-900 hover:border-ink-400">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         )}
 
         {related.length > 0 && (

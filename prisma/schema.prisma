@@ -376,6 +376,10 @@ model Product {
   seoDescription          String?
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
+  /// Last change a visitor or search engine would see (text, price, availability, photos). Kept by a
+  /// database trigger (migration 20261018090000), so stock syncs that change nothing visible leave it alone.
+  /// The sitemap's lastmod.
+  contentUpdatedAt        DateTime       @default(now())
   deletedAt               DateTime?
 
   images        ProductImage[]
@@ -395,6 +399,7 @@ model Product {
   @@index([publisher])
   @@index([featured])
   @@index([price])
+  @@index([contentUpdatedAt])
 }
 
 // ───────────────────────────── catalogue imports ─────────────────────────────

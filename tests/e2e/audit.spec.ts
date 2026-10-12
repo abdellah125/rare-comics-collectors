@@ -111,8 +111,13 @@ test("sitemap and robots cover the catalogue and hide private areas", async ({ r
   const sm = await request.get("/sitemaps/site.xml");
   const xml = await sm.text();
   expect(sm.status()).toBe(200);
-  expect(xml).toContain(`/store/${E2E.productSlug}`);
   expect(xml).toContain("/sellers/e2e-seller");
+  // Products live in their own files, listed in the index; every product is in one of them.
+  const index = await (await request.get("/sitemap.xml")).text();
+  const productFiles = [...index.matchAll(/<loc>[^<]*(\/sitemaps\/products-\d+\.xml)<\/loc>/g)].map((m) => m[1]);
+  expect(productFiles.length).toBeGreaterThan(0);
+  const products = (await Promise.all(productFiles.map(async (f) => (await request.get(f)).text()))).join("");
+  expect(products).toContain(`/store/${E2E.productSlug}`);
   expect(xml).not.toContain("/admin");
   expect(xml).not.toContain("/checkout");
   const rb = await request.get("/robots.txt");

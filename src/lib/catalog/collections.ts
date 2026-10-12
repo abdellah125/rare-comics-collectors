@@ -3,6 +3,7 @@ import { cache } from "react";
 import { db } from "@/lib/db";
 import { publishedWhere, summaryInclude, toSummary, type ProductSummary } from "@/lib/catalog/products";
 import { slugify } from "@/lib/validation";
+import { isKnown } from "@/lib/catalog/labels";
 
 /**
  * Indexable landing pages for the catalogue: one per active category
@@ -42,11 +43,13 @@ export const getCollection = cache(async (slug: string): Promise<Collection | nu
   return r ? toCollection(r) : null;
 });
 
-/** Cards on a collection or publisher page. The store browser lists (and filters) everything; these hubs show the newest. */
-export const HUB_PAGE_SIZE = 96;
+/** Cards per page on a collection or publisher page; every listing is on one of its numbered pages. */
+export const HUB_PAGE_SIZE = 48;
 
-export async function collectionProducts(categoryId: string): Promise<ProductSummary[]> {
-  const rows = await db.product.findMany({ where: { ...publishedWhere, categoryId }, include: summaryInclude, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }], take: HUB_PAGE_SIZE });
+export const hubPages = (count: number) => Math.max(1, Math.ceil(count / HUB_PAGE_SIZE));
+
+export async function collectionProducts(categoryId: string, page = 1): Promise<ProductSummary[]> {
+  const rows = await db.product.findMany({ where: { ...publishedWhere, categoryId }, include: summaryInclude, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }, { id: "asc" }], skip: (page - 1) * HUB_PAGE_SIZE, take: HUB_PAGE_SIZE });
   return rows.map(toSummary);
 }
 
@@ -68,14 +71,15 @@ export const listPublishers = cache(async (): Promise<Publisher[]> => {
   const rows = await db.product.groupBy({ by: ["publisher"], where: publishedWhere, _count: { _all: true } });
   return rows
     .map((r) => ({ name: r.publisher, slug: slugify(r.publisher), count: r._count._all }))
-    .filter((p) => p.slug.length > 0)
+    // "Unknown" is a placeholder, not a publisher: no page for it.
+    .filter((p) => p.slug.length > 0 && isKnown(p.name))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 });
 
 export const getPublisher = cache(async (slug: string): Promise<Publisher | null> => (await listPublishers()).find((p) => p.slug === slug) ?? null);
 
-export async function publisherProducts(name: string): Promise<ProductSummary[]> {
-  const rows = await db.product.findMany({ where: { ...publishedWhere, publisher: name }, include: summaryInclude, orderBy: [{ featured: "desc" }, { year: "asc" }], take: HUB_PAGE_SIZE });
+export async function publisherProducts(name: string, page = 1): Promise<ProductSummary[]> {
+  const rows = await db.product.findMany({ where: { ...publishedWhere, publisher: name }, include: summaryInclude, orderBy: [{ featured: "desc" }, { year: "asc" }, { id: "asc" }], skip: (page - 1) * HUB_PAGE_SIZE, take: HUB_PAGE_SIZE });
   return rows.map(toSummary);
 }
 

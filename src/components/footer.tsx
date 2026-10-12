@@ -123,6 +123,11 @@ export async function Footer({
                   </Link>
                 </li>
                 <li>
+                  <Link href="/price-guide" className="text-ink-400 hover:text-white">
+                    {tr("Price guide")}
+                  </Link>
+                </li>
+                <li>
                   <Link href="/cart" className="text-ink-400 hover:text-white">
                     {tr("Cart")}
                   </Link>

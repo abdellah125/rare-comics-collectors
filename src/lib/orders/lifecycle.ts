@@ -6,6 +6,7 @@ import { notifyAdmins, notifyUser } from "@/lib/notifications";
 import { formatMoney } from "@/lib/money";
 import { recordSaleForItem } from "@/lib/finance/ledger";
 import { queueTemplateEmail } from "@/lib/mail";
+import { env } from "@/lib/env";
 
 type Tx = Prisma.TransactionClient;
 
@@ -261,17 +262,23 @@ export async function autoCompleteOrders(): Promise<number> {
   const cutoff = new Date(Date.now() - settings["commerce.autoCompleteDays"] * 86_400_000);
   const orders = await db.order.findMany({
     where: { status: "delivered", shipments: { every: { deliveredAt: { lt: cutoff } } } },
-    select: { id: true },
+    select: { id: true, number: true, email: true, userId: true, user: { select: { name: true } } },
   });
   let completed = 0;
   for (const o of orders) {
     // Only an order that is still delivered changes: a second run (or a refund meanwhile) does nothing twice.
-    completed += await db.$transaction(async (tx) => {
+    const done = await db.$transaction(async (tx) => {
       const r = await tx.order.updateMany({ where: { id: o.id, status: "delivered" }, data: { status: "completed", completedAt: new Date() } });
       if (r.count === 0) return 0;
       await addOrderEvent(tx, o.id, "order.completed", "Order completed automatically after the inspection window", { id: null, type: "job" });
       return 1;
     });
+    completed += done;
+    // Real reviews come from real buyers: once an order is complete, its buyer (with an account,
+    // where reviews are written) is asked once. Completion happens once, so the email does too.
+    if (done > 0 && o.userId) {
+      await queueTemplateEmail("review_request", o.email, { name: o.user?.name ?? "there", orderNumber: o.number, reviewUrl: `${env.siteUrl}/account/orders/${o.number}` }, { userId: o.userId, meta: { orderId: o.id } }).catch((err) => console.error(`[orders] review request for ${o.number} not queued`, err));
+    }
   }
   return completed;
 }

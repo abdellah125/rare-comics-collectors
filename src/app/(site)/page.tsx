@@ -26,8 +26,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const tr = await getTranslator();
   return localizedMetadata({
   // The root layout template appends "| <site name>"; keep it out of the page title itself.
-  title: msg("Buy Graded Comics & Professional Comic Grading"),
-  description: tr("Shop CGC and CBCS graded key issues with an authenticity guarantee, then use {name} for grading submission, pressing, restoration detection and appraisal. Insured shipping nationwide from {city}, {region}.", { name: site.name, city: site.address.city, region: site.address.region }),
+  title: msg("Buy Graded Comics & Comic Grading"),
+  description: tr("CGC and CBCS graded comics and raw keys with an authenticity guarantee, plus grading submission, pressing and appraisal in {city}, {region}.", { city: site.address.city, region: site.address.region }),
   path: "/",
   keywords: [
     "buy graded comics online",

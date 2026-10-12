@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "@/components/link";
 import { notFound } from "next/navigation";
+import { HubPagination, pageHref, readPage } from "@/components/hub-pagination";
 import { CollectionCards, PublisherChips } from "@/components/catalog-links";
 import { RelatedGuides } from "@/components/guide-links";
 import { guidesForPublisher } from "@/lib/guides/data";
 import { JsonLd, breadcrumbJsonLd, itemListJsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { Breadcrumbs, Container, SectionHeading, type Crumb } from "@/components/ui";
-import { getPublisher, listCollections, listPublishers, lowestPrice, publisherProducts, publisherSpan } from "@/lib/catalog/collections";
+import { HUB_PAGE_SIZE, getPublisher, hubPages, listCollections, listPublishers, lowestPrice, publisherProducts, publisherSpan } from "@/lib/catalog/collections";
 import { formatPrice } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
@@ -18,25 +19,31 @@ export const dynamic = "force-dynamic";
 /** "Marvel Comics" already says comics; "Timely" does not. */
 const publisherLabel = (name: string) => (/comics?$/i.test(name.trim()) ? name : `${name} Comics`);
 
-export async function generateMetadata({ params }: PageProps<"/publishers/[slug]">): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps<"/publishers/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const publisher = await getPublisher(slug);
-  if (!publisher) return pageMetadata({ title: "Publisher not found", description: "No listings from this publisher right now.", path: `/publishers/${slug}`, noIndex: true });
+  const page = publisher ? readPage((await searchParams).page, hubPages(publisher.count)) : null;
+  if (!publisher || page === null) return pageMetadata({ title: "Publisher not found", description: "No listings from this publisher right now.", path: `/publishers/${slug}`, noIndex: true });
   const settings = await getSettings();
+  const pages = hubPages(publisher.count);
   return pageMetadata({
-    title: `${publisherLabel(publisher.name)} for Sale — Graded Key Issues`,
-    description: `${publisher.count} ${publisher.name} comic book${publisher.count === 1 ? "" : "s"} for sale: CGC and CBCS graded keys plus honestly graded raw copies. Cert-verified, insured shipping and a ${settings["commerce.returnWindowDays"]}-day return window from ${site.name}.`,
-    path: `/publishers/${publisher.slug}`,
+    title: page > 1 ? `${publisherLabel(publisher.name)} for Sale — Page ${page} of ${pages}` : `${publisherLabel(publisher.name)} for Sale — Graded Key Issues`,
+    description: `${page > 1 ? `Page ${page} of ${pages}. ` : ""}${publisher.count.toLocaleString("en-US")} ${publisher.name} comic book${publisher.count === 1 ? "" : "s"} for sale: CGC and CBCS graded keys and raw copies. Free insured US shipping and ${settings["commerce.returnWindowDays"]}-day returns.`,
+    path: pageHref(`/publishers/${publisher.slug}`, page),
     keywords: [`${publisher.name} comics for sale`, `${publisher.name} key issues`, `CGC ${publisher.name} comics`, "graded comics for sale"],
   });
 }
 
-export default async function PublisherPage({ params }: PageProps<"/publishers/[slug]">) {
+export default async function PublisherPage({ params, searchParams }: PageProps<"/publishers/[slug]">) {
   const { slug } = await params;
   const publisher = await getPublisher(slug);
   if (!publisher) notFound();
+  const pages = hubPages(publisher.count);
+  const page = readPage((await searchParams).page, pages);
+  if (page === null) notFound();
+  const base = `/publishers/${publisher.slug}`;
 
-  const [products, collections, publishers, settings, guides, years, lowestForPublisher] = await Promise.all([publisherProducts(publisher.name), listCollections(), listPublishers(), getSettings(), guidesForPublisher(publisher.name), publisherSpan(publisher.name), lowestPrice({ publisher: publisher.name })]);
+  const [products, collections, publishers, settings, guides, years, lowestForPublisher] = await Promise.all([publisherProducts(publisher.name, page), listCollections(), listPublishers(), getSettings(), guidesForPublisher(publisher.name), publisherSpan(publisher.name), lowestPrice({ publisher: publisher.name })]);
   const span = years.minYear !== null && years.maxYear !== null ? `${years.minYear}–${years.maxYear}` : null;
   const lowest = lowestForPublisher ?? Number.POSITIVE_INFINITY;
   const eras = years.eras;
@@ -53,7 +60,7 @@ export default async function PublisherPage({ params }: PageProps<"/publishers/[
     "@type": "CollectionPage",
     "@id": `${site.url}/publishers/${publisher.slug}#page`,
     name: `${publisherLabel(publisher.name)} for sale`,
-    url: `${site.url}/publishers/${publisher.slug}`,
+    url: `${site.url}${pageHref(base, page)}`,
     isPartOf: { "@id": `${site.url}/#website` },
     about: { "@type": "Organization", name: publisher.name },
     mainEntity: itemListJsonLd(products.map((p) => ({ url: `${site.url}/store/${p.slug}` }))),
@@ -95,9 +102,11 @@ export default async function PublisherPage({ params }: PageProps<"/publishers/[
           ))}
         </div>
 
-        {publisher.count > products.length && (
+        <HubPagination base={base} page={page} pages={pages} label={`${publisher.name} pages`} />
+
+        {pages > 1 && (
           <p className="mt-8 text-sm text-ink-500">
-            Showing {products.length} of {publisher.count.toLocaleString("en-US")} listings.{" "}
+            Showing {((page - 1) * HUB_PAGE_SIZE + 1).toLocaleString("en-US")}–{((page - 1) * HUB_PAGE_SIZE + products.length).toLocaleString("en-US")} of {publisher.count.toLocaleString("en-US")} listings.{" "}
             <Link href="/store" className="font-semibold text-brand-700 underline-offset-4 hover:underline">
               Browse and filter all of them in the store
             </Link>

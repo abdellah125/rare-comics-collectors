@@ -1,7 +1,7 @@
 import { BidPanel } from "@/components/bid-panel";
 import { auctionEnded } from "@/lib/commerce/bids";
 import { getTranslator } from "@/lib/i18n";
-import { NOT_GRADED, UNKNOWN, gradeLabel as gradeLabelOf, isKnown, joinKnown, yearKnown, yearText } from "@/lib/catalog/labels";
+import { NOT_GRADED, UNKNOWN, gradeLabel as gradeLabelOf, isKnown, joinKnown, yearKnown, yearText, coverAlt } from "@/lib/catalog/labels";
 import Link from "@/components/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -25,6 +25,9 @@ import { formatMoney, schemaPrice } from "@/lib/money-format";
 import { pageMetadata } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
 import { site } from "@/lib/site";
+import { freeInsuredShipping } from "@/lib/commerce/pricing";
+import { DESCRIPTION_MAX } from "@/lib/seo";
+import { priceGuideFor } from "@/lib/catalog/price-guide";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +42,7 @@ export async function generateMetadata({ params }: PageProps<"/store/[slug]">): 
   return {
     ...pageMetadata({
       title,
-      description: product.seoDescription?.trim() || `${product.title} ${product.issue}${joinKnown([product.publisher, yearText(product.year)], " ") ? `, ${joinKnown([product.publisher, yearText(product.year)], " ")}` : ""}. ${gradeLabel}${product.keyIssue ? ` — ${product.keyIssue}` : ""}. ${formatMoney(product.price, "USD", "en-US", { compact: true })}, insured shipping and a ${settings["commerce.returnWindowDays"]}-day return window from ${site.name}.`,
+      description: product.seoDescription?.trim() || productDescription(product, gradeLabel, settings["commerce.returnWindowDays"], await freeInsuredShipping(settings["marketplace.defaultCountry"]).catch(() => false)),
       path: `/store/${product.slug}`,
       type: "article",
       keywords: [`${product.title} ${product.issue}`, `${product.title} ${product.issue} ${product.grader} ${product.grade}`, `${product.publisher} ${product.era}`, "graded comic for sale"],
@@ -53,6 +56,21 @@ export async function generateMetadata({ params }: PageProps<"/store/[slug]">): 
           "product:availability": product.stock > 0 ? "in stock" : "out of stock",
         },
   };
+}
+
+/**
+ * The product's search snippet, built to fit: book, origin, grade, key issue, price and shipping.
+ * When it runs long, the key issue goes first, then the origin, so the price and grade always show.
+ */
+function productDescription(p: { title: string; issue: string; publisher: string; year: number; keyIssue?: string | null; price: number }, grade: string, returnDays: number, freeShipping: boolean): string {
+  const origin = joinKnown([p.publisher, yearText(p.year)], " ");
+  const offer = `${formatMoney(p.price, "USD", "en-US", { compact: true })} with ${freeShipping ? "free insured US shipping" : "insured shipping"} and ${returnDays}-day returns.`;
+  const variants = [
+    `${p.title} ${p.issue}${origin ? `, ${origin}` : ""}. ${grade}${p.keyIssue ? ` — ${p.keyIssue.replace(/\.$/, "")}` : ""}. ${offer}`,
+    `${p.title} ${p.issue}${origin ? `, ${origin}` : ""}. ${grade}. ${offer}`,
+    `${p.title} ${p.issue}. ${grade}. ${offer}`,
+  ];
+  return variants.find((v) => v.length <= DESCRIPTION_MAX) ?? variants[variants.length - 1];
 }
 
 /** Google wants a priceValidUntil date; a rolling one-year horizon never goes stale between edits. */
@@ -72,12 +90,13 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
   if (!product) notFound();
   after(() => recordProductView(product.id));
 
-  const [related, settings, { format, formatExact }, collection, guides] = await Promise.all([
+  const [related, settings, { format, formatExact }, collection, guides, priceGuide] = await Promise.all([
     relatedProducts(product),
     getSettings(),
     priceFormatterPair(),
     product.categorySlug ? getCollection(product.categorySlug) : Promise.resolve(null),
     guidesForProduct({ title: product.title, publisher: product.publisher, era: product.era, grader: product.grader, characters: (product.attributes["Character"] ?? "").split(",").map((s) => s.trim()).filter(Boolean) }),
+    product.keyIssue ? priceGuideFor(product.title, product.issue) : Promise.resolve(null),
   ]);
   const shippingOptions = await shippingOptionsFor(settings["marketplace.defaultCountry"], product.price);
   const cheapestShipping = cheapestDeliveryOption(shippingOptions);
@@ -180,7 +199,7 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
                   {product.images.slice(1, 6).map((img, i) => (
                     <li key={i} className="shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={smallPhoto(img.url)} alt={img.alt ?? `${product.title} ${product.issue} photo ${i + 2}`} width={64} height={96} decoding="async" className="h-24 w-16 rounded-md object-cover ring-1 ring-ink-200" loading="lazy" />
+                      <img src={smallPhoto(img.url)} alt={img.alt?.trim() || coverAlt(product, { index: i + 2, total: product.images.length })} width={64} height={96} decoding="async" className="h-24 w-16 rounded-md object-cover ring-1 ring-ink-200" loading="lazy" />
                     </li>
                   ))}
                 </ul>
@@ -405,6 +424,16 @@ export default async function ProductPage({ params }: PageProps<"/store/[slug]">
                 </div>
               ))}
             </dl>
+
+            {priceGuide && (
+              <p className="mt-4 text-sm text-ink-600">
+                What is {product.title} {product.issue} worth?{" "}
+                <Link href={`/price-guide/${priceGuide.slug}`} className="font-semibold text-brand-700 underline-offset-4 hover:underline">
+                  See the {product.title} {product.issue} price guide
+                </Link>{" "}
+                ({priceGuide.copies} cop{priceGuide.copies === 1 ? "y" : "ies"} on sale by grade).
+              </p>
+            )}
 
             <div className="mt-6 rounded-xl border border-brand-200 bg-brand-50 p-5">
               <h3 className="font-display text-lg font-semibold text-ink-950">Questions about this book?</h3>
