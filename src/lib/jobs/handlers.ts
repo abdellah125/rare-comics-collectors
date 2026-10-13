@@ -230,6 +230,37 @@ export function registerJobHandlers() {
     return `${r.approved} approved (${r.ready} ready, ${r.queued} storing photos, ${r.errors} to Error); ${r.remaining} left`;
   });
 
+  // Product photos move into our own storage (the address of each came with the import data), then,
+  // where the source lets our identified bot read listing pages, each listing's further photos and
+  // details are added: one page every 5 s, as its robots.txt asks. A refusal pauses page reading for
+  // a day; it is never worked around. Photo copying does not depend on it.
+  registerJobHandler("import_enrich", async () => {
+    const settings = await getSettings();
+    const again = (minutes: number) => enqueueJob("import_enrich", {}, { runAt: new Date(Date.now() + minutes * 60_000), dedupe: true, maxAttempts: 3 });
+    if (!settings["imports.enrichListings"]) {
+      await again(60);
+      return "Switched off (Imports settings).";
+    }
+    const { copySourcePhotos, enrichListings } = await import("@/lib/imports/enrich-listings");
+    const copy = await copySourcePhotos({ budgetMs: 150_000 });
+    const pauseKey = "imports.enrich.pagesRefusedUntil";
+    const paused = await db.setting.findUnique({ where: { key: pauseKey } });
+    const pausedUntil = paused ? new Date(JSON.parse(paused.value) as string) : null;
+    let pages = "listing pages: paused after a refusal by the source";
+    let pagesLeft = 0;
+    if (!pausedUntil || pausedUntil < new Date()) {
+      const r = await enrichListings({ budgetMs: 45_000 });
+      pagesLeft = r.stopped ? 0 : r.remaining;
+      pages = `listing pages: ${r.done} read, ${r.photos} photo(s) added, ${r.filled} with details filled, ${r.gone} gone, ${r.failed} failed, ${r.remaining} left${r.stopped ? `. ${r.stopped}` : ""}`;
+      if (r.stopped && /answered HTTP|anti-bot/.test(r.stopped)) {
+        const until = JSON.stringify(new Date(Date.now() + 24 * 3_600_000).toISOString());
+        await db.setting.upsert({ where: { key: pauseKey }, create: { key: pauseKey, value: until }, update: { value: until } });
+      }
+    }
+    await again(copy.stopped ? 6 * 60 : copy.remaining > 0 || pagesLeft > 0 ? 1 : 6 * 60);
+    return `photos: ${copy.copied} copied into our storage, ${copy.failed} failed, ${copy.remaining} left${copy.stopped ? `. ${copy.stopped}` : ""}; ${pages}`;
+  });
+
   // The daily release rule: a batch per run until the day's quota is met, then a slower check for the next day.
   registerJobHandler("import_auto_release", async () => {
     const { autoRelease } = await import("@/lib/imports/pipeline");

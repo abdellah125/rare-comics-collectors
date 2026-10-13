@@ -128,6 +128,8 @@ export const settingDefaults = {
   "imports.autoReleaseIncludePending": true,
   /** Kept for a person: possible duplicates. */
   "imports.autoReleaseHoldDuplicates": true,
+  /** Read each released listing's page once for all its photos (kept in our storage) and its details. */
+  "imports.enrichListings": true,
   /** The authorised data feed (https address given by the source). Empty = sync by file upload only. */
   "imports.feedUrl": "",
   /** The feed lists everything currently for sale, so a product missing from it is no longer available. */

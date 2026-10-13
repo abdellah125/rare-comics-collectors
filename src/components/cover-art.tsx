@@ -25,8 +25,10 @@ const queueSrcSet = (src: string) => `${src.replace(/\.webp$/, "-256.webp")} 256
 
 const SOURCE_PHOTO = /^https:\/\/img\.hipcomic\.com\/p\/[0-9a-f]+-800\.jpg$/;
 const SOURCE_PHOTO_ORIGIN = "https://img.hipcomic.com";
+/** A listing photo copied into our storage (see enrich-listings): the same 800/300 px pair, on our side. */
+const STORED_PHOTO = /^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\/products\/hip\/[0-9a-f]{16,64}-800\.jpg$/;
 /** The 300 px file of an imported photo, or the address unchanged when it is not one. */
-export const smallPhoto = (src: string) => (SOURCE_PHOTO.test(src) ? src.replace(/-800\.jpg$/, "-300.jpg") : src);
+export const smallPhoto = (src: string) => (SOURCE_PHOTO.test(src) || STORED_PHOTO.test(src) ? src.replace(/-800\.jpg$/, "-300.jpg") : src);
 const sourceSrcSet = (src: string) => `${smallPhoto(src)} 300w, ${src} 800w`;
 
 export const DEFAULT_COVER_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px";
@@ -48,9 +50,10 @@ export function CoverArt({
   const slabbed = product.grader !== "Raw";
   const src = (coverMap as Record<string, string>)[product.slug] ?? product.image ?? null;
   const responsive = src !== null && isLocalScan(src);
-  const sourcePhoto = src !== null && SOURCE_PHOTO.test(src);
+  const storedPhoto = src !== null && STORED_PHOTO.test(src);
+  const sourcePhoto = src !== null && (SOURCE_PHOTO.test(src) || storedPhoto);
   // The page's main photo on another host: open the connection while the HTML is still arriving.
-  if (priority && sourcePhoto) preconnect(SOURCE_PHOTO_ORIGIN);
+  if (priority && src && sourcePhoto) preconnect(storedPhoto ? new URL(src).origin : SOURCE_PHOTO_ORIGIN);
   const alt = coverAlt(product);
   const imgProps = {
     decoding: "async" as const,

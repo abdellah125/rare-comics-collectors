@@ -92,6 +92,7 @@ const SettingsSchema = z.object({
   autoReleasePerDay: z.coerce.number().int().min(0).max(20_000),
   autoReleaseIncludePending: zBool,
   autoReleaseHoldDuplicates: zBool,
+  enrichListings: zBool,
 });
 
 export async function saveImportSettingsAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
@@ -106,7 +107,7 @@ export async function saveImportSettingsAction(_prev: ActionState | undefined, f
         return failState(err instanceof Error ? err.message : "The feed address is not valid.", { feedUrl: "Not valid" });
       }
     }
-    await saveSettings({ "imports.discountBps": Math.round(d.discountPercent * 100), "imports.autoPriceSync": d.autoPriceSync, "imports.feedUrl": d.feedUrl, "imports.feedIsComplete": d.feedIsComplete, "imports.syncHours": d.syncHours, "imports.autoReleasePerDay": d.autoReleasePerDay, "imports.autoReleaseIncludePending": d.autoReleaseIncludePending, "imports.autoReleaseHoldDuplicates": d.autoReleaseHoldDuplicates }, admin.id);
+    await saveSettings({ "imports.discountBps": Math.round(d.discountPercent * 100), "imports.autoPriceSync": d.autoPriceSync, "imports.feedUrl": d.feedUrl, "imports.feedIsComplete": d.feedIsComplete, "imports.syncHours": d.syncHours, "imports.autoReleasePerDay": d.autoReleasePerDay, "imports.autoReleaseIncludePending": d.autoReleaseIncludePending, "imports.autoReleaseHoldDuplicates": d.autoReleaseHoldDuplicates, "imports.enrichListings": d.enrichListings }, admin.id);
     if (d.autoReleasePerDay > 0) await enqueueJob("import_auto_release", {}, { dedupe: true, maxAttempts: 3 });
     await audit({ actor: actorOf(admin), action: "import.settings", targetType: "setting", summary: `Import settings: daily release ${d.autoReleasePerDay || "off"}${d.autoReleasePerDay ? (d.autoReleaseIncludePending ? " (including Pending Review)" : " (approved only)") : ""}, discount ${d.discountPercent}%, automatic price sync ${d.autoPriceSync ? "on" : "off"}, feed ${d.feedUrl ? "set" : "not set"}` });
     refresh();

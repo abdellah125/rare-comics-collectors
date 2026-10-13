@@ -10,6 +10,7 @@ import { fixErrorsAction, releaseAllReadyAction, saveImportSettingsAction, syncN
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/i18n";
 import { importStats } from "@/lib/imports/pipeline";
+import { enrichProgress } from "@/lib/imports/enrich-listings";
 import { IMPORT_SOURCE } from "@/lib/imports/status";
 import { getSettings } from "@/lib/settings";
 
@@ -31,7 +32,7 @@ export default async function AdminImportsPage() {
   const admin = await requireAdmin("products.view");
   const manage = can(admin, "products.manage");
   const canSettings = can(admin, "settings.manage");
-  const [stats, runs, settings] = await Promise.all([importStats(IMPORT_SOURCE), db.importRun.findMany({ where: { source: IMPORT_SOURCE }, orderBy: { startedAt: "desc" }, take: 15 }), getSettings()]);
+  const [stats, runs, settings, photos] = await Promise.all([importStats(IMPORT_SOURCE), db.importRun.findMany({ where: { source: IMPORT_SOURCE }, orderBy: { startedAt: "desc" }, take: 15 }), getSettings(), enrichProgress()]);
   const queue = (status?: string) => `/admin/imports/queue${status ? `?status=${status}` : ""}`;
   const tiles: { label: string; value: number; href: string; tone?: "warning" | "gold" | "success" | "danger" | "brand" | "neutral" }[] = [
     { label: "Products discovered", value: stats.discovered, href: queue("all") },
@@ -61,6 +62,17 @@ export default async function AdminImportsPage() {
           </>
         }
       />
+
+      {photos.stored + photos.onSource + photos.failed > 0 && (
+        <p className="mb-4 rounded-lg border border-ink-200 bg-white px-4 py-3 text-[13px] text-ink-700" data-testid="enrich-progress">
+          <span className="font-semibold text-ink-950">Product photos:</span> {photos.stored.toLocaleString("en-US")} in our own storage
+          {photos.onSource > 0 ? `, ${photos.onSource.toLocaleString("en-US")} still shown from the source's servers (being copied, about ${Math.max(1, Math.ceil(photos.onSource / 1400)).toLocaleString("en-US")} h left)` : ""}
+          {photos.failed > 0 ? `, ${photos.failed.toLocaleString("en-US")} could not be copied` : ""}.{" "}
+          <span className="font-semibold text-ink-950">Listing pages</span> (extra photos and details): {photos.pagesDone.toLocaleString("en-US")} of {photos.pagesTotal.toLocaleString("en-US")} read
+          {photos.pagesPausedUntil ? "; the source is refusing our bot on listing pages, so this part is paused and tries again once a day" : ""}.
+          {photos.soldAtSource > 0 && <span className="text-amber-800"> The source shows {photos.soldAtSource.toLocaleString("en-US")} of them as no longer available.</span>}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {tiles.map((t) => (
@@ -124,6 +136,13 @@ export default async function AdminImportsPage() {
                   <label className="flex items-start gap-2 text-[13px] text-ink-800">
                     <input type="checkbox" name="autoReleaseHoldDuplicates" defaultChecked={settings["imports.autoReleaseHoldDuplicates"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
                     <span>Keep possible duplicates for me to check</span>
+                  </label>
+                  <label className="flex items-start gap-2 text-[13px] text-ink-800">
+                    <input type="checkbox" name="enrichListings" defaultChecked={settings["imports.enrichListings"]} className="mt-0.5 h-4 w-4 rounded border-ink-300 accent-brand-600" />
+                    <span>
+                      Copy every listing photo into our storage and complete details
+                      <span className="block text-[12px] text-ink-500">Reads each released listing&apos;s own page once, one page every 5 seconds as the source asks, identified as our bot. Stops by itself if the source refuses.</span>
+                    </span>
                   </label>
                 </div>
               </div>

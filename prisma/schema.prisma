@@ -572,6 +572,11 @@ model ImportItem {
   editedJson            String     @default("[]")
   attempts              Int        @default(0)
 
+  /// when the listing page was read for its photos and details (null: not yet)
+  enrichedAt            DateTime?
+  enrichAttempts        Int        @default(0)
+  /// what that read found or why it failed, for the admin
+  enrichNote            String?
   productId             String?    @unique
   product               Product?   @relation(fields: [productId], references: [id], onDelete: SetNull)
   runId                 String?
@@ -588,6 +593,7 @@ model ImportItem {
   @@index([certNumber])
   @@index([dedupeKey])
   @@index([seoStatus])
+  @@index([enrichedAt])
 }
 
 model ProductImage {
@@ -596,6 +602,10 @@ model ProductImage {
   product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
   alt       String?
+  /// where the photo came from, when it was copied into our storage from a source's address
+  sourceUrl    String?
+  /// failed attempts to copy it (the copy job gives up after three)
+  copyAttempts Int      @default(0)
   position  Int        @default(0)
   mediaId   String?
   media     MediaFile? @relation(fields: [mediaId], references: [id], onDelete: SetNull)
