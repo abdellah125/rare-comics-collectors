@@ -234,12 +234,10 @@ export async function copySourcePhotos(opts: { budgetMs?: number; max?: number; 
   const deadline = Date.now() + (opts.budgetMs ?? 150_000);
   try {
     while (Date.now() < deadline && result.copied + result.failed < (opts.max ?? 100_000)) {
-      const batch = await db.productImage.findMany({
-        where,
-        orderBy: { id: "asc" },
-        take: 25,
-        select: { id: true, url: true, position: true, productId: true, product: { select: { title: true, issue: true, publisher: true, year: true, grader: true, grade: true, label: true, _count: { select: { images: true } } } } },
-      });
+      // Products on sale first, newest first; drafts and removed listings after them.
+      const select = { id: true, url: true, position: true, productId: true, product: { select: { title: true, issue: true, publisher: true, year: true, grader: true, grade: true, label: true, _count: { select: { images: true } } } } } as const;
+      let batch = await db.productImage.findMany({ where: { ...where, product: { status: "published", deletedAt: null } }, orderBy: [{ product: { publishedAt: "desc" } }, { id: "asc" }], take: 25, select });
+      if (batch.length === 0) batch = await db.productImage.findMany({ where, orderBy: { id: "asc" }, take: 25, select });
       if (batch.length === 0) break;
       for (const img of batch) {
         if (Date.now() >= deadline) break;
