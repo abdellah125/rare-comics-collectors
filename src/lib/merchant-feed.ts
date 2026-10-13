@@ -18,7 +18,7 @@ export type MerchantFeedResult = { xml: string; included: number; skipped: FeedS
  * Google (no image, no price, no SKU) are skipped and logged.
  */
 /** Listings in the feed at most; the plain .xml is cut to its size limit afterwards, the .xml.gz carries them all. */
-const FEED_MAX_ITEMS = 50_000;
+const FEED_MAX_ITEMS = 100_000;
 const PAGE = 2_000;
 
 const feedSelect = {
