@@ -1,30 +1,13 @@
-import { gzipSync } from "node:zlib";
-import { merchantFeed } from "@/lib/merchant-feed";
-import { FEED_MAX_BYTES } from "@/lib/merchant-feed-xml";
+import { feedBody, feedHeaders } from "@/lib/merchant-feed-store";
 
 /**
- * The complete Google Merchant Center feed, gzip-compressed: https://<site>/google-shopping-feed.xml.gz
- *
- * The plain /google-shopping-feed.xml has to stay under Vercel's 20 MB limit for cached responses,
- * which the catalogue has outgrown, so it leaves the oldest listings out. Compressed, every listing
- * fits many times over. Merchant Center reads .gz files directly: point the data source's fetch URL here.
- * Same schedule and invalidation as the plain feed.
+ * The same feed as a plain .gz file: https://<site>/google-shopping-feed.xml.gz
+ * (the file the feed_publish job writes every 15 minutes; see merchant-feed-store.ts).
  */
-export const revalidate = 900;
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { xml, included, skipped } = await merchantFeed({ maxBytes: Number.POSITIVE_INFINITY });
-  const body = gzipSync(xml, { level: 9 });
-  if (body.byteLength > FEED_MAX_BYTES) console.error(`[merchant-feed] compressed feed is ${body.byteLength} bytes, over the ${FEED_MAX_BYTES} limit`);
-  return new Response(new Uint8Array(body), {
-    status: 200,
-    headers: {
-      "content-type": "application/gzip",
-      "content-disposition": 'inline; filename="google-shopping-feed.xml.gz"',
-      "cache-control": "public, s-maxage=900, stale-while-revalidate=3600",
-      "x-robots-tag": "noindex",
-      "x-feed-items": String(included),
-      "x-feed-skipped": String(skipped.length),
-    },
-  });
+  const feed = await feedBody();
+  if (!feed) return new Response("The feed is being rebuilt. Try again in a few minutes.", { status: 503, headers: { "retry-after": "300", "cache-control": "no-store" } });
+  return new Response(feed.body, { status: 200, headers: { ...feedHeaders(feed), "content-type": "application/gzip", "content-disposition": 'inline; filename="google-shopping-feed.xml.gz"' } });
 }

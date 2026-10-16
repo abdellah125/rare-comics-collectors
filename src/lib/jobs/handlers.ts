@@ -261,6 +261,16 @@ export function registerJobHandlers() {
     return `photos: ${copy.copied} copied into our storage, ${copy.failed} failed, ${copy.remaining} left${copy.stopped ? `. ${copy.stopped}` : ""}; ${pages}`;
   });
 
+  // The Google Merchant Center feed: one file, rebuilt every 15 minutes (see merchant-feed-store.ts).
+  registerJobHandler("feed_publish", async () => {
+    const { env } = await import("@/lib/env");
+    await enqueueJob("feed_publish", {}, { runAt: new Date(Date.now() + 15 * 60_000), dedupe: true, maxAttempts: 3 });
+    if (!env.blobToken) return "No Blob storage configured: the feed is built per request.";
+    const { publishFeed } = await import("@/lib/merchant-feed-store");
+    const f = await publishFeed();
+    return `${f.items.toLocaleString("en-US")} products, ${(f.bytes / 1e6).toFixed(1)} MB compressed`;
+  });
+
   // The daily release rule: a batch per run until the day's quota is met, then a slower check for the next day.
   registerJobHandler("import_auto_release", async () => {
     const { autoRelease } = await import("@/lib/imports/pipeline");

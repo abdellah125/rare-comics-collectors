@@ -49,7 +49,8 @@ export type JobType =
   | "import_auto_release"
   | "import_release_approved"
   | "import_approve_all"
-  | "import_enrich";
+  | "import_enrich"
+  | "feed_publish";
 
 /**
  * The jobs that keep themselves scheduled: each handler queues its next run. This list is what
@@ -67,6 +68,7 @@ export const RECURRING_JOBS: { type: JobType; everyMinutes: number; what: string
   { type: "catalog_release", everyMinutes: 24 * 60, what: "Releases the day's scheduled catalogue listings" },
   { type: "import_auto_release", everyMinutes: 15, what: "Daily release rule for approved imports" },
   { type: "import_sync", everyMinutes: 24 * 60, what: "Price and availability sync of imported listings" },
+  { type: "feed_publish", everyMinutes: 15, what: "Builds the Google Merchant Center feed file" },
   { type: "import_enrich", everyMinutes: 5, what: "Copies each listing's photos into our storage and completes its details" },
   { type: "indexnow_sync", everyMinutes: 7 * 24 * 60, what: "Tells search engines about changed pages" },
   { type: "seo_sync", everyMinutes: 7 * 24 * 60, what: "Weekly SEO Intelligence refresh (free sources)" },
