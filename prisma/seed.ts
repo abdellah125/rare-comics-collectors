@@ -926,8 +926,9 @@ async function main() {
   await restoreSoldOutOnce();
   await checkoutChangesOnce();
   await storeChangesOnce();
-  // Each deploy checks the Stripe setup once (read-only; the result is in the log and on Jobs & system).
-  await db.job.create({ data: { type: "stripe_check", payloadJson: "{}", maxAttempts: 1 } });
+  // Each deploy checks the Stripe setup once (read-only; the result is in the log and on Jobs & system),
+  // ten minutes on, so the new deployment, which knows the job, is the one serving by then.
+  await db.job.create({ data: { type: "stripe_check", payloadJson: "{}", maxAttempts: 3, runAt: new Date(Date.now() + 10 * 60_000) } });
   if ((await db.importItem.count({ where: { status: "error", OR: [{ reviewedAt: null, editedJson: "[]" }, { problemsJson: { contains: "photo could not be stored" } }] } })) > 0 && (await db.job.count({ where: { type: "import_fix", status: { in: ["pending", "running"] } } })) === 0) {
     await db.job.create({ data: { type: "import_fix", payloadJson: "{}", maxAttempts: 3 } });
     log("import errors: re-check queued");
