@@ -50,7 +50,8 @@ export type JobType =
   | "import_release_approved"
   | "import_approve_all"
   | "import_enrich"
-  | "feed_publish";
+  | "feed_publish"
+  | "stripe_check";
 
 /**
  * The jobs that keep themselves scheduled: each handler queues its next run. This list is what

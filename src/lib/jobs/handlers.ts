@@ -261,6 +261,15 @@ export function registerJobHandlers() {
     return `photos: ${copy.copied} copied into our storage, ${copy.failed} failed, ${copy.remaining} left${copy.stopped ? `. ${copy.stopped}` : ""}; ${pages}`;
   });
 
+  // One-off: the Stripe setup as the server sees it, in the job result and the log (no key is printed).
+  registerJobHandler("stripe_check", async () => {
+    const { stripeHealth } = await import("@/lib/payments/stripe-health");
+    const h = await stripeHealth();
+    const line = `${h.ok ? "ready" : "needs attention"} (${h.mode}): ${h.checks.map((c) => `${c.name} ${c.ok ? "ok" : `FAILED (${c.detail})`}`).join("; ")}`;
+    console.log(`[stripe] check: ${line}`);
+    return line;
+  });
+
   // The Google Merchant Center feed: one file, rebuilt every 15 minutes (see merchant-feed-store.ts).
   registerJobHandler("feed_publish", async () => {
     const { env } = await import("@/lib/env");

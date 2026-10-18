@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { CryptoHealth } from "@/components/admin/crypto-health";
+import { StripeHealth } from "@/components/admin/stripe-health";
 import type { Metadata } from "next";
 import { ActionForm } from "@/components/admin/action-form";
 import { AdminPageHeader, Card, Field, Tone, adminInput, adminTextarea } from "@/components/admin/ui";
@@ -33,6 +34,14 @@ export default async function AdminPaymentProvidersPage() {
                 <Field label="Currencies (ISO codes)" hint="Buyers paying in other currencies won't see this method.">
                   <input name="currencies" defaultValue={p.currencies.join(", ")} className={adminInput} />
                 </Field>
+              )}
+              {p.id === "stripe" && (
+                <div className="rounded-lg border border-ink-200 bg-ink-50 p-3">
+                  <Suspense fallback={<p className="text-[13px] text-ink-600">Checking the connection to Stripe…</p>}>
+                    <StripeHealth />
+                  </Suspense>
+                  <p className="mt-2 text-[12px] text-ink-600">Keys live in the Vercel environment variables, never here. Webhook endpoint: /api/webhooks/stripe.</p>
+                </div>
               )}
               {p.id === "crypto" && (
                 <div className="rounded-lg border border-ink-200 bg-ink-50 p-3">
